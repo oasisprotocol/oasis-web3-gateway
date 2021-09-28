@@ -1,0 +1,13 @@
+postdb:
+  host: "127.0.0.1"
+  port: 5432
+  db: "postgres"
+  user: "postgres"
+  password: "postgres"
+  sslmode: false
+  timeout: 5
+
+
+
+
+
