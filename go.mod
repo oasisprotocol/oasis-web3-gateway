@@ -2,7 +2,10 @@ module github.com/starfishlabs/oasis-evm-web3-gateway
 
 go 1.17
 
-require github.com/ethereum/go-ethereum v1.10.3
+require (
+	github.com/ethereum/go-ethereum v1.10.3
+	github.com/stretchr/testify v1.7.0
+)
 
 require (
 	github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6 // indirect
@@ -16,6 +19,8 @@ require (
 	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2 // indirect
 	golang.org/x/sys v0.0.0-20210420205809-ac73e9fd8988 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
+	github.com/go-stack/stack v1.8.0 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
+	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c // indirect
 )
-
-require github.com/go-stack/stack v1.8.0 // indirect
