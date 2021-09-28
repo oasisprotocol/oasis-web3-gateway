@@ -16,7 +16,7 @@ func InitPostDb(cfg *conf.Config) (*storage.PostDb, error) {
 	}
 	conn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s connect_timeout=%d",
 		cfg.PostDb.Host, cfg.PostDb.Port, cfg.PostDb.User, cfg.PostDb.Password, cfg.PostDb.Db, cfg.PostDb.SslMode, cfg.PostDb.Timeout)
-	fmt.Println(conn)
+
 	db, err := sql.Open("postgres", conn)
 	if err != nil {
 		return nil, err
