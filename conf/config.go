@@ -10,7 +10,7 @@ type Config struct {
 	PostDb *PostDbConfig `yaml:"postdb"`
 }
 
-// PostDb postgresql configuration
+// PostDbConfig PostDb postgresql configuration
 type PostDbConfig struct {
 	Host     string `yaml:"host"`
 	Port     int    `yaml:"port"`
