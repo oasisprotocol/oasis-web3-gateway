@@ -7,17 +7,17 @@ import (
 
 // Config gateway server configuration
 type Config struct {
-	PostDb *PostDb
+	PostDb *PostDbConfig `yaml:"postdb"`
 }
 
 // PostDb postgresql configuration
-type PostDb struct {
+type PostDbConfig struct {
 	Host     string `yaml:"host"`
 	Port     int    `yaml:"port"`
 	Db       string `yaml:"db"`
 	User     string `yaml:"user"`
 	Password string `yaml:"password"`
-	SslMode  bool   `yaml:"sslmode"`
+	SslMode  string `yaml:"sslmode"`
 	Timeout  int    `yaml:"timeout"`
 }
 

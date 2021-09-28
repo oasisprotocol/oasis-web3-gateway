@@ -4,7 +4,7 @@ postdb:
   db: "postgres"
   user: "postgres"
   password: "postgres"
-  sslmode: false
+  sslmode: disable
   timeout: 5
 
 
