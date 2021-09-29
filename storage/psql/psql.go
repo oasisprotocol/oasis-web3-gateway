@@ -9,7 +9,7 @@ import (
 	"github.com/starfishlabs/oasis-evm-web3-gateway/storage"
 )
 
-// InitPostDb create postdb instance
+// InitPostDb creates postdb instance
 func InitPostDb(cfg *conf.Config) (*storage.PostDb, error) {
 	if cfg == nil {
 		return nil, errors.New("nil configuration")

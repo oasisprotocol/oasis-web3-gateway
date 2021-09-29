@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 )
 
-// Config gateway server configuration
+// Config is gateway server configuration
 type Config struct {
 	PostDb *PostDbConfig `yaml:"postdb"`
 }
@@ -21,7 +21,7 @@ type PostDbConfig struct {
 	Timeout  int    `yaml:"timeout"`
 }
 
-// InitConfig initialize server configuration
+// InitConfig initializes server configuration
 func InitConfig(file string) (*Config, error) {
 	if len(file) == 0 {
 		file = "./server.yml"
