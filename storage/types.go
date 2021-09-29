@@ -8,20 +8,20 @@ import (
 )
 
 type Query interface {
-	// GetBlockRoundByHash queries block round by block hash.
-	GetBlockRoundByHash(ctx context.Context, blockHash hash.Hash) (uint64, error)
-
 	// GetBlockByHash queries block by block hash.
 	GetBlockByHash(ctx context.Context, blockHash hash.Hash) (*block.Block, error)
+
+	// GetBlockByRound queries block by round.
+	GetBlockByRound(ctx context.Context, round uint64) (*block.Block, error)
+
+	// GetBlockRoundByHash queries block round by block hash.
+	GetBlockRoundByHash(ctx context.Context, blockHash hash.Hash) (uint64, error)
 
 	// GetBlockHashByRound queries block hash by round.
 	GetBlockHashByRound(ctx context.Context, round uint64) (hash.Hash, error)
 
-	// QueryBlockByRound queries block by round.
-	QueryBlockByRound(ctx context.Context, round uint64) (*block.Block, error)
-
-	// QueryTxByIndex queries tx by block round and index.
-	QueryTxByIndex(ctx context.Context, round uint64, index uint32) (hash.Hash, error)
+	// GetTxByIndex queries tx by block round and index.
+	GetTxByIndex(ctx context.Context, round uint64, index uint32) (hash.Hash, error)
 }
 
 type Store interface {
