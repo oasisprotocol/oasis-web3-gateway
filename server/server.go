@@ -3,12 +3,32 @@ package server
 import (
 	"errors"
 	"fmt"
+	"github.com/starfishlabs/oasis-evm-web3-gateway/conf"
+	"github.com/starfishlabs/oasis-evm-web3-gateway/storage"
 	"net/http"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
 )
+
+type Server struct {
+	Config *conf.Config
+	Web3   *Web3Gateway
+	Db     storage.Storage
+}
+
+func (s *Server) Start() error {
+	return s.Web3.Start()
+}
+
+func (s *Server) Wait() {
+	s.Web3.Wait()
+}
+
+func (s *Server) Close() error {
+	return s.Web3.Close()
+}
 
 // Web3Gateway is a container on which services can be registered.
 type Web3Gateway struct {

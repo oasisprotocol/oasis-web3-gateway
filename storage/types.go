@@ -2,7 +2,6 @@ package storage
 
 import (
 	"context"
-	"database/sql"
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/hash"
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 )
@@ -35,8 +34,4 @@ type Store interface {
 type Storage interface {
 	Query
 	Store
-}
-
-type PostDb struct {
-	Db *sql.DB
 }
