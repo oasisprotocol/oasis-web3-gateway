@@ -9,6 +9,7 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/conf"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
+	"time"
 )
 
 type PostDb struct {
@@ -22,10 +23,11 @@ func InitDb(cfg *conf.Config) (*PostDb, error) {
 	}
 	// Connect db
 	db := pg.Connect(&pg.Options{
-		Addr:     fmt.Sprintf("%v:%v", cfg.PostDb.Host, cfg.PostDb.Port),
-		Database: cfg.PostDb.Db,
-		User:     cfg.PostDb.User,
-		Password: cfg.PostDb.Password,
+		Addr:        fmt.Sprintf("%v:%v", cfg.PostDb.Host, cfg.PostDb.Port),
+		Database:    cfg.PostDb.Db,
+		User:        cfg.PostDb.User,
+		Password:    cfg.PostDb.Password,
+		DialTimeout: time.Duration(cfg.PostDb.Timeout),
 	})
 	// Ping
 	if err := db.Ping(context.TODO()); err != nil {
