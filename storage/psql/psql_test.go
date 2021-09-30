@@ -11,7 +11,7 @@ func TestInitPostDb(t *testing.T) {
 	if err != nil {
 		log.Fatal("initialize config error:", err)
 	}
-	db, err := InitPostDb(cfg)
+	db, err := InitDb(cfg)
 	if err != nil {
 		log.Fatal("initialize postdb error:", err)
 	}
