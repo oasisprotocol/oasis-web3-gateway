@@ -27,7 +27,7 @@ func InitDb(cfg *conf.Config) (*PostDb, error) {
 		Database:    cfg.PostDb.Db,
 		User:        cfg.PostDb.User,
 		Password:    cfg.PostDb.Password,
-		DialTimeout: time.Duration(cfg.PostDb.Timeout),
+		DialTimeout: time.Duration(cfg.PostDb.Timeout) * time.Second,
 	})
 	// Ping
 	if err := db.Ping(context.TODO()); err != nil {
