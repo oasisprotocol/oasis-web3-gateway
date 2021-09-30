@@ -2,17 +2,17 @@ package psql
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
-	_ "github.com/lib/pq"
+	"github.com/go-pg/pg/v10"
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/hash"
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/conf"
+	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
 )
 
 type PostDb struct {
-	Db *sql.DB
+	Db *pg.DB
 }
 
 // InitDb creates postdb instance
@@ -20,16 +20,22 @@ func InitDb(cfg *conf.Config) (*PostDb, error) {
 	if cfg == nil {
 		return nil, errors.New("nil configuration")
 	}
-	conn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s connect_timeout=%d",
-		cfg.PostDb.Host, cfg.PostDb.Port, cfg.PostDb.User, cfg.PostDb.Password, cfg.PostDb.Db, cfg.PostDb.SslMode, cfg.PostDb.Timeout)
+	// Connect db
+	db := pg.Connect(&pg.Options{
+		Addr:     fmt.Sprintf("%v:%v", cfg.PostDb.Host, cfg.PostDb.Port),
+		Database: cfg.PostDb.Db,
+		User:     cfg.PostDb.User,
+		Password: cfg.PostDb.Password,
+	})
+	// Ping
+	if err := db.Ping(context.TODO()); err != nil {
+		return nil, err
+	}
+	// initialize models
+	if err := model.InitModel(db); err != nil {
+		return nil, err
+	}
 
-	db, err := sql.Open("postgres", conn)
-	if err != nil {
-		return nil, err
-	}
-	if err = db.Ping(); err != nil {
-		return nil, err
-	}
 	return &PostDb{
 		Db: db,
 	}, nil
