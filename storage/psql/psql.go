@@ -42,21 +42,46 @@ func InitDb(cfg *conf.Config) (*PostDb, error) {
 }
 
 // Store stores data.
-func (db *PostDb) Store(ctx context.Context, value interface{}) error {
-	return nil
+func (db *PostDb) Store(value interface{}) error {
+	_, err := db.Db.Model(value).Insert()
+	return err
 }
 
 // GetBlockRound queries block round by block hash.
-func (db *PostDb) GetBlockRound(ctx context.Context, hash string) (uint64, error) {
-	return 0, nil
+func (db *PostDb) GetBlockRound(hash string) (uint64, error) {
+	blockRef := new(model.BlockRef)
+	err := db.Db.Model(blockRef).
+		Where("blockRef.hash=?", hash).
+		Select()
+	if err != nil {
+		return 0, err
+	}
+
+	return blockRef.Round, nil
 }
 
 // GetBlockHash queries block hash by block round.
-func (db *PostDb) GetBlockHash(ctx context.Context, round uint64) (string, error) {
-	return "", nil
+func (db *PostDb) GetBlockHash(round uint64) (string, error) {
+	blk := new(model.BlockRef)
+	err := db.Db.Model(blk).
+		Where("blockRef.round=?", round).
+		Select()
+	if err != nil {
+		return "", err
+	}
+
+	return blk.Hash, nil
 }
 
 // GetTxResult queries oasis tx result by ethereum tx hash.
-func (db *PostDb) GetTxResult(ctx context.Context, hash string) (*model.TxResult, error) {
-	return nil, nil
+func (db *PostDb) GetTxResult(hash string) (*model.TxResult, error) {
+	tx := new(model.TransactionRef)
+	err := db.Db.Model(tx).
+		Where("TransactionRef.EthTxHash=?", hash).
+		Select()
+	if err != nil {
+		return nil, err
+	}
+
+	return tx.Result, nil
 }

@@ -9,7 +9,7 @@ type BlockRef struct {
 // TransactionRef represents the relationship between ethereum tx and oasis tx.
 type TransactionRef struct {
 	EthTxHash string
-	Result    TxResult
+	Result    *TxResult
 }
 
 // TxResult represents oasis tx result.
