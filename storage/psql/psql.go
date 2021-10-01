@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-pg/pg/v10"
-	"github.com/oasisprotocol/oasis-core/go/common/crypto/hash"
-	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/conf"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
 	"time"
@@ -43,37 +41,22 @@ func InitDb(cfg *conf.Config) (*PostDb, error) {
 	}, nil
 }
 
-// GetBlockByHash queries block by block hash.
-func (db *PostDb) GetBlockByHash(ctx context.Context, blockHash hash.Hash) (*block.Block, error) {
-	return nil, nil
+// Store stores data.
+func (db *PostDb) Store(ctx context.Context, value interface{}) error {
+	return nil
 }
 
-// GetBlockByRound queries block by round.
-func (db *PostDb) GetBlockByRound(ctx context.Context, round uint64) (*block.Block, error) {
-	return nil, nil
-}
-
-// GetBlockRoundByHash queries block round by block hash.
-func (db *PostDb) GetBlockRoundByHash(ctx context.Context, blockHash hash.Hash) (uint64, error) {
+// GetBlockRound queries block round by block hash.
+func (db *PostDb) GetBlockRound(ctx context.Context, hash string) (uint64, error) {
 	return 0, nil
 }
 
-// GetBlockHashByRound queries block hash by round.
-func (db *PostDb) GetBlockHashByRound(ctx context.Context, round uint64) (hash.Hash, error) {
-	return hash.Hash{}, nil
+// GetBlockHash queries block hash by block round.
+func (db *PostDb) GetBlockHash(ctx context.Context, round uint64) (string, error) {
+	return "", nil
 }
 
-// GetTxByIndex queries tx by block round and index.
-func (db *PostDb) GetTxByIndex(ctx context.Context, round uint64, index uint32) (hash.Hash, error) {
-	return hash.Hash{}, nil
-}
-
-// StoreBlock stores block hash, round and block.
-func (db *PostDb) StoreBlock(ctx context.Context, blockHash hash.Hash, round uint64, block *block.Block) error {
-	return nil
-}
-
-// StoreTx stores tx hash, round and tx index.
-func (db *PostDb) StoreTx(ctx context.Context, txHash hash.Hash, round uint64, index uint32) error {
-	return nil
+// GetTxResult queries oasis tx result by ethereum tx hash.
+func (db *PostDb) GetTxResult(ctx context.Context, hash string) (*model.TxResult, error) {
+	return nil, nil
 }

@@ -9,8 +9,8 @@ var Models []interface{}
 
 // Add model to Models
 func addModel() {
-	Models = append(Models, new(Block))
-	Models = append(Models, new(Transaction))
+	Models = append(Models, new(BlockRef))
+	Models = append(Models, new(TransactionRef))
 }
 
 // InitModel initializes models
