@@ -1,15 +1,15 @@
 package model
 
-// BlockRef represents the relationship between block round and block hash.
-type BlockRef struct {
-	Round uint64
+// Block represents the relationship between block round and block hash.
+type Block struct {
+	Round uint64 `pg:",pk"`
 	Hash  string
 }
 
-// TransactionRef represents the relationship between ethereum tx and oasis tx.
-type TransactionRef struct {
-	EthTxHash string
-	Result    *TxResult
+// Transaction represents the relationship between ethereum tx and oasis tx.
+type Transaction struct {
+	EthTx  string `pg:",pk"`
+	Result *TxResult
 }
 
 // TxResult represents oasis tx result.

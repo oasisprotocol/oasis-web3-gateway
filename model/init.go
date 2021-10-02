@@ -9,15 +9,15 @@ var Models []interface{}
 
 // Add model to Models
 func addModel() {
-	Models = append(Models, new(BlockRef))
-	Models = append(Models, new(TransactionRef))
+	Models = append(Models, new(Block))
+	Models = append(Models, new(Transaction))
 }
 
 // InitModel initializes models
 func InitModel(db *pg.DB) error {
 	addModel()
 	for _, m := range Models {
-		if err := db.Model(m).CreateTable(&orm.CreateTableOptions{}); err != nil {
+		if err := db.Model(m).CreateTable(&orm.CreateTableOptions{IfNotExists: true}); err != nil {
 			return err
 		}
 	}

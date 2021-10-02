@@ -49,22 +49,22 @@ func (db *PostDb) Store(value interface{}) error {
 
 // GetBlockRound queries block round by block hash.
 func (db *PostDb) GetBlockRound(hash string) (uint64, error) {
-	blockRef := new(model.BlockRef)
-	err := db.Db.Model(blockRef).
-		Where("blockRef.hash=?", hash).
+	block := new(model.Block)
+	err := db.Db.Model(block).
+		Where("block.hash=?", hash).
 		Select()
 	if err != nil {
 		return 0, err
 	}
 
-	return blockRef.Round, nil
+	return block.Round, nil
 }
 
 // GetBlockHash queries block hash by block round.
 func (db *PostDb) GetBlockHash(round uint64) (string, error) {
-	blk := new(model.BlockRef)
+	blk := new(model.Block)
 	err := db.Db.Model(blk).
-		Where("blockRef.round=?", round).
+		Where("block.round=?", round).
 		Select()
 	if err != nil {
 		return "", err
@@ -75,9 +75,9 @@ func (db *PostDb) GetBlockHash(round uint64) (string, error) {
 
 // GetTxResult queries oasis tx result by ethereum tx hash.
 func (db *PostDb) GetTxResult(hash string) (*model.TxResult, error) {
-	tx := new(model.TransactionRef)
+	tx := new(model.Transaction)
 	err := db.Db.Model(tx).
-		Where("TransactionRef.EthTxHash=?", hash).
+		Where("transaction.eth_tx=?", hash).
 		Select()
 	if err != nil {
 		return nil, err
