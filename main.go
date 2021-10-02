@@ -2,13 +2,14 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/conf"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/server"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/storage/psql"
-	"os"
-	"os/signal"
-	"syscall"
 )
 
 // In reality these would come from command-line arguments, the environment
