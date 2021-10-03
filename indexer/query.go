@@ -2,9 +2,8 @@ package indexer
 
 import (
 	"hash"
-	storage "github.com/oasisprotocol/oasis-core/go/storage/api"	
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
-	"github.com/oasisprotocol/oasis-core/go/runtime/transaction"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
 func (s *Service) GetBlockByHash(blockHash hash.Hash) (*block.Block, error) {
@@ -24,26 +23,17 @@ func (s *Service) GetBlockByHash(blockHash hash.Hash) (*block.Block, error) {
 }
 
 
-func (s *Service) getBlockTransactions(blk *block.Block) ([]*transaction.Transaction, error) {
-	ioRoot := storage.Root{
-		Namespace: blk.Header.Namespace,
-		Version:   blk.Header.Round,
-		Type:      storage.RootTypeIO,
-		Hash:      blk.Header.IORoot,
-	}
-
-	tree := transaction.NewTree(s.storageBackend, ioRoot)
-	defer tree.Close()
-
-	txs, err = tree.GetTransactions(bctx)
+func (s *Service) getBlockTransactions(blk *block.Block) ([]*types.UnverifiedTransaction, error) {
+	uvTxs, err := s.client.GetTransactions(s.ctx, blk.Header.Round)	
 	if err != nil {
-		return nil, err
+		s.Logger.Error("can't get transactions through client")
+		continue
 	}
 
 	return txs, nil
 }
 
-func (s *Service) getBlockTransactionsByNumber(round uint64) ([]*transaction.Transaction, error) {
+func (s *Service) getBlockTransactionsByNumber(round uint64) ([]*types.UnverifiedTransaction, error) {
 	blk, err1 := s.client.GetBlock(s.ctx, round)
 	if err1 != nil {
 		s.logger.Errorf("Matched block error, block round: %v", round)
@@ -59,7 +49,7 @@ func (s *Service) getBlockTransactionsByNumber(round uint64) ([]*transaction.Tra
 	return txs, nil
 }
 
-func (s *Service) getBlockTransactionsByHash(blockHash hash.Hash) ([]*transaction.Transaction, error) {
+func (s *Service) getBlockTransactionsByHash(blockHash hash.Hash) ([]*types.UnverifiedTransaction, error) {
 	blk, err := s.GetBlockByHash(blockHash)
 	if err != nil {
 		s.logger.Errorf("Matched block error when call GetBlockByHash, 
@@ -100,7 +90,7 @@ type EthTransaction struct {
 	tx string
 }
 
-func (s *Service) getTransactionByIndex(txs []*transaction.Transaction, index uint32) (*EthTransaction, error) {
+func (s *Service) getTransactionByIndex(txs []*types.UnverifiedTransaction, index uint32) (*EthTransaction, error) {
 	if index >= len(txs) {
 		return nil, errors.New("Index is too large")
 	}

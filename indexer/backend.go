@@ -5,10 +5,10 @@ import (
 
 	"github.com/oasisprotocol/oasis-core/go/common"
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/hash"
-	"github.com/oasisprotocol/oasis-core/go/runtime/client/api"
-	"github.com/oasisprotocol/oasis-core/go/runtime/transaction"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
-	localStorage "github.com/starfishlabs/oasis-evm-web3-gateway/storage"
+	"github.com/starfishlabs/oasis-evm-web3-gateway/storage"
 )
 
 // Result is a query result.
@@ -29,7 +29,7 @@ type Results map[uint64][]Result
 type BackendFactory func(
 	dataDir string, 
 	runtimeID common.Namespace, 
-	storage localStorage.storage) (Backend, error)
+	storage storage.storage) (Backend, error)
 
 // QueryableBackend is the read-only indexer backend interface.
 type QueryableBackend interface {
@@ -47,11 +47,9 @@ type Backend interface {
 	QueryableBackend
 
 	Index(
-		ctx context.Context,
 		round uint64,
 		blockHash hash.Hash,
-		txs []*transaction.Transaction,
-		tags transaction.Tags,
+		txs []*types.UnverifiedTransaction,
 	) error
 
 	Close()
@@ -59,15 +57,13 @@ type Backend interface {
 
 type psqlBackend struct {
 	logger *logging.Logger
-	storage localStorage.Storage
+	storage storage.Storage
 }
 
 func (p *psqlBackend) Index(
-	ctx context.Context,
 	round uint64,
 	blockHash hash.Hash,
-	txs []*transaction.Transaction,
-	tags transaction.Tags,
+	txs []*types.UnverifiedTransaction,
 ) error {
 	//block round <-> block hash
 	blockRef := &model.Block{
@@ -77,22 +73,20 @@ func (p *psqlBackend) Index(
 
 	p.storage.Store(blockRef)
 
-	//eth tx hash <-> oasis tx result
-	for idx, tx := range txs {
-		ethTxHash = "decode eth tx from oasis tx, and get eth tx hash"
-		txRef := &model.Transaction{
-			EthTx: ethTxHash,
-			Result: &model.TxResult{
-				Hash:  tx.Hash(),
-				Index: uint32(idx),
-				Round: round,
-			},
-		}
+	// //eth tx hash <-> oasis tx result
+	// for idx, tx := range txs {
+	// 	ethTxHash = "decode eth tx from oasis tx, and get eth tx hash"
+	// 	txRef := &model.Transaction{
+	// 		EthTx: ethTxHash,
+	// 		Result: &model.TxResult{
+	// 			Hash:  tx.Hash(),
+	// 			Index: uint32(idx),
+	// 			Round: round,
+	// 		},
+	// 	}
 
-		p.storage.Store(txRef)
-	}
-
-	//tags?
+	// 	p.storage.Store(txRef)
+	// }
 
 	return nil
 }
@@ -135,7 +129,7 @@ func (p *psqlBackend) Close() {
 	p.logger.Info("Psql backend closed!")
 }
 
-func newPsqlBackend(storage localStorage.Storage) (Backend, error) {
+func newPsqlBackend(storage storage.Storage) (Backend, error) {
 	b := &psqlBackend{
 		logger:   logging.GetLogger("gateway/indexer/backend").With("runtime_id", runtimeID),
 		storage: storage
@@ -146,6 +140,6 @@ func newPsqlBackend(storage localStorage.Storage) (Backend, error) {
 	return b, nil
 }
 
-func NewPsqlBackend(storage localStorage.Storage) BackendFactory {
+func NewPsqlBackend(storage storage.Storage) BackendFactory {
 	return newPsqlBackend 
 }
