@@ -1,0 +1,161 @@
+package indexer
+
+import (
+	"hash"
+	storage "github.com/oasisprotocol/oasis-core/go/storage/api"	
+	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
+	"github.com/oasisprotocol/oasis-core/go/runtime/transaction"
+)
+
+func (s *Service) GetBlockByHash(blockHash hash.Hash) (*block.Block, error) {
+	round, err1 := s.backend.QueryBlockRound(blockHash)
+	if err1 != nil {
+		s.logger.Errorf("Matched block error, block hash: %v", blockHash)
+		return nil, err1
+	}
+
+	blk, err2 := s.client.GetBlock(s.ctx, round)
+	if err2 != nil {
+		s.logger.Errorf("Matched block error, block round: %v", round)
+		return nil, err2
+	}
+
+	return blk, nil
+}
+
+
+func (s *Service) getBlockTransactions(blk *block.Block) ([]*transaction.Transaction, error) {
+	ioRoot := storage.Root{
+		Namespace: blk.Header.Namespace,
+		Version:   blk.Header.Round,
+		Type:      storage.RootTypeIO,
+		Hash:      blk.Header.IORoot,
+	}
+
+	tree := transaction.NewTree(s.storageBackend, ioRoot)
+	defer tree.Close()
+
+	txs, err = tree.GetTransactions(bctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return txs, nil
+}
+
+func (s *Service) getBlockTransactionsByNumber(round uint64) ([]*transaction.Transaction, error) {
+	blk, err1 := s.client.GetBlock(s.ctx, round)
+	if err1 != nil {
+		s.logger.Errorf("Matched block error, block round: %v", round)
+		return nil, err1
+	}
+
+	txs, err := s.getBlockTransactions(blk)
+	if err != nil {
+		s.logger.Errorf("Call getBlockTransactions error")
+		return nil, err
+	}	
+
+	return txs, nil
+}
+
+func (s *Service) getBlockTransactionsByHash(blockHash hash.Hash) ([]*transaction.Transaction, error) {
+	blk, err := s.GetBlockByHash(blockHash)
+	if err != nil {
+		s.logger.Errorf("Matched block error when call GetBlockByHash, 
+			block hash: %v", blockHash)
+		return nil, err
+	}
+
+	txs, err := s.getBlockTransactions(blk)
+	if err != nil {
+		s.logger.Errorf("Call getBlockTransactions error")
+		return nil, err
+	}	
+
+	return txs, nil
+}
+
+func (s *Service) GetBlockTransactionsCountByHash(blockHash hash.Hash) (uint32, error) {
+	txs, err = getBlockTransactionsByHash(blockHash)
+	if err != nil {
+		s.logger.Errorf("Call getBlockTransactionsByHash error")
+		return nil, err
+	}
+
+	return uint32(len(txs)), nil
+}
+
+
+func (s *Service) GetBlockNumberByHash(round uint64) (hash.Hash, error) {
+	return s.backend.QueryBlockHash(round)
+}
+
+func (s *Service) getTxResultByHash(ethTransactionHash hash.Hash) (*model.TxResult, error) {
+	return s.backend.QueryTxResult(ethTransactionHash)
+}
+
+type EthTransaction struct {
+	//to do
+	tx string
+}
+
+func (s *Service) getTransactionByIndex(txs []*transaction.Transaction, index uint32) (*EthTransaction, error) {
+	if index >= len(txs) {
+		return nil, errors.New("Index is too large")
+	}
+
+	innerTx := txs[result.Index] 
+
+	//todo: decode oasis tx to eth tx 
+	var ethTx EthTransaction
+
+	return ethTx, nil
+}
+
+func (s *Service) GetTransactionByHash(ethTransactionHash hash.Hash) (*EthTransaction, error) {
+	result, err := s.backend.QueryTxResult(ethTransactionHash)
+	if err != nil {
+		s.logger.Errorf("Get transaction result error!")
+		return nil, err
+	}
+
+	blk, err := s.client.GetBlock(s.ctx, result.Round)
+	if err != nil {
+		s.logger.Errorf("Get block result error!")
+		return nil, err
+	}
+
+	txs, err := s.getBlockTransactions(blk)
+	if err != nil {
+		s.logger.Errorf("Call getBlockTransactions error")
+		return nil, err
+	}	
+
+	return getTransactionByIndex(txs, result.Index)
+}
+
+func (s *Service) GetTransactionByBlockHashAndIndex(blockHash hash.Hash, index uint32) (*EthTransaction, error) {
+	txs, err = getBlockTransactionsByHash(blockHash)
+	if err != nil {
+		s.logger.Errorf("Call getBlockTransactionsByHash error")
+		return nil, err
+	}
+
+	return getTransactionByIndex(txs, index)
+}
+
+func (s *Service) GetTansactionByBlockNumberAndIndex(round uint64, index uint32) (*EthRransaction, error) {
+	txs, err := getBlockTransactionsByNumber(round)
+	if err != nil {
+		s.logger.Errorf("Call getBlockTransactionsByNumber error")
+		return nil, err
+	}	
+
+	return getTransactionByIndex(txs, index)
+}
+
+func (s *Service) GetTransactionReceipt(hash.Hash) (string, error) {
+	//to do
+	return nil, nil
+}

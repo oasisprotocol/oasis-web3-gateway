@@ -15,6 +15,6 @@ type Transaction struct {
 // TxResult represents oasis tx result.
 type TxResult struct {
 	Hash  string
-	Index uint64
+	Index uint32
 	Round uint64
 }
