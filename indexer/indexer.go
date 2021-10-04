@@ -74,9 +74,8 @@ func (s *Service) worker() {
 	}
 }
 
-func (s *Service) Start() error {
+func (s *Service) Start() {
 	go s.worker()
-	return nil
 }
 
 func (s *Service) Stop() {
