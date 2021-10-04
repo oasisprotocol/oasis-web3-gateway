@@ -1,3 +1,4 @@
+//May be we will move this file to rpc later.
 package indexer
 
 import (
@@ -22,17 +23,6 @@ func (s *Service) GetBlockByHash(blockHash hash.Hash) (*block.Block, error) {
 	return blk, nil
 }
 
-
-func (s *Service) getBlockTransactions(blk *block.Block) ([]*types.UnverifiedTransaction, error) {
-	uvTxs, err := s.client.GetTransactions(s.ctx, blk.Header.Round)	
-	if err != nil {
-		s.Logger.Error("can't get transactions through client")
-		continue
-	}
-
-	return txs, nil
-}
-
 func (s *Service) getBlockTransactionsByNumber(round uint64) ([]*types.UnverifiedTransaction, error) {
 	blk, err1 := s.client.GetBlock(s.ctx, round)
 	if err1 != nil {
@@ -40,9 +30,9 @@ func (s *Service) getBlockTransactionsByNumber(round uint64) ([]*types.Unverifie
 		return nil, err1
 	}
 
-	txs, err := s.getBlockTransactions(blk)
+	txs, err := s.client.GetTransactions(s.ctx, blk.Header.Round)	
 	if err != nil {
-		s.logger.Errorf("Call getBlockTransactions error")
+		s.logger.Errorf("Call GetTransactions error")
 		return nil, err
 	}	
 
@@ -57,9 +47,9 @@ func (s *Service) getBlockTransactionsByHash(blockHash hash.Hash) ([]*types.Unve
 		return nil, err
 	}
 
-	txs, err := s.getBlockTransactions(blk)
+	txs, err := s.client.GetTransactions(s.ctx, blk.Header.Round)	
 	if err != nil {
-		s.logger.Errorf("Call getBlockTransactions error")
+		s.logger.Errorf("Call GetTransactions error")
 		return nil, err
 	}	
 
@@ -116,9 +106,9 @@ func (s *Service) GetTransactionByHash(ethTransactionHash hash.Hash) (*EthTransa
 		return nil, err
 	}
 
-	txs, err := s.getBlockTransactions(blk)
+	txs, err := s.client.GetTransactions(s.ctx, blk.Header.Round)	
 	if err != nil {
-		s.logger.Errorf("Call getBlockTransactions error")
+		s.logger.Errorf("Call GetTransactions error")
 		return nil, err
 	}	
 

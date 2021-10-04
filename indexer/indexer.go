@@ -84,7 +84,7 @@ func (s *Service) Stop() {
 	close(s.stopCh)
 }
 
-// New creates a new tag indexer service.
+// New creates a new indexer service.
 func New(
 	dataDir string,
 	runtimeID common.Namespace
