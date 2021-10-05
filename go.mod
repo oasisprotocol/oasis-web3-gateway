@@ -10,6 +10,5 @@ require (
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.1.0
 	github.com/rs/cors v1.7.0
 	github.com/stretchr/testify v1.7.0
-	google.golang.org/grpc v1.41.0
 	gopkg.in/yaml.v2 v2.4.0
 )

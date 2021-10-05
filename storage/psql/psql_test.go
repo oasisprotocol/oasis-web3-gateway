@@ -44,7 +44,7 @@ func TestInitPostDb(t *testing.T) {
 	fmt.Println("block1 hash:", hash)
 
 	tx1 := &model.Transaction{
-		EthTx: "hello",
+		EthTxHash: "hello",
 		Result: &model.TxResult{
 			Hash:  "tx1 oasis hash",
 			Index: 1,
@@ -52,7 +52,7 @@ func TestInitPostDb(t *testing.T) {
 		},
 	}
 	tx2 := &model.Transaction{
-		EthTx: "hello",
+		EthTxHash: "hello",
 		Result: &model.TxResult{
 			Hash:  "tx2 oasis hash",
 			Index: 1,
@@ -61,7 +61,7 @@ func TestInitPostDb(t *testing.T) {
 	}
 	db.Store(tx1)
 	db.Store(tx2)
-	res, err := db.GetTxResult(tx1.EthTx)
+	res, err := db.GetTxResult(tx1.EthTxHash)
 	if err != nil {
 		log.Fatal(err)
 	}

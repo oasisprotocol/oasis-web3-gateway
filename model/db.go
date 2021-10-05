@@ -8,8 +8,8 @@ type Block struct {
 
 // Transaction represents the relationship between ethereum tx and oasis tx.
 type Transaction struct {
-	EthTx  string `pg:",pk"`
-	Result *TxResult
+	EthTxHash string `pg:",pk"`
+	Result    *TxResult
 }
 
 // TxResult represents oasis tx result.

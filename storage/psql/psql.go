@@ -14,7 +14,7 @@ type PostDb struct {
 	Db *pg.DB
 }
 
-// InitDb creates postdb instance
+// InitDb creates postgresql db instance
 func InitDb(cfg *conf.Config) (*PostDb, error) {
 	if cfg == nil {
 		return nil, errors.New("nil configuration")
@@ -77,7 +77,7 @@ func (db *PostDb) GetBlockHash(round uint64) (string, error) {
 func (db *PostDb) GetTxResult(hash string) (*model.TxResult, error) {
 	tx := new(model.Transaction)
 	err := db.Db.Model(tx).
-		Where("transaction.eth_tx=?", hash).
+		Where("transaction.eth_tx_hash=?", hash).
 		Select()
 	if err != nil {
 		return nil, err
