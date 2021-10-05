@@ -54,23 +54,19 @@ func (s *Service) worker() {
 			blk := annBlk.Block
 
 			var txs []*types.UnverifiedTransaction
-			if !blk.Header.IORoot.IsEmpty() {
-				txs, err := s.client.GetTransactions(s.ctx, blk.Header.Round)	
-				if err != nil {
-					s.Logger.Error("can't get transactions through client")
-					continue
-				}
+			txs, err := s.client.GetTransactions(s.ctx, blk.Header.Round)	
+			if err != nil {
+				s.Logger.Error("can't get transactions through client")
+				continue
+			}
 
-
-
-				if err = s.backend.Index(blk.Header.Round, blk.Header.EncodedHash(), txs); err != nil {
-					s.Logger.Error("failed to index",
-						"err", err,
-						"round", blk.Header.Round,
+			if err = s.backend.Index(blk.Header.Round, blk.Header.EncodedHash(), txs); err != nil {
+				s.Logger.Error("failed to index",
+					"err", err,
+					"round", blk.Header.Round,
 				)
 				continue
 			}
-		}
 	}
 }
 
