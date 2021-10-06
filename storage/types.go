@@ -16,4 +16,7 @@ type Storage interface {
 
 	// GetTxResult queries oasis tx result by ethereum tx hash.
 	GetTxResult(hash string) (*model.TxResult, error)
+
+	// GetEthTransaction queries ethereum tx by hash.
+	GetEthTransaction(hash string) (*model.EthTx, error)
 }

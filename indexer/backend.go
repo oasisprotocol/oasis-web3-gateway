@@ -34,13 +34,17 @@ type BackendFactory func(
 
 // QueryableBackend is the read-only indexer backend interface.
 type QueryableBackend interface {
-	// querie block round by block hash.
+	// QueryBlockRound queriee block round by block hash.
 	QueryBlockRound(blockHash hash.Hash) (uint64, error)
 
+	// QueryBlockHash queries block hash by round.
 	QueryBlockHash(round uint64) (hash.Hash, error)
 
-	// querie oasis tx result by ethereum tx hash.
+	// QueryTxResult queries oasis tx result by ethereum tx hash.
 	QueryTxResult(ethTransactionHash hash.Hash) (*model.TxResult, error)
+
+	// QueryEthTransaction queries ethereum transaction by hash.
+	QueryEthTransaction(ethTxHash hash.Hash) (*model.EthTx, error)
 }
 
 // Backend is the indexer backend interface.
@@ -175,14 +179,13 @@ func (p *psqlBackend) QueryBlockRound(blockHash hash.Hash) (uint64, error) {
 }
 
 func (p *psqlBackend) QueryBlockHash(round uint64) (hash.Hash, error) {
-	hash, err := p.storage.GetBlockHash(round)
-
+	blockHash, err := p.storage.GetBlockHash(round)
 	if err != nil {
-		panic("Indexer error!")
-		return nil, err
+		p.logger.Error("Indexer error!")
+		return hash.Hash{}, err
 	}
 
-	return hash, nil
+	return hash.NewFromBytes([]byte(blockHash)), nil
 }
 
 func (p *psqlBackend) QueryTxResult(ethTransactionHash hash.Hash) (*model.TxResult, error) {
@@ -196,13 +199,21 @@ func (p *psqlBackend) QueryTxResult(ethTransactionHash hash.Hash) (*model.TxResu
 	return result, nil
 }
 
+func (p *psqlBackend) QueryEthTransaction(ethTxHash hash.Hash) (*model.EthTx, error) {
+	tx, err := p.storage.GetEthTransaction(ethTxHash.String())
+	if err != nil {
+		return nil, err
+	}
+	return tx, nil
+}
+
 func (p *psqlBackend) Close() {
 	p.logger.Info("Psql backend closed!")
 }
 
 func newPsqlBackend(storage storage.Storage) (Backend, error) {
 	b := &psqlBackend{
-		logger:  logging.GetLogger("gateway/indexer/backend").With("runtime_id", runtimeID),
+		logger:  logging.GetLogger("gateway/indexer/backend"),
 		storage: storage,
 	}
 
@@ -211,6 +222,6 @@ func newPsqlBackend(storage storage.Storage) (Backend, error) {
 	return b, nil
 }
 
-func NewPsqlBackend(storage storage.Storage) BackendFactory {
-	return newPsqlBackend
+func NewPsqlBackend(storage storage.Storage) (Backend, error) {
+	return newPsqlBackend(storage)
 }
