@@ -97,6 +97,7 @@ func (p *psqlBackend) Index(
 		}
 
 		p.storage.Store(txRef)
+		p.storage.Store(ethTx)
 	}
 
 	return nil
