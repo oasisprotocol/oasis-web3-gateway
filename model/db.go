@@ -13,13 +13,13 @@ type EthAccessTuple struct {
 
 type EthTx struct {
 	Hash       string `pg:",pk"`
-	Type       uint8
+	Type       uint8  `pg:",use_zero"`
 	ChainID    string
-	Gas        uint64
+	Gas        uint64 `pg:",use_zero"`
 	GasPrice   string
 	GasTipCap  string
 	GasFeeCap  string
-	Nonce      uint64
+	Nonce      uint64 `pg:",use_zero"`
 	To         string
 	Value      string
 	Data       string

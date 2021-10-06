@@ -41,6 +41,17 @@ func InitDb(cfg *conf.Config) (*PostDb, error) {
 	}, nil
 }
 
+func (db *PostDb) GetEthTransaction(hash string) (*model.EthTx, error) {
+	tx := new(model.EthTx)
+	err := db.Db.Model(tx).
+		Where("eth_tx.hash=?", hash).
+		Select()
+	if err != nil {
+		return nil, err
+	}
+	return tx, nil
+}
+
 // Store stores data.
 func (db *PostDb) Store(value interface{}) error {
 	_, err := db.Db.Model(value).Insert()

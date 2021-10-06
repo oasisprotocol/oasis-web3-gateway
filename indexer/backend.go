@@ -130,6 +130,10 @@ func (p *psqlBackend) Index(
 			{
 				innerTx.Type = ethtypes.LegacyTxType
 				innerTx.GasPrice = ethTx.GasPrice().String()
+				innerTx.GasFeeCap = "0"
+				innerTx.GasTipCap = "0"
+				innerTx.ChainID = "0"
+				innerTx.AccessList = []model.EthAccessTuple{}
 			}
 		case ethtypes.AccessListTxType:
 			{
@@ -137,6 +141,8 @@ func (p *psqlBackend) Index(
 				innerTx.GasPrice = ethTx.GasPrice().String()
 				innerTx.ChainID = ethTx.ChainId().String()
 				innerTx.AccessList = accList
+				innerTx.GasFeeCap = "0"
+				innerTx.GasTipCap = "0"
 			}
 		case ethtypes.DynamicFeeTxType:
 			{
@@ -144,6 +150,7 @@ func (p *psqlBackend) Index(
 				innerTx.GasFeeCap = ethTx.GasFeeCap().String()
 				innerTx.GasTipCap = ethTx.GasTipCap().String()
 				innerTx.AccessList = accList
+				innerTx.GasPrice = "0"
 			}
 		default:
 			p.logger.Error("unknown ethereum transaction type")
