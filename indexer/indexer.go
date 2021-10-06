@@ -86,7 +86,7 @@ func (s *Service) periodIndexWorker() {
 
 		latest := s.client.RoundLatest
 		start := latest
-		indexed := s.backend.LatestIndexedRound()
+		indexed := s.backend.QueryIndexedRound()
 
 		if latest == indexed {
 			time.Sleep(storageRetryTimeout)

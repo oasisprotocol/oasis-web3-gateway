@@ -3,7 +3,7 @@ package indexer
 
 import (
 	"errors"
-	"hash"
+	"github.com/oasisprotocol/oasis-core/go/common/crypto/hash"
 
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
@@ -76,11 +76,6 @@ func (s *Service) getTxResultByHash(ethTransactionHash hash.Hash) (*model.TxResu
 	return s.backend.QueryTxResult(ethTransactionHash)
 }
 
-type EthTransaction struct {
-	//to do
-	tx string
-}
-
 func (s *Service) getTransactionByIndex(txs []*types.UnverifiedTransaction, index uint32) (*EthTransaction, error) {
 	if index >= len(txs) {
 		return nil, errors.New("Index is too large")
@@ -126,7 +121,7 @@ func (s *Service) GetTransactionByBlockHashAndIndex(blockHash hash.Hash, index u
 	return getTransactionByIndex(txs, index)
 }
 
-func (s *Service) GetTansactionByBlockNumberAndIndex(round uint64, index uint32) (*EthRransaction, error) {
+func (s *Service) GetTransactionByBlockNumberAndIndex(round uint64, index uint32) (*EthRransaction, error) {
 	txs, err := getBlockTransactionsByNumber(round)
 	if err != nil {
 		s.Logger.Error("Call getBlockTransactionsByNumber error")
