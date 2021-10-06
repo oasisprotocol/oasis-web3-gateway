@@ -1,12 +1,12 @@
 package indexer
 
 import (
+	ethtypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/oasisprotocol/oasis-core/go/common"
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/hash"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
-
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
-
 	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/storage"
 )
@@ -73,20 +73,31 @@ func (p *psqlBackend) Index(
 
 	p.storage.Store(blockRef)
 
-	// //eth tx hash <-> oasis tx result
-	// for idx, tx := range txs {
-	// 	ethTxHash = "decode eth tx from oasis tx, and get eth tx hash"
-	// 	txRef := &model.Transaction{
-	// 		EthTx: ethTxHash,
-	// 		Result: &model.TxResult{
-	// 			Hash:  tx.Hash(),
-	// 			Index: uint32(idx),
-	// 			Round: round,
-	// 		},
-	// 	}
+	for idx, utx := range txs {
+		if len(utx.AuthProofs) != 1 || utx.AuthProofs[0].Module != "evm.ethereum.v0" {
+			// Skip non-Ethereum transactions.
+			continue
+		}
 
-	// 	p.storage.Store(txRef)
-	// }
+		// Extract raw Ethereum transaction for further processing.
+		// Use standard libraries to decode the Ethereum transaction.
+		ethTx := &ethtypes.Transaction{}
+		if err := rlp.DecodeBytes(utx.Body, &ethTx); err != nil {
+			p.logger.Error("decode ethereum transaction", err)
+			continue
+		}
+
+		txRef := &model.Transaction{
+			EthTxHash: ethTx.Hash().String(),
+			Result: &model.TxResult{
+				//Hash:  ,
+				Index: uint32(idx),
+				Round: round,
+			},
+		}
+
+		p.storage.Store(txRef)
+	}
 
 	return nil
 }
