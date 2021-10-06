@@ -82,7 +82,7 @@ func (p *psqlBackend) Index(
 		// Extract raw Ethereum transaction for further processing.
 		// Use standard libraries to decode the Ethereum transaction.
 		ethTx := &ethtypes.Transaction{}
-		if err := rlp.DecodeBytes(utx.Body, &ethTx); err != nil {
+		if err := rlp.DecodeBytes(utx.Body, ethTx); err != nil {
 			p.logger.Error("decode ethereum transaction", err)
 			continue
 		}
