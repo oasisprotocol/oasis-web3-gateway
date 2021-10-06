@@ -2,6 +2,8 @@ package indexer
 
 import (
 	"encoding/hex"
+	"sync"
+
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/oasisprotocol/oasis-core/go/common"
@@ -41,6 +43,8 @@ type QueryableBackend interface {
 
 	// querie oasis tx result by ethereum tx hash.
 	QueryTxResult(ethTransactionHash hash.Hash) (*model.TxResult, error)
+
+	LatestIndexedRound() uint64
 }
 
 // Backend is the indexer backend interface.
@@ -59,6 +63,7 @@ type Backend interface {
 type psqlBackend struct {
 	logger  *logging.Logger
 	storage storage.Storage
+	indexedRoundMutex *sync.Mutex
 }
 
 func (p *psqlBackend) Index(
@@ -160,6 +165,10 @@ func (p *psqlBackend) Index(
 		p.storage.Store(innerTx)
 	}
 
+	if p.LatestIndexedRound() == (round - 1) {
+		storeIndexedRound(round)
+	}
+
 	return nil
 }
 
@@ -196,6 +205,31 @@ func (p *psqlBackend) QueryTxResult(ethTransactionHash hash.Hash) (*model.TxResu
 	return result, nil
 }
 
+func (p *psqlBackend) storeIndexedRound(round) {
+	p.indexedRoundMutex.lock()
+	r := &model.ContinuesIndexedRound {
+		Round: round
+	}
+
+	p.storage.Store(r)
+	p.indexedRoundMutex.unlock()
+}
+
+
+
+func (p *psqlBackend) LatestIndexedRound() uint64 {
+	p.indexedRoundMutex.lock()
+	indexedRound, err := p.storage.GetContinuesIndexedRound()
+	if err != nil {
+		p.indexedRoundMutex.unlock()
+		p.storeIndexedRound(0)
+		return 0
+	}
+	p.indexedRoundMutex.unlock()
+
+	return indexedRound
+}
+
 func (p *psqlBackend) Close() {
 	p.logger.Info("Psql backend closed!")
 }
@@ -204,6 +238,7 @@ func newPsqlBackend(storage storage.Storage) (Backend, error) {
 	b := &psqlBackend{
 		logger:  logging.GetLogger("gateway/indexer/backend").With("runtime_id", runtimeID),
 		storage: storage,
+		indexedRoundMutex: new(sync.Mutex),
 	}
 
 	b.logger.Info("New psql backend")
