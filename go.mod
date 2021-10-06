@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/blevesearch/bleve v1.0.14 // indirect
-	github.com/ethereum/go-ethereum v1.10.3
+	github.com/ethereum/go-ethereum v1.10.10-0.20211005163353-57ff2dee06a1 // indirect
 	github.com/go-pg/pg/v10 v10.10.6
 	github.com/gorilla/websocket v1.4.2
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0 // indirect

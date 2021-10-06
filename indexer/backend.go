@@ -1,6 +1,7 @@
 package indexer
 
 import (
+	"encoding/hex"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/oasisprotocol/oasis-core/go/common"
@@ -70,7 +71,6 @@ func (p *psqlBackend) Index(
 		Round: round,
 		Hash:  blockHash.String(),
 	}
-
 	p.storage.Store(blockRef)
 
 	for idx, utx := range txs {
@@ -95,9 +95,62 @@ func (p *psqlBackend) Index(
 				Round: round,
 			},
 		}
-
 		p.storage.Store(txRef)
-		p.storage.Store(ethTx)
+
+		v, r, s := ethTx.RawSignatureValues()
+		innerTx := &model.EthTx{
+			Hash:  ethTx.Hash().String(),
+			Gas:   ethTx.Gas(),
+			Nonce: ethTx.Nonce(),
+			To:    ethTx.To().String(),
+			Value: ethTx.Value().String(),
+			Data:  hex.EncodeToString(ethTx.Data()),
+			V:     v.String(),
+			R:     r.String(),
+			S:     s.String(),
+		}
+
+		accList := []model.EthAccessTuple{}
+		if ethTx.Type() == ethtypes.AccessListTxType || ethTx.Type() == ethtypes.DynamicFeeTxType {
+			for _, tuple := range ethTx.AccessList() {
+				addr := tuple.Address.String()
+				keys := []string{}
+				for _, k := range tuple.StorageKeys {
+					keys = append(keys, k.String())
+				}
+				accList = append(accList, model.EthAccessTuple{
+					Address:     addr,
+					StorageKeys: keys,
+				})
+			}
+		}
+
+		switch ethTx.Type() {
+		case ethtypes.LegacyTxType:
+			{
+				innerTx.Type = ethtypes.LegacyTxType
+				innerTx.GasPrice = ethTx.GasPrice().String()
+			}
+		case ethtypes.AccessListTxType:
+			{
+				innerTx.Type = ethtypes.AccessListTxType
+				innerTx.GasPrice = ethTx.GasPrice().String()
+				innerTx.ChainID = ethTx.ChainId().String()
+				innerTx.AccessList = accList
+			}
+		case ethtypes.DynamicFeeTxType:
+			{
+				innerTx.Type = ethtypes.DynamicFeeTxType
+				innerTx.GasFeeCap = ethTx.GasFeeCap().String()
+				innerTx.GasTipCap = ethTx.GasTipCap().String()
+				innerTx.AccessList = accList
+			}
+		default:
+			p.logger.Error("unknown ethereum transaction type")
+			continue
+		}
+
+		p.storage.Store(innerTx)
 	}
 
 	return nil

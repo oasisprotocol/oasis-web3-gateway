@@ -11,6 +11,7 @@ var Models []interface{}
 func addModel() {
 	Models = append(Models, new(Block))
 	Models = append(Models, new(Transaction))
+	Models = append(Models, new(EthTx))
 }
 
 // InitModel initializes models
