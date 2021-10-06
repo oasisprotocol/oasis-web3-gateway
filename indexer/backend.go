@@ -34,7 +34,7 @@ type BackendFactory func(
 
 // QueryableBackend is the read-only indexer backend interface.
 type QueryableBackend interface {
-	// QueryBlockRound queriee block round by block hash.
+	// QueryBlockRound queries block round by block hash.
 	QueryBlockRound(blockHash hash.Hash) (uint64, error)
 
 	// QueryBlockHash queries block hash by round.
@@ -169,7 +169,6 @@ func (p *psqlBackend) Index(
 
 func (p *psqlBackend) QueryBlockRound(blockHash hash.Hash) (uint64, error) {
 	round, err := p.storage.GetBlockRound(blockHash.String())
-
 	if err != nil {
 		p.logger.Error("Can't find matched block")
 		return 0, err
@@ -190,7 +189,6 @@ func (p *psqlBackend) QueryBlockHash(round uint64) (hash.Hash, error) {
 
 func (p *psqlBackend) QueryTxResult(ethTransactionHash hash.Hash) (*model.TxResult, error) {
 	result, err := p.storage.GetTxResult(ethTransactionHash.String())
-
 	if err != nil {
 		p.logger.Error("Can't find matched transaction result")
 		return nil, err
@@ -216,7 +214,6 @@ func newPsqlBackend(storage storage.Storage) (Backend, error) {
 		logger:  logging.GetLogger("gateway/indexer/backend"),
 		storage: storage,
 	}
-
 	b.logger.Info("New psql backend")
 
 	return b, nil
