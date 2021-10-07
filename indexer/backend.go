@@ -30,10 +30,7 @@ type Result struct {
 type Results map[uint64][]Result
 
 // BackendFactory is the indexer backend factory interface.
-type BackendFactory func(
-	dataDir string,
-	runtimeID common.Namespace,
-	storage storage.Storage) (Backend, error)
+type BackendFactory func(dataDir string, runtimeID common.Namespace, storage storage.Storage) (Backend, error)
 
 // QueryableBackend is the read-only indexer backend interface.
 type QueryableBackend interface {
