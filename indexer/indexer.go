@@ -16,6 +16,7 @@ const (
 	storageRetryTimeout   = 120 * time.Second
 )
 
+
 // Service is an indexer service.
 type Service struct {
 	service.BaseBackgroundService
@@ -25,11 +26,11 @@ type Service struct {
 
 	ctx       context.Context
 	cancelCtx context.CancelFunc
-
+	stopFlag bool
 	stopCh chan struct{}
 }
 
-func (s *Service) worker() {
+func (s *Service) watchBlockworker() {
 	defer s.BaseBackgroundService.Stop()
 
 	s.Logger.Info("started indexer for runtime")
@@ -54,7 +55,14 @@ func (s *Service) worker() {
 			blk := annBlk.Block
 
 			var txs []*types.UnverifiedTransaction
-			txs, err := s.client.GetTransactions(s.ctx, blk.Header.Round)	
+
+			off := cmnBackoff.NewExponentialBackOff()
+			off.MaxElapsedTime = storageRetryTimeout
+
+			err = backoff.Retry(func() error {
+				txs, err := s.client.GetTransactions(s.ctx, blk.Header.Round)	
+			}, off)
+
 			if err != nil {
 				s.Logger.Error("can't get transactions through client")
 				continue
@@ -70,13 +78,69 @@ func (s *Service) worker() {
 	}
 }
 
+func (s *Service) periodIndexWorker() {
+	for {
+		if stopFlag == true {
+			break
+		}
+
+		latest := s.client.RoundLatest
+		start := latest
+		indexed := s.backend.QueryIndexedRound()
+
+		if latest == indexed {
+			time.Sleep(storageRetryTimeout)
+			continue	
+		}
+
+		for { 
+			if stopFlag == true || latest == indexed {
+				break
+			}
+			
+			indexed ++
+			hash, err1 := s.backend.QueryBlockHash(indexed) 
+			if hash != nil && err1 == nil{
+				indexed ++
+				continue
+			}
+
+			blk, err2 := s.client.GetBlock(s.ctx, indexed)
+			if err2 != nil {
+				indexed --
+				time.Sleep(storageRequestTimeout)
+				continue
+			}
+			
+			txs, err3 := s.client.GetTransactions(s.ctx, blk.Header.Round)	
+			if err3 != nil {
+				indexed --
+				time.Sleep(storageRequestTimeout)
+				continue
+			}
+
+			if err = s.backend.Index(blk.Header.Round, blk.Header.EncodedHash(), txs); err != nil {
+				s.Logger.Error("failed to index",
+					"err", err,
+					"round", blk.Header.Round,
+				)
+				indexed --
+				time.Sleep(storageRetryTimeout)
+				continue
+			}
+		} 
+	}
+}
+
 func (s *Service) Start() {
-	go s.worker()
+	go s.watchBlockworker()
+	go s.periodIndexWorker()
 }
 
 func (s *Service) Stop() {
 	s.cancelCtx()
 	close(s.stopCh)
+	stopFlag = true 
 }
 
 // New creates a new indexer service.
@@ -101,6 +165,7 @@ func New(
 		ctx:                   ctx,
 		cancelCtx:             cancelCtx,
 		stopCh:                make(chan struct{}),
+		stopFlag: 			   false,
 	}
 	s.Logger = s.Logger.With("runtime_id", s.runtimeID.String())
 

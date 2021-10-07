@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
+
 	"github.com/go-pg/pg/v10"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/conf"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
-	"time"
 )
 
 type PostDb struct {
@@ -95,4 +96,15 @@ func (db *PostDb) GetTxResult(hash string) (*model.TxResult, error) {
 	}
 
 	return tx.Result, nil
+}
+
+// GetContinuesIndexedRound queries latest continues indexed block round.
+func (db *PostDb) GetContinuesIndexedRound() (uint64, error) {
+	indexedRound := new(model.ContinuesIndexedRound)
+	err := db.Db.Model(indexedRound).Select()
+	if err != nil {
+		return 0, err
+	}
+
+	return indexedRound.Round, nil
 }

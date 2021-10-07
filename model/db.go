@@ -39,3 +39,8 @@ type TxResult struct {
 	Index uint32
 	Round uint64
 }
+
+// Continues latest Indexed Block Round
+type ContinuesIndexedRound struct {
+	Round uint64
+}

@@ -2,6 +2,8 @@ package indexer
 
 import (
 	"encoding/hex"
+	"sync"
+
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/oasisprotocol/oasis-core/go/common"
@@ -43,6 +45,9 @@ type QueryableBackend interface {
 	// QueryTxResult queries oasis tx result by ethereum tx hash.
 	QueryTxResult(ethTransactionHash hash.Hash) (*model.TxResult, error)
 
+	// QueryIndexedRound query continues indexed block round.
+	QueryIndexedRound() uint64
+
 	// QueryEthTransaction queries ethereum transaction by hash.
 	QueryEthTransaction(ethTxHash hash.Hash) (*model.EthTx, error)
 }
@@ -61,8 +66,9 @@ type Backend interface {
 }
 
 type psqlBackend struct {
-	logger  *logging.Logger
-	storage storage.Storage
+	logger            *logging.Logger
+	storage           storage.Storage
+	indexedRoundMutex *sync.Mutex
 }
 
 func (p *psqlBackend) Index(
@@ -164,6 +170,10 @@ func (p *psqlBackend) Index(
 		p.storage.Store(innerTx)
 	}
 
+	if p.QueryIndexedRound() == (round - 1) {
+		p.storeIndexedRound(round)
+	}
+
 	return nil
 }
 
@@ -197,6 +207,29 @@ func (p *psqlBackend) QueryTxResult(ethTransactionHash hash.Hash) (*model.TxResu
 	return result, nil
 }
 
+func (p *psqlBackend) storeIndexedRound(round uint64) {
+	p.indexedRoundMutex.Lock()
+	r := &model.ContinuesIndexedRound{
+		Round: round,
+	}
+
+	p.storage.Store(r)
+	p.indexedRoundMutex.Unlock()
+}
+
+func (p *psqlBackend) QueryIndexedRound() uint64 {
+	p.indexedRoundMutex.Lock()
+	indexedRound, err := p.storage.GetContinuesIndexedRound()
+	if err != nil {
+		p.indexedRoundMutex.Unlock()
+		p.storeIndexedRound(0)
+		return 0
+	}
+	p.indexedRoundMutex.Unlock()
+
+	return indexedRound
+}
+
 func (p *psqlBackend) QueryEthTransaction(ethTxHash hash.Hash) (*model.EthTx, error) {
 	tx, err := p.storage.GetEthTransaction(ethTxHash.String())
 	if err != nil {
@@ -211,8 +244,9 @@ func (p *psqlBackend) Close() {
 
 func newPsqlBackend(storage storage.Storage) (Backend, error) {
 	b := &psqlBackend{
-		logger:  logging.GetLogger("gateway/indexer/backend"),
-		storage: storage,
+		logger:            logging.GetLogger("gateway/indexer/backend"),
+		storage:           storage,
+		indexedRoundMutex: new(sync.Mutex),
 	}
 	b.logger.Info("New psql backend")
 
