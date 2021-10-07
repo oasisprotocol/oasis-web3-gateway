@@ -17,7 +17,6 @@ type PostDbConfig struct {
 	Db       string `yaml:"db"`
 	User     string `yaml:"user"`
 	Password string `yaml:"password"`
-	SslMode  string `yaml:"sslmode"`
 	Timeout  int    `yaml:"timeout"`
 }
 
