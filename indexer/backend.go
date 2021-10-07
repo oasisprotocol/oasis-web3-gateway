@@ -51,6 +51,9 @@ type QueryableBackend interface {
 
 	// QueryEthTransaction queries ethereum transaction by hash.
 	QueryEthTransaction(ethTxHash hash.Hash) (*model.EthTransaction, error)
+
+	// Decode decodes an unverified transaction into ethereum transaction.
+	Decode(utx *types.UnverifiedTransaction) (*model.EthTransaction, error)
 }
 
 // Backend is the indexer backend interface.
@@ -72,18 +75,11 @@ type psqlBackend struct {
 	indexedRoundMutex *sync.Mutex
 }
 
-func (p *psqlBackend) DecodeUtx(utx *types.UnverifiedTransaction, round uint64, idx uint32) (*model.TransactionRef, *model.EthTransaction, error) {
+func (p *psqlBackend) Decode(utx *types.UnverifiedTransaction) (*model.EthTransaction, error) {
 	ethTx := &ethtypes.Transaction{}
 	if err := rlp.DecodeBytes(utx.Body, ethTx); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-
-	txRef := &model.TransactionRef{
-		EthTxHash: ethTx.Hash().String(),
-		Index:     idx,
-		Round:     round,
-	}
-
 	v, r, s := ethTx.RawSignatureValues()
 	innerTx := &model.EthTransaction{
 		Hash:  ethTx.Hash().String(),
@@ -140,10 +136,25 @@ func (p *psqlBackend) DecodeUtx(utx *types.UnverifiedTransaction, round uint64, 
 			innerTx.GasPrice = "0"
 		}
 	default:
-		return nil, nil, errors.New("unknown transaction type")
+		return nil, errors.New("unknown transaction type")
 	}
 
-	return txRef, innerTx, nil
+	return nil, nil
+}
+
+func (p *psqlBackend) DecodeUtx(utx *types.UnverifiedTransaction, round uint64, idx uint32) (*model.TransactionRef, *model.EthTransaction, error) {
+	ethTx, err := p.Decode(utx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	txRef := &model.TransactionRef{
+		EthTxHash: ethTx.Hash,
+		Index:     idx,
+		Round:     round,
+	}
+
+	return txRef, ethTx, nil
 }
 
 func (p *psqlBackend) Index(

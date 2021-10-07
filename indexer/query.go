@@ -59,7 +59,7 @@ func (s *Service) getBlockTransactionsByHash(blockHash hash.Hash) ([]*types.Unve
 }
 
 func (s *Service) GetBlockTransactionsCountByHash(blockHash hash.Hash) (uint32, error) {
-	txs, err := getBlockTransactionsByHash(blockHash)
+	txs, err := s.getBlockTransactionsByHash(blockHash)
 	if err != nil {
 		s.Logger.Error("Call getBlockTransactionsByHash error")
 		return 0, err
@@ -72,48 +72,31 @@ func (s *Service) GetBlockNumberByHash(round uint64) (hash.Hash, error) {
 	return s.backend.QueryBlockHash(round)
 }
 
-func (s *Service) getTxResultByHash(ethTransactionHash hash.Hash) (*model.TxResult, error) {
-	return s.backend.QueryTxResult(ethTransactionHash)
-}
-
-func (s *Service) getTransactionByIndex(txs []*types.UnverifiedTransaction, index uint32) (*EthTransaction, error) {
-	if index >= len(txs) {
-		return nil, errors.New("Index is too large")
+func (s *Service) getTransactionByIndex(txs []*types.UnverifiedTransaction, index uint32) (*model.EthTransaction, error) {
+	if index >= uint32(len(txs)) {
+		return nil, errors.New("out of tx index")
 	}
-
-	innerTx := txs[result.Index]
-
-	//todo: decode oasis tx to eth tx
-	var ethTx EthTransaction
-
-	return ethTx, nil
+	return s.backend.Decode(txs[index])
 }
 
 func (s *Service) GetTransactionByHash(ethTransactionHash hash.Hash) (*model.EthTransaction, error) {
 	return s.backend.QueryEthTransaction(ethTransactionHash)
 }
 
-func (s *Service) GetTransactionByBlockHashAndIndex(blockHash hash.Hash, index uint32) (*EthTransaction, error) {
-	txs, err := getBlockTransactionsByHash(blockHash)
+func (s *Service) GetTransactionByBlockHashAndIndex(blockHash hash.Hash, index uint32) (*model.EthTransaction, error) {
+	txs, err := s.getBlockTransactionsByHash(blockHash)
 	if err != nil {
-		s.Logger.Error("Call getBlockTransactionsByHash error")
 		return nil, err
 	}
 
-	return getTransactionByIndex(txs, index)
+	return s.getTransactionByIndex(txs, index)
 }
 
-func (s *Service) GetTransactionByBlockNumberAndIndex(round uint64, index uint32) (*EthRransaction, error) {
-	txs, err := getBlockTransactionsByNumber(round)
-	if err != nil {
-		s.Logger.Error("Call getBlockTransactionsByNumber error")
-		return nil, err
-	}
-
-	return getTransactionByIndex(txs, index)
+func (s *Service) GetTransactionByBlockNumberAndIndex(round uint64, index uint32) (*model.EthTransaction, error) {
+	return s.backend.QueryTransactionByRoundAndIndex(round, index)
 }
 
 func (s *Service) GetTransactionReceipt(hash.Hash) (string, error) {
-	//to do
+	// TODO
 	return "", nil
 }
