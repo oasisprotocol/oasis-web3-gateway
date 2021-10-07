@@ -1,17 +1,26 @@
 package model
 
-// Block represents the relationship between block round and block hash.
-type Block struct {
+// BlockRef represents the relationship between block round and block hash.
+type BlockRef struct {
 	Round uint64 `pg:",pk"`
 	Hash  string
 }
 
+// TransactionRef represents the relationship between ethereum tx and oasis tx.
+type TransactionRef struct {
+	EthTxHash string `pg:",pk"`
+	Index     uint32 `pg:",use_zero"`
+	Round     uint64 `pg:",use_zero"`
+}
+
+// EthAccessTuple for ethereum AccessList.
 type EthAccessTuple struct {
 	Address     string
 	StorageKeys []string
 }
 
-type EthTx struct {
+// EthTransaction is ethereum transaction.
+type EthTransaction struct {
 	Hash       string `pg:",pk"`
 	Type       uint8  `pg:",use_zero"`
 	ChainID    string
@@ -27,20 +36,7 @@ type EthTx struct {
 	V, R, S    string
 }
 
-// Transaction represents the relationship between ethereum tx and oasis tx.
-type Transaction struct {
-	EthTxHash string `pg:",pk"`
-	Result    *TxResult
-}
-
-// TxResult represents oasis tx result.
-type TxResult struct {
-	Hash  string
-	Index uint32
-	Round uint64
-}
-
-// Continues latest Indexed Block Round
+// ContinuesIndexedRound Continues latest Indexed Block Round
 type ContinuesIndexedRound struct {
 	Round uint64
 }

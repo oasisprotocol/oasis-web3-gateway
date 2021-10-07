@@ -18,15 +18,15 @@ func TestInitPostDb(t *testing.T) {
 	if err != nil {
 		log.Fatal("initialize postdb error:", err)
 	}
-	block1 := &model.Block{
+	block1 := &model.BlockRef{
 		Round: 1,
 		Hash:  "hello",
 	}
-	block2 := &model.Block{
+	block2 := &model.BlockRef{
 		Round: 2,
 		Hash:  "world",
 	}
-	block3 := &model.Block{
+	block3 := &model.BlockRef{
 		Round: 1,
 		Hash:  "hello world",
 	}
@@ -44,31 +44,25 @@ func TestInitPostDb(t *testing.T) {
 	}
 	fmt.Println("block1 hash:", hash)
 
-	tx1 := &model.Transaction{
+	tx1 := &model.TransactionRef{
 		EthTxHash: "hello",
-		Result: &model.TxResult{
-			Hash:  "tx1 oasis hash",
-			Index: 1,
-			Round: 1,
-		},
+		Index:     1,
+		Round:     1,
 	}
-	tx2 := &model.Transaction{
+	tx2 := &model.TransactionRef{
 		EthTxHash: "hello",
-		Result: &model.TxResult{
-			Hash:  "tx2 oasis hash",
-			Index: 1,
-			Round: 2,
-		},
+		Index:     1,
+		Round:     2,
 	}
 	db.Store(tx1)
 	db.Store(tx2)
-	res, err := db.GetTxResult(tx1.EthTxHash)
+	round, index, err := db.GetTransactionRoundAndIndex(tx1.EthTxHash)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("tx result: hash: %v, index: %v, round: %v\n", res.Hash, res.Index, res.Round)
+	fmt.Printf("index: %v, round: %v\n", index, round)
 
-	legacyTx := &model.EthTx{
+	legacyTx := &model.EthTransaction{
 		Hash:       "hello",
 		Type:       0,
 		ChainID:    "0",
@@ -88,7 +82,7 @@ func TestInitPostDb(t *testing.T) {
 	accList := []model.EthAccessTuple{
 		{Address: "helloworld", StorageKeys: []string{"hello", "world"}},
 	}
-	accessListTx := &model.EthTx{
+	accessListTx := &model.EthTransaction{
 		Hash:       "world",
 		Type:       1,
 		ChainID:    "12321",
@@ -105,7 +99,7 @@ func TestInitPostDb(t *testing.T) {
 		R:          big.NewInt(2).String(),
 		S:          big.NewInt(2).String(),
 	}
-	dynamicFeeTx := &model.EthTx{
+	dynamicFeeTx := &model.EthTransaction{
 		Hash:       "good",
 		Type:       2,
 		ChainID:    "45654",

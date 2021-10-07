@@ -14,12 +14,15 @@ type Storage interface {
 	// GetBlockHash queries block hash by block round.
 	GetBlockHash(round uint64) (string, error)
 
-	// GetTxResult queries oasis tx result by ethereum tx hash.
-	GetTxResult(hash string) (*model.TxResult, error)
+	// GetTransactionRoundAndIndex queries transaction round and index by transaction hash.
+	GetTransactionRoundAndIndex(ethTxHash string) (uint64, uint32, error)
+
+	// GetTransactionByRoundAndIndex queries ethereum transaction by round and index.
+	GetTransactionByRoundAndIndex(round uint64, index uint32) (*model.EthTransaction, error)
 
 	// GetContinuesIndexedRound query continues indexed block round.
 	GetContinuesIndexedRound() (uint64, error)
 
-	// GetEthTransaction queries ethereum tx by hash.
-	GetEthTransaction(hash string) (*model.EthTx, error)
+	// GetEthTransaction queries ethereum transaction by hash.
+	GetEthTransaction(hash string) (*model.EthTransaction, error)
 }

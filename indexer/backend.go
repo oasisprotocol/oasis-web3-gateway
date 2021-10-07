@@ -2,6 +2,7 @@ package indexer
 
 import (
 	"encoding/hex"
+	"errors"
 	"sync"
 
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -42,14 +43,17 @@ type QueryableBackend interface {
 	// QueryBlockHash queries block hash by round.
 	QueryBlockHash(round uint64) (hash.Hash, error)
 
-	// QueryTxResult queries oasis tx result by ethereum tx hash.
-	QueryTxResult(ethTransactionHash hash.Hash) (*model.TxResult, error)
+	// QueryTransactionRoundAndIndex queries transaction round and index by transaction hash.
+	QueryTransactionRoundAndIndex(ethTxHash string) (uint64, uint32, error)
+
+	// QueryTransactionByRoundAndIndex queries ethereum transaction by round and index.
+	QueryTransactionByRoundAndIndex(round uint64, index uint32) (*model.EthTransaction, error)
 
 	// QueryIndexedRound query continues indexed block round.
 	QueryIndexedRound() uint64
 
 	// QueryEthTransaction queries ethereum transaction by hash.
-	QueryEthTransaction(ethTxHash hash.Hash) (*model.EthTx, error)
+	QueryEthTransaction(ethTxHash hash.Hash) (*model.EthTransaction, error)
 }
 
 // Backend is the indexer backend interface.
@@ -71,13 +75,87 @@ type psqlBackend struct {
 	indexedRoundMutex *sync.Mutex
 }
 
+func (p *psqlBackend) DecodeUtx(utx *types.UnverifiedTransaction, round uint64, idx uint32) (*model.TransactionRef, *model.EthTransaction, error) {
+	ethTx := &ethtypes.Transaction{}
+	if err := rlp.DecodeBytes(utx.Body, ethTx); err != nil {
+		return nil, nil, err
+	}
+
+	txRef := &model.TransactionRef{
+		EthTxHash: ethTx.Hash().String(),
+		Index:     idx,
+		Round:     round,
+	}
+
+	v, r, s := ethTx.RawSignatureValues()
+	innerTx := &model.EthTransaction{
+		Hash:  ethTx.Hash().String(),
+		Gas:   ethTx.Gas(),
+		Nonce: ethTx.Nonce(),
+		To:    ethTx.To().String(),
+		Value: ethTx.Value().String(),
+		Data:  hex.EncodeToString(ethTx.Data()),
+		V:     v.String(),
+		R:     r.String(),
+		S:     s.String(),
+	}
+
+	accList := []model.EthAccessTuple{}
+	if ethTx.Type() == ethtypes.AccessListTxType || ethTx.Type() == ethtypes.DynamicFeeTxType {
+		for _, tuple := range ethTx.AccessList() {
+			addr := tuple.Address.String()
+			keys := []string{}
+			for _, k := range tuple.StorageKeys {
+				keys = append(keys, k.String())
+			}
+			accList = append(accList, model.EthAccessTuple{
+				Address:     addr,
+				StorageKeys: keys,
+			})
+		}
+	}
+
+	switch ethTx.Type() {
+	case ethtypes.LegacyTxType:
+		{
+			innerTx.Type = ethtypes.LegacyTxType
+			innerTx.GasPrice = ethTx.GasPrice().String()
+			innerTx.GasFeeCap = "0"
+			innerTx.GasTipCap = "0"
+			innerTx.ChainID = "0"
+			innerTx.AccessList = []model.EthAccessTuple{}
+		}
+	case ethtypes.AccessListTxType:
+		{
+			innerTx.Type = ethtypes.AccessListTxType
+			innerTx.GasPrice = ethTx.GasPrice().String()
+			innerTx.ChainID = ethTx.ChainId().String()
+			innerTx.AccessList = accList
+			innerTx.GasFeeCap = "0"
+			innerTx.GasTipCap = "0"
+		}
+	case ethtypes.DynamicFeeTxType:
+		{
+			innerTx.Type = ethtypes.DynamicFeeTxType
+			innerTx.GasFeeCap = ethTx.GasFeeCap().String()
+			innerTx.GasTipCap = ethTx.GasTipCap().String()
+			innerTx.AccessList = accList
+			innerTx.GasPrice = "0"
+		}
+	default:
+		return nil, nil, errors.New("unknown transaction type")
+	}
+
+	return txRef, innerTx, nil
+}
+
 func (p *psqlBackend) Index(
 	round uint64,
 	blockHash hash.Hash,
 	txs []*types.UnverifiedTransaction,
 ) error {
 	//block round <-> block hash
-	blockRef := &model.Block{
+	blockRef := &model.BlockRef{
 		Round: round,
 		Hash:  blockHash.String(),
 	}
@@ -88,86 +166,13 @@ func (p *psqlBackend) Index(
 			// Skip non-Ethereum transactions.
 			continue
 		}
-
-		// Extract raw Ethereum transaction for further processing.
-		// Use standard libraries to decode the Ethereum transaction.
-		ethTx := &ethtypes.Transaction{}
-		if err := rlp.DecodeBytes(utx.Body, ethTx); err != nil {
-			p.logger.Error("decode ethereum transaction", err)
+		txRef, ethTx, err := p.DecodeUtx(utx, round, uint32(idx))
+		if err != nil {
+			p.logger.Error("decode transaction", err)
 			continue
-		}
-
-		txRef := &model.Transaction{
-			EthTxHash: ethTx.Hash().String(),
-			Result: &model.TxResult{
-				//Hash:  ,
-				Index: uint32(idx),
-				Round: round,
-			},
 		}
 		p.storage.Store(txRef)
-
-		v, r, s := ethTx.RawSignatureValues()
-		innerTx := &model.EthTx{
-			Hash:  ethTx.Hash().String(),
-			Gas:   ethTx.Gas(),
-			Nonce: ethTx.Nonce(),
-			To:    ethTx.To().String(),
-			Value: ethTx.Value().String(),
-			Data:  hex.EncodeToString(ethTx.Data()),
-			V:     v.String(),
-			R:     r.String(),
-			S:     s.String(),
-		}
-
-		accList := []model.EthAccessTuple{}
-		if ethTx.Type() == ethtypes.AccessListTxType || ethTx.Type() == ethtypes.DynamicFeeTxType {
-			for _, tuple := range ethTx.AccessList() {
-				addr := tuple.Address.String()
-				keys := []string{}
-				for _, k := range tuple.StorageKeys {
-					keys = append(keys, k.String())
-				}
-				accList = append(accList, model.EthAccessTuple{
-					Address:     addr,
-					StorageKeys: keys,
-				})
-			}
-		}
-
-		switch ethTx.Type() {
-		case ethtypes.LegacyTxType:
-			{
-				innerTx.Type = ethtypes.LegacyTxType
-				innerTx.GasPrice = ethTx.GasPrice().String()
-				innerTx.GasFeeCap = "0"
-				innerTx.GasTipCap = "0"
-				innerTx.ChainID = "0"
-				innerTx.AccessList = []model.EthAccessTuple{}
-			}
-		case ethtypes.AccessListTxType:
-			{
-				innerTx.Type = ethtypes.AccessListTxType
-				innerTx.GasPrice = ethTx.GasPrice().String()
-				innerTx.ChainID = ethTx.ChainId().String()
-				innerTx.AccessList = accList
-				innerTx.GasFeeCap = "0"
-				innerTx.GasTipCap = "0"
-			}
-		case ethtypes.DynamicFeeTxType:
-			{
-				innerTx.Type = ethtypes.DynamicFeeTxType
-				innerTx.GasFeeCap = ethTx.GasFeeCap().String()
-				innerTx.GasTipCap = ethTx.GasTipCap().String()
-				innerTx.AccessList = accList
-				innerTx.GasPrice = "0"
-			}
-		default:
-			p.logger.Error("unknown ethereum transaction type")
-			continue
-		}
-
-		p.storage.Store(innerTx)
+		p.storage.Store(ethTx)
 	}
 
 	if p.QueryIndexedRound() == (round - 1) {
@@ -197,16 +202,6 @@ func (p *psqlBackend) QueryBlockHash(round uint64) (hash.Hash, error) {
 	return hash.NewFromBytes([]byte(blockHash)), nil
 }
 
-func (p *psqlBackend) QueryTxResult(ethTransactionHash hash.Hash) (*model.TxResult, error) {
-	result, err := p.storage.GetTxResult(ethTransactionHash.String())
-	if err != nil {
-		p.logger.Error("Can't find matched transaction result")
-		return nil, err
-	}
-
-	return result, nil
-}
-
 func (p *psqlBackend) storeIndexedRound(round uint64) {
 	p.indexedRoundMutex.Lock()
 	r := &model.ContinuesIndexedRound{
@@ -230,12 +225,20 @@ func (p *psqlBackend) QueryIndexedRound() uint64 {
 	return indexedRound
 }
 
-func (p *psqlBackend) QueryEthTransaction(ethTxHash hash.Hash) (*model.EthTx, error) {
+func (p *psqlBackend) QueryEthTransaction(ethTxHash hash.Hash) (*model.EthTransaction, error) {
 	tx, err := p.storage.GetEthTransaction(ethTxHash.String())
 	if err != nil {
 		return nil, err
 	}
 	return tx, nil
+}
+
+func (p *psqlBackend) QueryTransactionRoundAndIndex(hash string) (uint64, uint32, error) {
+	return p.storage.GetTransactionRoundAndIndex(hash)
+}
+
+func (p *psqlBackend) QueryTransactionByRoundAndIndex(round uint64, index uint32) (*model.EthTransaction, error) {
+	return p.storage.GetTransactionByRoundAndIndex(round, index)
 }
 
 func (p *psqlBackend) Close() {

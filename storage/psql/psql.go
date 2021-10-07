@@ -42,14 +42,50 @@ func InitDb(cfg *conf.Config) (*PostDb, error) {
 	}, nil
 }
 
-func (db *PostDb) GetEthTransaction(hash string) (*model.EthTx, error) {
-	tx := new(model.EthTx)
+//GetTransactionRoundAndIndex queries transaction round and index by hash.
+func (db *PostDb) GetTransactionRoundAndIndex(hash string) (uint64, uint32, error) {
+	tx := new(model.TransactionRef)
 	err := db.Db.Model(tx).
-		Where("eth_tx.hash=?", hash).
+		Where("transaction_ref.hash=?", hash).
+		Select()
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return tx.Round, tx.Index, nil
+}
+
+// GetTransactionByRoundAndIndex queries ethereum transaction by round and index.
+func (db *PostDb) GetTransactionByRoundAndIndex(round uint64, index uint32) (*model.EthTransaction, error) {
+	txRef := new(model.TransactionRef)
+	err := db.Db.Model(txRef).
+		Where("transaction_ref.round=? and transaction_ref.index=?", round, index).
 		Select()
 	if err != nil {
 		return nil, err
 	}
+
+	ethTx := new(model.EthTransaction)
+	err = db.Db.Model(ethTx).
+		Where("eth_transaction.hash=?", txRef.EthTxHash).
+		Select()
+	if err != nil {
+		return nil, err
+	}
+
+	return ethTx, nil
+}
+
+// GetEthTransaction queries ethereum transaction by hash.
+func (db *PostDb) GetEthTransaction(hash string) (*model.EthTransaction, error) {
+	tx := new(model.EthTransaction)
+	err := db.Db.Model(tx).
+		Where("eth_transaction.hash=?", hash).
+		Select()
+	if err != nil {
+		return nil, err
+	}
+
 	return tx, nil
 }
 
@@ -61,9 +97,9 @@ func (db *PostDb) Store(value interface{}) error {
 
 // GetBlockRound queries block round by block hash.
 func (db *PostDb) GetBlockRound(hash string) (uint64, error) {
-	block := new(model.Block)
+	block := new(model.BlockRef)
 	err := db.Db.Model(block).
-		Where("block.hash=?", hash).
+		Where("block_ref.hash=?", hash).
 		Select()
 	if err != nil {
 		return 0, err
@@ -74,28 +110,15 @@ func (db *PostDb) GetBlockRound(hash string) (uint64, error) {
 
 // GetBlockHash queries block hash by block round.
 func (db *PostDb) GetBlockHash(round uint64) (string, error) {
-	blk := new(model.Block)
+	blk := new(model.BlockRef)
 	err := db.Db.Model(blk).
-		Where("block.round=?", round).
+		Where("block_ref.round=?", round).
 		Select()
 	if err != nil {
 		return "", err
 	}
 
 	return blk.Hash, nil
-}
-
-// GetTxResult queries oasis tx result by ethereum tx hash.
-func (db *PostDb) GetTxResult(hash string) (*model.TxResult, error) {
-	tx := new(model.Transaction)
-	err := db.Db.Model(tx).
-		Where("transaction.eth_tx_hash=?", hash).
-		Select()
-	if err != nil {
-		return nil, err
-	}
-
-	return tx.Result, nil
 }
 
 // GetContinuesIndexedRound queries latest continues indexed block round.

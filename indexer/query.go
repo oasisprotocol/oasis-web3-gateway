@@ -89,26 +89,8 @@ func (s *Service) getTransactionByIndex(txs []*types.UnverifiedTransaction, inde
 	return ethTx, nil
 }
 
-func (s *Service) GetTransactionByHash(ethTransactionHash hash.Hash) (*EthTransaction, error) {
-	result, err := s.backend.QueryTxResult(ethTransactionHash)
-	if err != nil {
-		s.Logger.Error("Get transaction result error!")
-		return nil, err
-	}
-
-	blk, err := s.client.GetBlock(s.ctx, result.Round)
-	if err != nil {
-		s.Logger.Error("Get block result error!")
-		return nil, err
-	}
-
-	txs, err := s.client.GetTransactions(s.ctx, blk.Header.Round)
-	if err != nil {
-		s.Logger.Error("Call GetTransactions error")
-		return nil, err
-	}
-
-	return getTransactionByIndex(txs, result.Index)
+func (s *Service) GetTransactionByHash(ethTransactionHash hash.Hash) (*model.EthTransaction, error) {
+	return s.backend.QueryEthTransaction(ethTransactionHash)
 }
 
 func (s *Service) GetTransactionByBlockHashAndIndex(blockHash hash.Hash, index uint32) (*EthTransaction, error) {
