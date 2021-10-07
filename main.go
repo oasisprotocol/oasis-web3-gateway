@@ -5,10 +5,18 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"context"
 
+	"google.golang.org/grpc"
+	"github.com/oasisprotocol/oasis-core/go/common"
+	cmnGrpc "github.com/oasisprotocol/oasis-core/go/common/grpc"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
+
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
+
 	"github.com/starfishlabs/oasis-evm-web3-gateway/conf"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/server"
+	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/storage/psql"
 )
 
@@ -30,6 +38,26 @@ func main() {
 		fmt.Fprintf(os.Stderr, "ERROR: Unable to initialize logging: %v\n", err)
 		os.Exit(1)
 	}
+
+	// Decode hex runtime ID into something we can use.
+	var runtimeID common.Namespace
+	if err := runtimeID.UnmarshalHex(runtimeIDHex); err != nil {
+		logger.Error("malformed runtime ID", "err", err)
+		os.Exit(1)
+	}
+
+	// Establish a gRPC connection with the client node.
+	logger.Info("connecting to local node")
+	conn, err := cmnGrpc.Dial(nodeDefaultAddress, grpc.WithInsecure())
+	if err != nil {
+		logger.Error("failed to establish connection")
+		os.Exit(1)
+	}
+	defer conn.Close()
+
+	// Create the runtime client with account module query helpers.
+	rc := client.New(conn, runtimeID)
+
 	// Initialize server config
 	cfg, err := conf.InitConfig("./conf/server.yml")
 	if err != nil {
@@ -43,13 +71,13 @@ func main() {
 		os.Exit(1)
 	}
 	// Create web3 gateway instance
-	w3, err := server.New(&server.DefaultConfig)
+	srvConfig := defaultServerConfig()
+	w3, err := server.New(&srvConfig)
 	if err != nil {
 		logger.Error("failed to create web3", err)
 		os.Exit(1)
 	}
-	// Establish a gRPC connection with the client node.
-	logger.Info("Connecting to evm node")
+	w3.RegisterAPIs(rpc.GetRPCAPIs(context.Background(), rc))
 
 	svr := server.Server{
 		Config: cfg,
@@ -70,4 +98,13 @@ func main() {
 	}()
 
 	svr.Wait()
+}
+
+func defaultServerConfig() server.Config {
+	cfg := server.DefaultConfig
+	cfg.HTTPHost = server.DefaultHTTPHost
+	cfg.WSHost = server.DefaultWSHost
+	cfg.HTTPModules = append(cfg.HTTPModules, "eth")
+	cfg.WSModules = append(cfg.WSModules, "eth")
+	return cfg
 }

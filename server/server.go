@@ -3,13 +3,13 @@ package server
 import (
 	"errors"
 	"fmt"
-	"github.com/starfishlabs/oasis-evm-web3-gateway/conf"
-	"github.com/starfishlabs/oasis-evm-web3-gateway/storage"
-	"net/http"
+	"os"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/starfishlabs/oasis-evm-web3-gateway/conf"
+	"github.com/starfishlabs/oasis-evm-web3-gateway/storage"
 )
 
 type Server struct {
@@ -43,7 +43,6 @@ type Web3Gateway struct {
 	rpcAPIs       []rpc.API   // List of APIs currently provided by the node
 	http          *httpServer //
 	ws            *httpServer //
-	inprocHandler *rpc.Server // In-process RPC request handler to process the API requests
 }
 
 const (
@@ -65,10 +64,11 @@ func New(conf *Config) (*Web3Gateway, error) {
 	if conf.Logger == nil {
 		conf.Logger = log.New()
 	}
+	log.Root().SetHandler(log.LvlFilterHandler(log.LvlInfo, log.StreamHandler(os.Stdout, log.LogfmtFormat())))
 
 	server := &Web3Gateway{
 		config:        conf,
-		inprocHandler: rpc.NewServer(),
+		// inprocHandler: rpc.NewServer(),
 		log:           conf.Logger,
 		stop:          make(chan struct{}),
 	}
@@ -208,22 +208,6 @@ func (srv *Web3Gateway) wsServerForPort(port int) *httpServer {
 func (srv *Web3Gateway) stopRPC() {
 	srv.http.stop()
 	srv.ws.stop()
-	srv.stopInProc()
-}
-
-// startInProc registers all RPC APIs on the inproc server.
-func (srv *Web3Gateway) startInProc() error {
-	for _, api := range srv.rpcAPIs {
-		if err := srv.inprocHandler.RegisterName(api.Namespace, api.Service); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// stopInProc terminates the in-process RPC endpoint.
-func (srv *Web3Gateway) stopInProc() {
-	srv.inprocHandler.Stop()
 }
 
 // Wait blocks until the server is closed.
@@ -240,50 +224,4 @@ func (srv *Web3Gateway) RegisterAPIs(apis []rpc.API) {
 		panic("can't register APIs on running/stopped server")
 	}
 	srv.rpcAPIs = append(srv.rpcAPIs, apis...)
-}
-
-// RegisterHandler mounts a handler on the given path on the canonical HTTP server.
-//
-// The name of the handler is shown in a log message when the HTTP server starts
-// and should be a descriptive term for the service provided by the handler.
-func (srv *Web3Gateway) RegisterHandler(name, path string, handler http.Handler) {
-	srv.lock.Lock()
-	defer srv.lock.Unlock()
-
-	if srv.state != initializingState {
-		panic("can't register HTTP handler on running/stopped server")
-	}
-
-	srv.http.mux.Handle(path, handler)
-	srv.http.handlerNames[path] = name
-}
-
-// Attach creates an RPC client attached to an in-process API handler.
-func (srv *Web3Gateway) Attach() (*rpc.Client, error) {
-	return rpc.DialInProc(srv.inprocHandler), nil
-}
-
-// RPCHandler returns the in-process RPC request handler.
-func (srv *Web3Gateway) RPCHandler() (*rpc.Server, error) {
-	srv.lock.Lock()
-	defer srv.lock.Unlock()
-
-	if srv.state == closedState {
-		return nil, ErrServerStopped
-	}
-	return srv.inprocHandler, nil
-}
-
-// HTTPEndpoint returns the URL of the HTTP server. Note that this URL does not
-// contain the JSON-RPC path prefix set by HTTPPathPrefix.
-func (srv *Web3Gateway) HTTPEndpoint() string {
-	return "http://" + srv.http.listenAddr()
-}
-
-// WSEndpoint returns the current JSON-RPC over WebSocket endpoint.
-func (srv *Web3Gateway) WSEndpoint() string {
-	if srv.http.wsAllowed() {
-		return "ws://" + srv.http.listenAddr() + srv.http.wsConfig.prefix
-	}
-	return "ws://" + srv.ws.listenAddr() + srv.ws.wsConfig.prefix
 }
