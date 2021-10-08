@@ -2,11 +2,13 @@ package indexer
 
 import (
 	"context"
+	"time"
+
+	"github.com/cenkalti/backoff"
 	"github.com/oasisprotocol/oasis-core/go/common"
 	"github.com/oasisprotocol/oasis-core/go/common/service"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
-	"time"
 )
 
 const (
@@ -54,12 +56,12 @@ func (s *Service) watchBlockWorker() {
 
 			var txs []*types.UnverifiedTransaction
 			// TODO:
-			//off := cmnBackoff.NewExponentialBackOff()
-			//off.MaxElapsedTime = storageRetryTimeout
-			//
-			//err = backoff.Retry(func() error {
-			//	txs, err := s.client.GetTransactions(s.ctx, blk.Header.Round)
-			//}, off)
+			off := cmnBackoff.NewExponentialBackOff()
+			off.MaxElapsedTime = storageRetryTimeout
+
+			err = backoff.Retry(func() error {
+				txs, err := s.client.GetTransactions(s.ctx, blk.Header.Round)
+			}, off)
 
 			if err != nil {
 				s.Logger.Error("can't get transactions through client")
