@@ -139,7 +139,7 @@ func (p *psqlBackend) Decode(utx *types.UnverifiedTransaction) (*model.EthTransa
 		return nil, errors.New("unknown transaction type")
 	}
 
-	return nil, nil
+	return innerTx, nil
 }
 
 func (p *psqlBackend) DecodeUtx(utx *types.UnverifiedTransaction, round uint64, idx uint32) (*model.TransactionRef, *model.EthTransaction, error) {
