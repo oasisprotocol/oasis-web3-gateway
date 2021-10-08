@@ -61,7 +61,8 @@ func (s *Service) watchBlockWorker() {
 			off.MaxElapsedTime = storageRetryTimeout
 
 			err = backoff.Retry(func() error {
-				txs, err := s.client.GetTransactions(s.ctx, blk.Header.Round)
+				txs, err = s.client.GetTransactions(s.ctx, blk.Header.Round)
+				return err
 			}, off)
 
 			if err != nil {
