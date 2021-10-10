@@ -46,7 +46,7 @@ func InitDb(cfg *conf.Config) (*PostDb, error) {
 func (db *PostDb) GetTransactionRoundAndIndex(hash string) (uint64, uint32, error) {
 	tx := new(model.TransactionRef)
 	err := db.Db.Model(tx).
-		Where("transaction_ref.hash=?", hash).
+		Where("transaction_ref.eth_tx_hash=?", hash).
 		Select()
 	if err != nil {
 		return 0, 0, err
