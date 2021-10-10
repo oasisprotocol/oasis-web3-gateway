@@ -2,10 +2,15 @@ package eth
 
 import (
 	"context"
+	"math/big"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	ethrpc "github.com/ethereum/go-ethereum/rpc"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/evm"
 
 	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/utils"
 )
@@ -22,10 +27,12 @@ type PublicAPI struct {
 func NewPublicAPI(
 	ctx context.Context,
 	client client.RuntimeClient,
+	logger *logging.Logger,
 ) *PublicAPI {
 	return &PublicAPI{
 		ctx:    ctx,
 		client: client,
+		Logger: logger,
 	}
 }
 
@@ -47,6 +54,16 @@ func (api *PublicAPI) GetBlockByNumber(blockNum uint64) (map[string]interface{},
 	}
 
 	return res, nil
+}
+
+func (e *PublicAPI) GetBalance(address common.Address, blockNrOrHash ethrpc.BlockNumberOrHash) (*hexutil.Big, error) {
+	ethmod := evm.NewV1(e.client)
+	res, err := ethmod.Balance(e.ctx, address[:])
+
+	if err != nil {
+		e.Logger.Error("Get balance failed")
+	}
+	return (*hexutil.Big)(new(big.Int).SetBytes(res)), nil
 }
 
 // ConvertToEthBlock returns a JSON-RPC compatible Ethereum block from a given Oasis block and its block result.

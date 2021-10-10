@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 
+	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 
 	ethRpc "github.com/ethereum/go-ethereum/rpc"
@@ -15,6 +16,7 @@ import (
 func GetRPCAPIs(
 	ctx context.Context,
 	client client.RuntimeClient,
+	logger *logging.Logger,
 ) []ethRpc.API {
 	var apis []ethRpc.API
 
@@ -28,7 +30,7 @@ func GetRPCAPIs(
 		ethRpc.API{
 			Namespace: "eth",
 			Version:   "1.0",
-			Service:   eth.NewPublicAPI(ctx, client),
+			Service:   eth.NewPublicAPI(ctx, client, logger),
 			Public:    true,
 		},
 	)

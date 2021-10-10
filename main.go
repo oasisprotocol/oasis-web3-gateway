@@ -77,7 +77,7 @@ func main() {
 		logger.Error("failed to create web3", err)
 		os.Exit(1)
 	}
-	w3.RegisterAPIs(rpc.GetRPCAPIs(context.Background(), rc))
+	w3.RegisterAPIs(rpc.GetRPCAPIs(context.Background(), rc, logger))
 
 	svr := server.Server{
 		Config: cfg,
