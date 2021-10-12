@@ -10,8 +10,8 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 	ethrpc "github.com/ethereum/go-ethereum/rpc"
 
-	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/address"
+	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/accounts"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/evm"
@@ -43,12 +43,10 @@ func NewPublicAPI(
 
 // GetBlockByNumber returns the block identified by number.
 func (api *PublicAPI) GetBlockByNumber(blockNum uint64) (map[string]interface{}, error) {
-	logger := api.Logger.With("web3gateway", "json-rpc")
-
-	logger.Debug("eth_getBlockByNumber", "number", blockNum)
+	api.Logger.Debug("eth_getBlockByNumber", "number", blockNum)
 	resBlock, err := api.client.GetBlock(api.ctx, blockNum)
 	if err != nil {
-		logger.Error("GetBlock failed", "number", blockNum)
+		api.Logger.Error("GetBlock failed", "number", blockNum)
 	}
 
 	bhash, _ := resBlock.Header.IORoot.MarshalBinary()
@@ -56,14 +54,22 @@ func (api *PublicAPI) GetBlockByNumber(blockNum uint64) (map[string]interface{},
 	var resTxs []*types.UnverifiedTransaction
 	resTxs, err = api.client.GetTransactions(api.ctx, resBlock.Header.Round)
 	if err != nil {
-		logger.Error("GetTransactions failed", "number", blockNum)
+		api.Logger.Error("GetTransactions failed", "number", blockNum)
 	}
 
 	for i, oasisTx := range resTxs {
+		if len(oasisTx.AuthProofs) != 1 || oasisTx.AuthProofs[0].Module != "evm.ethereum.v0" {
+			// Skip non-Ethereum transactions.
+			continue
+		}
+
+		// Extract raw Ethereum transaction for further processing.
+		rawEthTx := oasisTx.Body
+		// Decode the Ethereum transaction.
 		ethTx := &ethtypes.Transaction{}
-		err := rlp.DecodeBytes(oasisTx.Body, ethTx)
+		err := rlp.DecodeBytes(rawEthTx, ethTx)
 		if err != nil {
-			logger.Error("Failed to decode UnverifiedTransaction", "height", blockNum, "index", i, "error", err.Error())
+			api.Logger.Error("Failed to decode UnverifiedTransaction", "height", blockNum, "index", i, "error", err.Error())
 			continue
 		}
 
@@ -74,7 +80,7 @@ func (api *PublicAPI) GetBlockByNumber(blockNum uint64) (map[string]interface{},
 			uint64(i),
 		)
 		if err != nil {
-			logger.Error("Failed to ConstructRPCTransaction", "hash", ethTx.Hash().Hex(), "error", err.Error())
+			api.Logger.Error("Failed to ConstructRPCTransaction", "hash", ethTx.Hash().Hex(), "error", err.Error())
 			continue
 		}
 
@@ -83,7 +89,7 @@ func (api *PublicAPI) GetBlockByNumber(blockNum uint64) (map[string]interface{},
 
 	res, err := utils.ConvertToEthBlock(resBlock, ethRPCTxs)
 	if err != nil {
-		logger.Debug("Failed to ConvertToEthBlock", "height", blockNum, "error", err.Error())
+		api.Logger.Debug("Failed to ConvertToEthBlock", "height", blockNum, "error", err.Error())
 		return nil, err
 	}
 
@@ -150,12 +156,34 @@ func (api *PublicAPI) Call(args utils.TransactionArgs, blockNrOrHash ethrpc.Bloc
 
 // SendRawTransaction send a raw Ethereum transaction.
 func (api *PublicAPI) SendRawTransaction(data hexutil.Bytes) (common.Hash, error) {
-	return common.BytesToHash([]byte{}), nil
+	api.Logger.Debug("eth_sendRawTransaction", "length", len(data))
+
+	// Generate an Ethereum transaction that is handled by the EVM module.
+	utx := types.UnverifiedTransaction{
+		Body: data,
+		AuthProofs: []types.AuthProof{
+			{Module: "evm.ethereum.v0"},
+		},
+	}
+
+	_, err := api.client.SubmitTx(api.ctx, &utx)
+	if err != nil {
+		api.Logger.Error("Failed to SubmitTx", "error", err.Error())
+	}
+
+	// Decode the Ethereum transaction.
+	ethTx := &ethtypes.Transaction{}
+	err = rlp.DecodeBytes(data, ethTx)
+	if err != nil {
+		api.Logger.Error("Failed to decode rawtx data", "error", err.Error())
+	}
+
+	return ethTx.Hash(), nil
 }
 
 // EstimateGas returns an estimate of gas usage for the given transaction .
 func (api *PublicAPI) EstimateGas(args utils.TransactionArgs, blockNrOptional *ethrpc.BlockNumber) (hexutil.Uint64, error) {
-	api.Logger.Info("EVM call", "from", args.From, "to", args.To, "input", args.Input, "value", args.Value)
+	api.Logger.Debug("eth_estimateGas")
 
 	return 0, nil
 }
