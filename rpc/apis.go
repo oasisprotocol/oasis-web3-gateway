@@ -10,6 +10,7 @@ import (
 
 	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/eth"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/web3"
+	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/net"
 )
 
 // GetRPCAPIs returns the list of all APIs
@@ -25,6 +26,12 @@ func GetRPCAPIs(
 			Namespace: "web3",
 			Version:   "1.0",
 			Service:   web3.NewPublicAPI(),
+			Public:    true,
+		},
+		ethRpc.API{
+			Namespace: "net",
+			Version:   "1.0",
+			Service:   net.NewPublicAPI(),
 			Public:    true,
 		},
 		ethRpc.API{

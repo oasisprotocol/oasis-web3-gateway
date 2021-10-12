@@ -28,3 +28,25 @@ type RPCTransaction struct {
 	R                *hexutil.Big         `json:"r"`
 	S                *hexutil.Big         `json:"s"`
 }
+
+// TransactionArgs represents the call arguments of a transaction
+type TransactionArgs struct {
+	From                 *common.Address `json:"from"`
+	To                   *common.Address `json:"to"`
+	Gas                  *hexutil.Uint64 `json:"gas"`
+	GasPrice             *hexutil.Big    `json:"gasPrice"`
+	MaxFeePerGas         *hexutil.Big    `json:"maxFeePerGas"`
+	MaxPriorityFeePerGas *hexutil.Big    `json:"maxPriorityFeePerGas"`
+	Value                *hexutil.Big    `json:"value"`
+	Nonce                *hexutil.Uint64 `json:"nonce"`
+
+	// We accept "data" and "input" for backwards-compatibility reasons.
+	// "input" is the newer name and should be preferred by clients.
+	// Issue detail: https://github.com/ethereum/go-ethereum/issues/15628
+	Data  *hexutil.Bytes `json:"data"`
+	Input *hexutil.Bytes `json:"input"`
+
+	// Introduced by AccessListTxType transaction.
+	AccessList *ethtypes.AccessList `json:"accessList,omitempty"`
+	ChainID    *hexutil.Big      `json:"chainId,omitempty"`
+}
