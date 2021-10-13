@@ -3,7 +3,6 @@ module github.com/starfishlabs/oasis-evm-web3-gateway
 go 1.16
 
 require (
-	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/ethereum/go-ethereum v1.10.10-0.20211005163353-57ff2dee06a1
 	github.com/go-pg/pg/v10 v10.10.6
 	github.com/gorilla/mux v1.8.0

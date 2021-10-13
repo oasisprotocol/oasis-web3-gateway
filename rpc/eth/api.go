@@ -157,10 +157,24 @@ func (api *PublicAPI) GetCode(address common.Address, blockNrOrHash ethrpc.Block
 
 // Call executes the given transaction on the state for the given block number.
 // this function doesn't make any changes in the evm state of blockchain
-func (api *PublicAPI) Call(args utils.TransactionArgs, blockNrOrHash ethrpc.BlockNumberOrHash) (hexutil.Bytes, error) {
-	api.Logger.Info("EVM call", "from", args.From, "to", args.To, "input", args.Input, "value", args.Value)
+func (api *PublicAPI) Call(args utils.TransactionArgs) (hexutil.Bytes, error) {
+	api.Logger.Debug("eth_call", "from", args.From, "to", args.To, "input", args.Input, "value", args.Value)
 
-	return (hexutil.Bytes)([]byte{}), nil
+	res, err := core.NewV1(api.client).SimulateCall(
+		api.ctx,
+		args.GasPrice.ToInt().Bytes(),
+		args.Gas,
+		args.From.Bytes(),
+		args.To.Bytes(),
+		args.Value.ToInt().Bytes(),
+		*args.Data)
+
+	if err != nil {
+		api.Logger.Error("Failed to execute SimulateCall", "error", err.Error())
+		return nil, err
+	}
+
+	return (hexutil.Bytes)(res), nil
 }
 
 // SendRawTransaction send a raw Ethereum transaction.
