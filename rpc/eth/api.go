@@ -12,12 +12,21 @@ import (
 
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/address"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
+	"github.com/oasisprotocol/oasis-core/go/common/quantity"
+
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/accounts"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/evm"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 
 	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/utils"
+)
+
+const (
+	// Callable methods.
+	methodCreate = "evm.Create"
+	methodCall   = "evm.Call"
 )
 
 // PublicAPI is the eth_ prefixed set of APIs in the Web3 JSON-RPC spec.
@@ -182,8 +191,44 @@ func (api *PublicAPI) SendRawTransaction(data hexutil.Bytes) (common.Hash, error
 }
 
 // EstimateGas returns an estimate of gas usage for the given transaction .
-func (api *PublicAPI) EstimateGas(args utils.TransactionArgs, blockNrOptional *ethrpc.BlockNumber) (hexutil.Uint64, error) {
+func (api *PublicAPI) EstimateGas(args utils.TransactionArgs, blockNum ethrpc.BlockNumber) (hexutil.Uint64, error) {
 	api.Logger.Debug("eth_estimateGas")
 
-	return 0, nil
+	var q quantity.Quantity
+	totalFee := new(big.Int).Mul(args.GasPrice.ToInt(), new(big.Int).SetUint64(uint64(*args.Gas)))
+	q.FromBigInt(totalFee)
+	amount := types.NewBaseUnits(q, types.NativeDenomination)
+
+	fee := &types.Fee{
+		Amount: amount,
+		Gas:    uint64(*args.Gas),
+	}
+
+	ethTxValue := args.Value.ToInt().Bytes()
+	ethTxData := args.Data
+
+	var tx *types.Transaction
+
+	if args.To == nil {
+		// evm.create
+		tx = types.NewTransaction(fee, methodCreate, &evm.Create{
+			Value:    ethTxValue,
+			InitCode: *ethTxData,
+		})
+	} else {
+		// evm.call
+		tx = types.NewTransaction(fee, methodCall, &evm.Call{
+			Address: args.To.Bytes(), // contract address, ignore non-contract call
+			Value:   ethTxValue,
+			Data:    *ethTxData,
+		})
+	}
+
+	gas, err := core.NewV1(api.client).EstimateGas(api.ctx, uint64(blockNum), tx)
+	if err != nil {
+		api.Logger.Error("Failed to EstimateGas", "error", err.Error())
+		return 0, err
+	}
+
+	return hexutil.Uint64(gas), nil
 }
