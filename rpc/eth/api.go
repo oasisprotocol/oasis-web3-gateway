@@ -160,10 +160,10 @@ func (api *PublicAPI) GetCode(address common.Address, blockNrOrHash ethrpc.Block
 func (api *PublicAPI) Call(args utils.TransactionArgs) (hexutil.Bytes, error) {
 	api.Logger.Debug("eth_call", "from", args.From, "to", args.To, "input", args.Input, "value", args.Value)
 
-	res, err := core.NewV1(api.client).SimulateCall(
+	res, err := evm.NewV1(api.client).SimulateCall(
 		api.ctx,
 		args.GasPrice.ToInt().Bytes(),
-		args.Gas,
+		uint64(*args.Gas),
 		args.From.Bytes(),
 		args.To.Bytes(),
 		args.Value.ToInt().Bytes(),
