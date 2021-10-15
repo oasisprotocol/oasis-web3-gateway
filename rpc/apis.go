@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"github.com/starfishlabs/oasis-evm-web3-gateway/indexer"
 
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
@@ -9,8 +10,8 @@ import (
 	ethRpc "github.com/ethereum/go-ethereum/rpc"
 
 	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/eth"
-	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/web3"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/net"
+	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/web3"
 )
 
 // GetRPCAPIs returns the list of all APIs
@@ -18,6 +19,7 @@ func GetRPCAPIs(
 	ctx context.Context,
 	client client.RuntimeClient,
 	logger *logging.Logger,
+	backend indexer.Backend,
 ) []ethRpc.API {
 	var apis []ethRpc.API
 
@@ -37,7 +39,7 @@ func GetRPCAPIs(
 		ethRpc.API{
 			Namespace: "eth",
 			Version:   "1.0",
-			Service:   eth.NewPublicAPI(ctx, client, logger),
+			Service:   eth.NewPublicAPI(ctx, client, logger, backend),
 			Public:    true,
 		},
 	)

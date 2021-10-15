@@ -2,6 +2,8 @@ package eth
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/starfishlabs/oasis-evm-web3-gateway/indexer"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -31,10 +33,10 @@ const (
 
 // PublicAPI is the eth_ prefixed set of APIs in the Web3 JSON-RPC spec.
 type PublicAPI struct {
-	ctx    context.Context
-	client client.RuntimeClient
-
-	Logger *logging.Logger
+	ctx     context.Context
+	client  client.RuntimeClient
+	backend indexer.Backend
+	Logger  *logging.Logger
 }
 
 // NewPublicAPI creates an instance of the public ETH Web3 API.
@@ -42,11 +44,13 @@ func NewPublicAPI(
 	ctx context.Context,
 	client client.RuntimeClient,
 	logger *logging.Logger,
+	backend indexer.Backend,
 ) *PublicAPI {
 	return &PublicAPI{
-		ctx:    ctx,
-		client: client,
-		Logger: logger,
+		ctx:     ctx,
+		client:  client,
+		Logger:  logger,
+		backend: backend,
 	}
 }
 
@@ -245,4 +249,86 @@ func (api *PublicAPI) EstimateGas(args utils.TransactionArgs, blockNum ethrpc.Bl
 	}
 
 	return hexutil.Uint64(gas), nil
+}
+
+// GetTransactionReceipt returns the transaction receipt by hash.
+func (api *PublicAPI) GetTransactionReceipt(hash common.Hash) (map[string]interface{}, error) {
+	round, index, err := api.backend.QueryTransactionRoundAndIndex(hash.String())
+	if err != nil {
+		api.Logger.Error("failed query transaction round and index", "hash", hash.Hex(), "error", err.Error())
+		return nil, err
+	}
+	blockHash, err := api.backend.QueryBlockHash(round)
+	if err != nil {
+		api.Logger.Error("failed to query block hash", "round", round, "error", err.Error())
+		return nil, err
+	}
+	txResults, err := api.client.GetTransactionsWithResults(context.Background(), round)
+	if err != nil {
+		api.Logger.Error("failed to get transaction results", "round", round, "error", err.Error())
+		return nil, err
+	}
+	utx := txResults[index].Tx
+	ethTx, err := api.backend.Decode(&utx)
+	if err != nil {
+		api.Logger.Error("decode utx error", err.Error())
+		return nil, err
+	}
+
+	// cumulativeGasUsed
+	cumulativeGasUsed := uint64(0)
+	for i := 0; i <= int(index) && i < len(txResults); i++ {
+		tx, err := api.backend.Decode(&txResults[i].Tx)
+		if err != nil {
+			api.Logger.Error("decode utx error", err.Error())
+			return nil, err
+		}
+		cumulativeGasUsed += tx.Gas
+	}
+
+	// status
+	status := uint8(0)
+	if txResults[index].Result.IsSuccess() {
+		status = uint8(ethtypes.ReceiptStatusSuccessful)
+	} else {
+		status = uint8(ethtypes.ReceiptStatusFailed)
+	}
+
+	// logs
+	logs, err := getTransactionLogs(hash)
+	if err != nil {
+		api.Logger.Debug("logs not found", "hash", hash.String(), "error", err.Error())
+	}
+
+	// from
+	from := common.Address{}
+
+	receipt := map[string]interface{}{
+		"status":            status,
+		"cumulativeGasUsed": cumulativeGasUsed,
+		"logsBloom":         ethtypes.BytesToBloom(ethtypes.LogsBloom(logs)),
+		"logs":              logs,
+		"transactionHash":   hash,
+		"contractAddress":   nil,
+		"gasUsed":           ethTx.Gas,
+		"type":              ethTx.Type,
+		"blockHash":         blockHash.Hex(),
+		"blockNumber":       round,
+		"transactionIndex":  index,
+		"from":              "",
+		"to":                ethTx.To,
+	}
+	if logs == nil {
+		receipt["logs"] = [][]*ethtypes.Log{}
+	}
+	if len(ethTx.To) == 0 {
+		receipt["contractAddress"] = crypto.CreateAddress(from, ethTx.Nonce)
+	}
+
+	return receipt, nil
+}
+
+func getTransactionLogs(hash common.Hash) ([]*ethtypes.Log, error) {
+	// TODO
+	return nil, nil
 }
