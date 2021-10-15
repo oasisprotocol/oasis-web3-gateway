@@ -300,35 +300,31 @@ func (api *PublicAPI) GetTransactionReceipt(hash common.Hash) (map[string]interf
 		api.Logger.Debug("logs not found", "hash", hash.String(), "error", err.Error())
 	}
 
-	// from
-	from := common.Address{}
-
 	receipt := map[string]interface{}{
 		"status":            status,
 		"cumulativeGasUsed": cumulativeGasUsed,
 		"logsBloom":         ethtypes.BytesToBloom(ethtypes.LogsBloom(logs)),
 		"logs":              logs,
 		"transactionHash":   hash,
-		"contractAddress":   nil,
+		"contractAddress":   "",
 		"gasUsed":           ethTx.Gas,
 		"type":              ethTx.Type,
 		"blockHash":         blockHash.Hex(),
 		"blockNumber":       round,
 		"transactionIndex":  index,
-		"from":              "",
+		"from":              ethTx.From,
 		"to":                ethTx.To,
 	}
 	if logs == nil {
 		receipt["logs"] = [][]*ethtypes.Log{}
 	}
 	if len(ethTx.To) == 0 {
-		receipt["contractAddress"] = crypto.CreateAddress(from, ethTx.Nonce)
+		receipt["contractAddress"] = crypto.CreateAddress(common.HexToAddress(ethTx.From), ethTx.Nonce).Hex()
 	}
 
 	return receipt, nil
 }
 
 func getTransactionLogs(hash common.Hash) ([]*ethtypes.Log, error) {
-	// TODO
 	return nil, nil
 }

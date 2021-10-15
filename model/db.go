@@ -29,6 +29,7 @@ type EthTransaction struct {
 	GasTipCap  string
 	GasFeeCap  string
 	Nonce      uint64 `pg:",use_zero"`
+	From       string
 	To         string
 	Value      string
 	Data       string
