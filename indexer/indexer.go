@@ -22,8 +22,6 @@ var (
 	ErrGetBlockFailed        = errors.New("GetBlock failed")
 	ErrGetTransactionsFailed = errors.New("GetTransactions failed")
 	ErrIndexedFailed         = errors.New("Index block failed")
-	ErrCreateBackendFailed   = errors.New("Create backend failed")
-	ErrCreateServiceFailed   = errors.New("Create backend failed")
 )
 
 // Service is an indexer service.
