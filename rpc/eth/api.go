@@ -2,6 +2,8 @@ package eth
 
 import (
 	"context"
+	"errors"
+	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/crypto"
@@ -31,6 +33,13 @@ const (
 	methodCreate = "evm.Create"
 	methodCall   = "evm.Call"
 )
+
+// Log is the Oasis Log.
+type Log struct {
+	Address common.Address
+	Topics  []common.Hash
+	Data    []byte
+}
 
 // PublicAPI is the eth_ prefixed set of APIs in the Web3 JSON-RPC spec.
 type PublicAPI struct {
@@ -269,6 +278,10 @@ func (api *PublicAPI) GetTransactionReceipt(hash common.Hash) (map[string]interf
 		api.Logger.Error("failed to get transaction results", "round", round, "error", err.Error())
 		return nil, err
 	}
+	if len(txResults) == 0 || len(txResults)-1 < int(index) {
+		return nil, errors.New("out of index")
+	}
+
 	utx := txResults[index].Tx
 	ethTx, err := api.backend.Decode(&utx)
 	if err != nil {
@@ -296,10 +309,18 @@ func (api *PublicAPI) GetTransactionReceipt(hash common.Hash) (map[string]interf
 	}
 
 	// logs
-	logs, err := getTransactionLogs(hash)
-	if err != nil {
-		api.Logger.Debug("logs not found", "hash", hash.String(), "error", err.Error())
+	oasisLogs := []*Log{}
+	for i, ev := range txResults[index].Events {
+		if ev.Code == 1 {
+			log := &Log{}
+			if err := cbor.Unmarshal(ev.Value, log); err != nil {
+				api.Logger.Error("failed unmarshal event value", "index", i)
+				continue
+			}
+			oasisLogs = append(oasisLogs, log)
+		}
 	}
+	logs := logs2EthLogs(oasisLogs, round, common.HexToHash(blockHash.Hex()), hash, index)
 
 	receipt := map[string]interface{}{
 		"status":            status,
@@ -326,6 +347,31 @@ func (api *PublicAPI) GetTransactionReceipt(hash common.Hash) (map[string]interf
 	return receipt, nil
 }
 
-func getTransactionLogs(hash common.Hash) ([]*ethtypes.Log, error) {
-	return nil, nil
+// logs2EthLogs casts the Oasis Logs to a slice of Ethereum Logs.
+func logs2EthLogs(logs []*Log, round uint64, txHash, blockHash common.Hash, txIndex uint32) []*ethtypes.Log {
+	ethLogs := []*ethtypes.Log{}
+	for i := range logs {
+		ethLogs = append(ethLogs, toEthereum(logs[i], round, blockHash, txHash, uint(txIndex), uint(i)))
+	}
+	return ethLogs
+}
+
+//toEthereum returns the Ethereum type Log from an Oasis Log.
+func toEthereum(log *Log, round uint64, blockHash, txHash common.Hash, txIndex, logIndex uint) *ethtypes.Log {
+	topics := []common.Hash{}
+	for i := range log.Topics {
+		topics = append(topics, log.Topics[i])
+	}
+
+	return &ethtypes.Log{
+		Address:     log.Address,
+		Topics:      log.Topics,
+		Data:        log.Data,
+		BlockNumber: round,
+		TxHash:      txHash,
+		TxIndex:     txIndex,
+		BlockHash:   blockHash,
+		Index:       logIndex,
+		Removed:     false,
+	}
 }
