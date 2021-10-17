@@ -30,7 +30,7 @@ type Result struct {
 type Results map[uint64][]Result
 
 // BackendFactory is the indexer backend factory interface.
-type BackendFactory func(dataDir string, runtimeID common.Namespace, storage storage.Storage) (Backend, error)
+type BackendFactory func(runtimeID common.Namespace, storage storage.Storage) (Backend, error)
 
 // QueryableBackend is the read-only indexer backend interface.
 type QueryableBackend interface {
@@ -70,6 +70,7 @@ type Backend interface {
 }
 
 type psqlBackend struct {
+	runtimeID         common.Namespace
 	logger            *logging.Logger
 	storage           storage.Storage
 	indexedRoundMutex *sync.Mutex
@@ -187,6 +188,8 @@ func (p *psqlBackend) Index(
 		p.storeIndexedRound(round)
 	}
 
+	p.logger.Info("Indexed block: ", round)
+
 	return nil
 }
 
@@ -253,8 +256,9 @@ func (p *psqlBackend) Close() {
 	p.logger.Info("Psql backend closed!")
 }
 
-func newPsqlBackend(storage storage.Storage) (Backend, error) {
+func newPsqlBackend(runtimeID common.Namespace, storage storage.Storage) (Backend, error) {
 	b := &psqlBackend{
+		runtimeID:         runtimeID,
 		logger:            logging.GetLogger("gateway/indexer/backend"),
 		storage:           storage,
 		indexedRoundMutex: new(sync.Mutex),
@@ -264,6 +268,6 @@ func newPsqlBackend(storage storage.Storage) (Backend, error) {
 	return b, nil
 }
 
-func NewPsqlBackend(storage storage.Storage) (Backend, error) {
-	return newPsqlBackend(storage)
+func NewPsqlBackend() BackendFactory {
+	return newPsqlBackend
 }

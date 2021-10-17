@@ -1,22 +1,23 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
-	"context"
 
-	"google.golang.org/grpc"
 	"github.com/oasisprotocol/oasis-core/go/common"
 	cmnGrpc "github.com/oasisprotocol/oasis-core/go/common/grpc"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
+	"google.golang.org/grpc"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 
 	"github.com/starfishlabs/oasis-evm-web3-gateway/conf"
-	"github.com/starfishlabs/oasis-evm-web3-gateway/server"
+	"github.com/starfishlabs/oasis-evm-web3-gateway/indexer"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc"
+	"github.com/starfishlabs/oasis-evm-web3-gateway/server"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/storage/psql"
 )
 
@@ -26,7 +27,7 @@ const (
 	// This is the default runtime ID as used in oasis-net-runner..
 	runtimeIDHex = "8000000000000000000000000000000000000000000000000000000000000000"
 	// This is the default client node address as set in oasis-net-runner.
-	nodeDefaultAddress = "unix:/tmp/minimal-runtime-test/net-runner/network/client-0/internal.sock"
+	nodeDefaultAddress = "unix:/tmp/eth-runtime-test/net-runner/network/client-0/internal.sock"
 )
 
 // The global logger.
@@ -64,12 +65,23 @@ func main() {
 		logger.Error("failed to initialize config", err)
 		os.Exit(1)
 	}
+
 	// Initialize db
 	db, err := psql.InitDb(cfg)
 	if err != nil {
 		logger.Error("failed to initialize db", err)
 		os.Exit(1)
 	}
+
+	// Create Indexer
+	f := indexer.NewPsqlBackend()
+	indx, err := indexer.New(f, rc, runtimeID, db)
+	if err != nil {
+		logger.Error("failed to create indexer", err)
+		os.Exit(1)
+	}
+	indx.Start()
+
 	// Create web3 gateway instance
 	srvConfig := defaultServerConfig()
 	w3, err := server.New(&srvConfig)
@@ -95,6 +107,7 @@ func main() {
 		<-sigc
 		logger.Info("Got interrupt, shutting down...")
 		go svr.Close()
+		go indx.Stop()
 	}()
 
 	svr.Wait()

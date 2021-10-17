@@ -8,6 +8,7 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common"
 	"github.com/oasisprotocol/oasis-core/go/common/service"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
+	"github.com/starfishlabs/oasis-evm-web3-gateway/storage"
 )
 
 const (
@@ -21,6 +22,8 @@ var (
 	ErrGetBlockFailed        = errors.New("GetBlock failed")
 	ErrGetTransactionsFailed = errors.New("GetTransactions failed")
 	ErrIndexedFailed         = errors.New("Index block failed")
+	ErrCreateBackendFailed   = errors.New("Create backend failed")
+	ErrCreateServiceFailed   = errors.New("Create backend failed")
 )
 
 // Service is an indexer service.
@@ -71,12 +74,14 @@ func (s *Service) periodIndexWorker() {
 		latest, err := s.getRoundLatest()
 		if err != nil {
 			time.Sleep(storageRequestTimeout)
+			s.Logger.Info("Can't get round latest, continue!")
 			continue
 		}
 
 		indexed := s.backend.QueryIndexedRound()
 		if latest == indexed {
 			time.Sleep(storageRetryTimeout)
+			s.Logger.Info("QueryIndexedRound failed, continue!")
 			continue
 		}
 
@@ -90,6 +95,7 @@ func (s *Service) periodIndexWorker() {
 			if err != nil {
 				indexed--
 				time.Sleep(storageRequestTimeout)
+				s.Logger.Info("IndexedBlock failed, continue!")
 				continue
 			}
 		}
@@ -106,8 +112,8 @@ func (s *Service) Stop() {
 }
 
 // New creates a new indexer service.
-func New(dataDir string, runtimeID common.Namespace, backendFactory BackendFactory, client client.RuntimeClient) (*Service, error) {
-	backend, err := backendFactory(dataDir, runtimeID, nil)
+func New(backendFactory BackendFactory, client client.RuntimeClient, runtimeID common.Namespace, storage storage.Storage) (*Service, error) {
+	backend, err := backendFactory(runtimeID, storage)
 	if err != nil {
 		return nil, err
 	}
