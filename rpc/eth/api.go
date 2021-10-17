@@ -2,9 +2,10 @@ package eth
 
 import (
 	"context"
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/indexer"
-	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"

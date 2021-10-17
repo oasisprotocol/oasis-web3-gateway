@@ -112,10 +112,10 @@ func (s *Service) Stop() {
 }
 
 // New creates a new indexer service.
-func New(backendFactory BackendFactory, client client.RuntimeClient, runtimeID common.Namespace, storage storage.Storage) (*Service, error) {
+func New(backendFactory BackendFactory, client client.RuntimeClient, runtimeID common.Namespace, storage storage.Storage) (*Service, Backend, error) {
 	backend, err := backendFactory(runtimeID, storage)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	ctx, cancelCtx := context.WithCancel(context.Background())
@@ -131,5 +131,5 @@ func New(backendFactory BackendFactory, client client.RuntimeClient, runtimeID c
 	}
 	s.Logger = s.Logger.With("runtime_id", s.runtimeID.String())
 
-	return s, nil
+	return s, backend, nil
 }

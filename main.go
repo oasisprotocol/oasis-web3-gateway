@@ -75,7 +75,7 @@ func main() {
 
 	// Create Indexer
 	f := indexer.NewPsqlBackend()
-	indx, err := indexer.New(f, rc, runtimeID, db)
+	indx, backend, err := indexer.New(f, rc, runtimeID, db)
 	if err != nil {
 		logger.Error("failed to create indexer", err)
 		os.Exit(1)
@@ -89,7 +89,7 @@ func main() {
 		logger.Error("failed to create web3", err)
 		os.Exit(1)
 	}
-	w3.RegisterAPIs(rpc.GetRPCAPIs(context.Background(), rc, logger))
+	w3.RegisterAPIs(rpc.GetRPCAPIs(context.Background(), rc, logger, backend))
 
 	svr := server.Server{
 		Config: cfg,

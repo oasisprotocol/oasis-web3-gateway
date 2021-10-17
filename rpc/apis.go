@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+
 	"github.com/starfishlabs/oasis-evm-web3-gateway/indexer"
 
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
