@@ -8,7 +8,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
 	github.com/oasisprotocol/oasis-core/go v0.2103.1
-	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.1.1-0.20211013133326-db9421802ee3
+	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.1.1-0.20211015202754-672f32aaf093
 	github.com/rs/cors v1.7.0
 	github.com/stretchr/testify v1.7.0
 	google.golang.org/grpc v1.41.0

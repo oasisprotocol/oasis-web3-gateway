@@ -15,7 +15,6 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 	ethrpc "github.com/ethereum/go-ethereum/rpc"
 
-	"github.com/oasisprotocol/oasis-core/go/common/crypto/address"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 
@@ -141,13 +140,13 @@ func (api *PublicAPI) GetBalance(address common.Address, blockNrOrHash ethrpc.Bl
 		return nil, err
 	}
 
-	return (*hexutil.Big)(new(big.Int).SetBytes(res)), nil
+	return (*hexutil.Big)(res.ToBigInt()), nil
 }
 
 // GetTransactionCount returns the number of transactions the given address has sent for the given block number.
 func (api *PublicAPI) GetTransactionCount(ethaddr common.Address, blockNrOrHash ethrpc.BlockNumberOrHash) (*hexutil.Uint64, error) {
 	accountsMod := accounts.NewV1(api.client)
-	accountsAddr := address.NewAddress(types.AddressV0ModuleContext, ethaddr[:])
+	accountsAddr := types.NewAddressRaw(types.AddressV0Secp256k1EthContext, ethaddr[:])
 	nonce, err := accountsMod.Nonce(api.ctx, client.RoundLatest, (types.Address)(accountsAddr))
 
 	if err != nil {
