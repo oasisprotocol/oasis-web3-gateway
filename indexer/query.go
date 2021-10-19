@@ -72,18 +72,18 @@ func (s *Service) GetBlockNumberByHash(round uint64) (hash.Hash, error) {
 	return s.backend.QueryBlockHash(round)
 }
 
-func (s *Service) getTransactionByIndex(txs []*types.UnverifiedTransaction, index uint32) (*model.EthTransaction, error) {
+func (s *Service) getTransactionByIndex(txs []*types.UnverifiedTransaction, index uint32) (*model.Transaction, error) {
 	if index >= uint32(len(txs)) {
 		return nil, errors.New("out of tx index")
 	}
 	return s.backend.Decode(txs[index])
 }
 
-func (s *Service) GetTransactionByHash(ethTransactionHash hash.Hash) (*model.EthTransaction, error) {
-	return s.backend.QueryEthTransaction(ethTransactionHash)
+func (s *Service) GetTransactionByHash(TransactionHash hash.Hash) (*model.Transaction, error) {
+	return s.backend.QueryTransaction(TransactionHash)
 }
 
-func (s *Service) GetTransactionByBlockHashAndIndex(blockHash hash.Hash, index uint32) (*model.EthTransaction, error) {
+func (s *Service) GetTransactionByBlockHashAndIndex(blockHash hash.Hash, index uint32) (*model.Transaction, error) {
 	txs, err := s.getBlockTransactionsByHash(blockHash)
 	if err != nil {
 		return nil, err
@@ -92,7 +92,7 @@ func (s *Service) GetTransactionByBlockHashAndIndex(blockHash hash.Hash, index u
 	return s.getTransactionByIndex(txs, index)
 }
 
-func (s *Service) GetTransactionByBlockNumberAndIndex(round uint64, index uint32) (*model.EthTransaction, error) {
+func (s *Service) GetTransactionByBlockNumberAndIndex(round uint64, index uint32) (*model.Transaction, error) {
 	return s.backend.QueryTransactionByRoundAndIndex(round, index)
 }
 

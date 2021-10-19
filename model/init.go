@@ -11,7 +11,7 @@ var Models []interface{}
 func addModel() {
 	Models = append(Models, new(BlockRef))
 	Models = append(Models, new(TransactionRef))
-	Models = append(Models, new(EthTransaction))
+	Models = append(Models, new(Transaction))
 	Models = append(Models, new(ContinuesIndexedRound))
 }
 

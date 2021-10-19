@@ -62,7 +62,7 @@ func TestInitPostDb(t *testing.T) {
 	}
 	fmt.Printf("index: %v, round: %v\n", index, round)
 
-	legacyTx := &model.EthTransaction{
+	legacyTx := &model.Transaction{
 		Hash:       "hello",
 		Type:       0,
 		ChainID:    "0",
@@ -74,15 +74,15 @@ func TestInitPostDb(t *testing.T) {
 		To:         "hellohello",
 		Value:      "4321000000000000000",
 		Data:       "123456abcdef",
-		AccessList: []model.EthAccessTuple{},
+		AccessList: []model.AccessTuple{},
 		V:          big.NewInt(1).String(),
 		R:          big.NewInt(1).String(),
 		S:          big.NewInt(1).String(),
 	}
-	accList := []model.EthAccessTuple{
+	accList := []model.AccessTuple{
 		{Address: "helloworld", StorageKeys: []string{"hello", "world"}},
 	}
-	accessListTx := &model.EthTransaction{
+	accessListTx := &model.Transaction{
 		Hash:       "world",
 		Type:       1,
 		ChainID:    "12321",
@@ -99,7 +99,7 @@ func TestInitPostDb(t *testing.T) {
 		R:          big.NewInt(2).String(),
 		S:          big.NewInt(2).String(),
 	}
-	dynamicFeeTx := &model.EthTransaction{
+	dynamicFeeTx := &model.Transaction{
 		Hash:       "good",
 		Type:       2,
 		ChainID:    "45654",
@@ -120,7 +120,7 @@ func TestInitPostDb(t *testing.T) {
 	db.Store(accessListTx)
 	db.Store(dynamicFeeTx)
 
-	tx, err := db.GetEthTransaction("hello")
+	tx, err := db.GetTransaction("hello")
 	if err != nil {
 		log.Fatal(err)
 	}

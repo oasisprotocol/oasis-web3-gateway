@@ -56,7 +56,7 @@ func (db *PostDb) GetTransactionRoundAndIndex(hash string) (uint64, uint32, erro
 }
 
 // GetTransactionByRoundAndIndex queries ethereum transaction by round and index.
-func (db *PostDb) GetTransactionByRoundAndIndex(round uint64, index uint32) (*model.EthTransaction, error) {
+func (db *PostDb) GetTransactionByRoundAndIndex(round uint64, index uint32) (*model.Transaction, error) {
 	txRef := new(model.TransactionRef)
 	err := db.Db.Model(txRef).
 		Where("transaction_ref.round=? and transaction_ref.index=?", round, index).
@@ -65,7 +65,7 @@ func (db *PostDb) GetTransactionByRoundAndIndex(round uint64, index uint32) (*mo
 		return nil, err
 	}
 
-	ethTx := new(model.EthTransaction)
+	ethTx := new(model.Transaction)
 	err = db.Db.Model(ethTx).
 		Where("eth_transaction.hash=?", txRef.EthTxHash).
 		Select()
@@ -76,9 +76,9 @@ func (db *PostDb) GetTransactionByRoundAndIndex(round uint64, index uint32) (*mo
 	return ethTx, nil
 }
 
-// GetEthTransaction queries ethereum transaction by hash.
-func (db *PostDb) GetEthTransaction(hash string) (*model.EthTransaction, error) {
-	tx := new(model.EthTransaction)
+// GetTransaction queries ethereum transaction by hash.
+func (db *PostDb) GetTransaction(hash string) (*model.Transaction, error) {
+	tx := new(model.Transaction)
 	err := db.Db.Model(tx).
 		Where("eth_transaction.hash=?", hash).
 		Select()

@@ -13,14 +13,21 @@ type TransactionRef struct {
 	Round     uint64 `pg:",use_zero"`
 }
 
-// EthAccessTuple for ethereum AccessList.
-type EthAccessTuple struct {
+// AccessTuple is the element of an AccessList.
+type AccessTuple struct {
 	Address     string
 	StorageKeys []string
 }
 
-// EthTransaction is ethereum transaction.
-type EthTransaction struct {
+// ContinuesIndexedRound Continues latest Indexed Block Round
+type ContinuesIndexedRound struct {
+	Round uint64 `pg:",pk"`
+}
+
+type AccessList []AccessTuple
+
+// Transaction is ethereum transaction.
+type Transaction struct {
 	Hash       string `pg:",pk"`
 	Type       uint8  `pg:",use_zero"`
 	ChainID    string
@@ -33,11 +40,6 @@ type EthTransaction struct {
 	To         string
 	Value      string
 	Data       string
-	AccessList []EthAccessTuple
+	AccessList AccessList
 	V, R, S    string
-}
-
-// ContinuesIndexedRound Continues latest Indexed Block Round
-type ContinuesIndexedRound struct {
-	Round uint64 `pg:",pk"`
 }

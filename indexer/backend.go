@@ -44,16 +44,16 @@ type QueryableBackend interface {
 	QueryTransactionRoundAndIndex(ethTxHash string) (uint64, uint32, error)
 
 	// QueryTransactionByRoundAndIndex queries ethereum transaction by round and index.
-	QueryTransactionByRoundAndIndex(round uint64, index uint32) (*model.EthTransaction, error)
+	QueryTransactionByRoundAndIndex(round uint64, index uint32) (*model.Transaction, error)
 
 	// QueryIndexedRound query continues indexed block round.
 	QueryIndexedRound() uint64
 
-	// QueryEthTransaction queries ethereum transaction by hash.
-	QueryEthTransaction(ethTxHash hash.Hash) (*model.EthTransaction, error)
+	// QueryTransaction queries ethereum transaction by hash.
+	QueryTransaction(ethTxHash hash.Hash) (*model.Transaction, error)
 
 	// Decode decodes an unverified transaction into ethereum transaction.
-	Decode(utx *types.UnverifiedTransaction) (*model.EthTransaction, error)
+	Decode(utx *types.UnverifiedTransaction) (*model.Transaction, error)
 }
 
 // Backend is the indexer backend interface.
@@ -76,16 +76,19 @@ type psqlBackend struct {
 	indexedRoundMutex *sync.Mutex
 }
 
-func (p *psqlBackend) Decode(utx *types.UnverifiedTransaction) (*model.EthTransaction, error) {
+func (p *psqlBackend) Decode(utx *types.UnverifiedTransaction) (*model.Transaction, error) {
 	ethTx := &ethtypes.Transaction{}
 	if err := rlp.DecodeBytes(utx.Body, ethTx); err != nil {
 		return nil, err
 	}
 	v, r, s := ethTx.RawSignatureValues()
-	innerTx := &model.EthTransaction{
+	signer := ethtypes.LatestSignerForChainID(ethTx.ChainId())
+	from, _ := signer.Sender(ethTx)
+	innerTx := &model.Transaction{
 		Hash:  ethTx.Hash().String(),
 		Gas:   ethTx.Gas(),
 		Nonce: ethTx.Nonce(),
+		From:  from.String(),
 		To:    ethTx.To().String(),
 		Value: ethTx.Value().String(),
 		Data:  hex.EncodeToString(ethTx.Data()),
@@ -94,7 +97,7 @@ func (p *psqlBackend) Decode(utx *types.UnverifiedTransaction) (*model.EthTransa
 		S:     s.String(),
 	}
 
-	accList := []model.EthAccessTuple{}
+	accList := []model.AccessTuple{}
 	if ethTx.Type() == ethtypes.AccessListTxType || ethTx.Type() == ethtypes.DynamicFeeTxType {
 		for _, tuple := range ethTx.AccessList() {
 			addr := tuple.Address.String()
@@ -102,7 +105,7 @@ func (p *psqlBackend) Decode(utx *types.UnverifiedTransaction) (*model.EthTransa
 			for _, k := range tuple.StorageKeys {
 				keys = append(keys, k.String())
 			}
-			accList = append(accList, model.EthAccessTuple{
+			accList = append(accList, model.AccessTuple{
 				Address:     addr,
 				StorageKeys: keys,
 			})
@@ -117,7 +120,7 @@ func (p *psqlBackend) Decode(utx *types.UnverifiedTransaction) (*model.EthTransa
 			innerTx.GasFeeCap = "0"
 			innerTx.GasTipCap = "0"
 			innerTx.ChainID = "0"
-			innerTx.AccessList = []model.EthAccessTuple{}
+			innerTx.AccessList = []model.AccessTuple{}
 		}
 	case ethtypes.AccessListTxType:
 		{
@@ -143,7 +146,7 @@ func (p *psqlBackend) Decode(utx *types.UnverifiedTransaction) (*model.EthTransa
 	return innerTx, nil
 }
 
-func (p *psqlBackend) DecodeUtx(utx *types.UnverifiedTransaction, round uint64, idx uint32) (*model.TransactionRef, *model.EthTransaction, error) {
+func (p *psqlBackend) DecodeUtx(utx *types.UnverifiedTransaction, round uint64, idx uint32) (*model.TransactionRef, *model.Transaction, error) {
 	ethTx, err := p.Decode(utx)
 	if err != nil {
 		return nil, nil, err
@@ -236,8 +239,8 @@ func (p *psqlBackend) QueryIndexedRound() uint64 {
 	return indexedRound
 }
 
-func (p *psqlBackend) QueryEthTransaction(ethTxHash hash.Hash) (*model.EthTransaction, error) {
-	tx, err := p.storage.GetEthTransaction(ethTxHash.String())
+func (p *psqlBackend) QueryTransaction(ethTxHash hash.Hash) (*model.Transaction, error) {
+	tx, err := p.storage.GetTransaction(ethTxHash.String())
 	if err != nil {
 		return nil, err
 	}
@@ -248,7 +251,7 @@ func (p *psqlBackend) QueryTransactionRoundAndIndex(hash string) (uint64, uint32
 	return p.storage.GetTransactionRoundAndIndex(hash)
 }
 
-func (p *psqlBackend) QueryTransactionByRoundAndIndex(round uint64, index uint32) (*model.EthTransaction, error) {
+func (p *psqlBackend) QueryTransactionByRoundAndIndex(round uint64, index uint32) (*model.Transaction, error) {
 	return p.storage.GetTransactionByRoundAndIndex(round, index)
 }
 
