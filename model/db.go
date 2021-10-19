@@ -39,5 +39,5 @@ type EthTransaction struct {
 
 // ContinuesIndexedRound Continues latest Indexed Block Round
 type ContinuesIndexedRound struct {
-	Round uint64
+	Round uint64 `pg:",pk"`
 }

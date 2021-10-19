@@ -186,9 +186,10 @@ func (p *psqlBackend) Index(
 
 	if p.QueryIndexedRound() == (round - 1) {
 		p.storeIndexedRound(round)
+		p.logger.Info("store Indexed block: ", "round", round)
 	}
 
-	p.logger.Info("Indexed block: ", round)
+	p.logger.Info("Indexed block: ", "round", round)
 
 	return nil
 }
@@ -228,7 +229,6 @@ func (p *psqlBackend) QueryIndexedRound() uint64 {
 	indexedRound, err := p.storage.GetContinuesIndexedRound()
 	if err != nil {
 		p.indexedRoundMutex.Unlock()
-		p.storeIndexedRound(0)
 		return 0
 	}
 	p.indexedRoundMutex.Unlock()
@@ -263,6 +263,7 @@ func newPsqlBackend(runtimeID common.Namespace, storage storage.Storage) (Backen
 		storage:           storage,
 		indexedRoundMutex: new(sync.Mutex),
 	}
+	b.storeIndexedRound(0)
 	b.logger.Info("New psql backend")
 
 	return b, nil
