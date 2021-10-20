@@ -220,10 +220,11 @@ func (p *psqlBackend) QueryBlockHash(round uint64) (hash.Hash, error) {
 func (p *psqlBackend) storeIndexedRound(round uint64) {
 	p.indexedRoundMutex.Lock()
 	r := &model.ContinuesIndexedRound{
+		Tip:   "tip",
 		Round: round,
 	}
 
-	p.storage.Store(r)
+	p.storage.Update(r)
 	p.indexedRoundMutex.Unlock()
 }
 

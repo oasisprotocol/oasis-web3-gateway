@@ -129,3 +129,53 @@ func TestInitPostDb(t *testing.T) {
 	fmt.Printf("to: %v, value: %v\n", tx.To, tx.Value)
 	fmt.Printf("access_list: %v\n", tx.AccessList)
 }
+
+func TestUpdate(t *testing.T) {
+	cfg, err := conf.InitConfig("../../conf/server.yml")
+	if err != nil {
+		log.Fatal("initialize config error:", err)
+	}
+	db, err := InitDb(cfg)
+	if err != nil {
+		log.Fatal("initialize postdb error:", err)
+	}
+
+	ir1 := &model.ContinuesIndexedRound{
+		Tip:   "tip",
+		Round: 1,
+	}
+	if err := db.Update(ir1); err != nil {
+		log.Fatalln("Update", err)
+	}
+	if r1, err := db.GetContinuesIndexedRound(); err != nil {
+		log.Fatalln("GetContinuesIndexedRound", err)
+	} else {
+		fmt.Println("round:", r1)
+	}
+
+	ir2 := &model.ContinuesIndexedRound{
+		Tip:   "tip",
+		Round: 2,
+	}
+	if err := db.Update(ir2); err != nil {
+		log.Fatalln("Update", err)
+	}
+	if r2, err := db.GetContinuesIndexedRound(); err != nil {
+		log.Fatalln("GetContinuesIndexedRound", err)
+	} else {
+		fmt.Println("round:", r2)
+	}
+
+	ir3 := &model.ContinuesIndexedRound{
+		Tip:   "tip",
+		Round: 3,
+	}
+	if err := db.Update(ir3); err != nil {
+		log.Fatalln("Update", err)
+	}
+	if r3, err := db.GetContinuesIndexedRound(); err != nil {
+		log.Fatalln("GetContinuesIndexedRound", err)
+	} else {
+		fmt.Println("round:", r3)
+	}
+}

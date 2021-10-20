@@ -8,6 +8,9 @@ type Storage interface {
 	// Store stores data.
 	Store(value interface{}) error
 
+	// Update updates record.
+	Update(value interface{}) error
+
 	// GetBlockRound queries block round by block hash.
 	GetBlockRound(hash string) (uint64, error)
 

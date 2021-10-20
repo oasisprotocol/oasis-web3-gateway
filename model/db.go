@@ -21,7 +21,8 @@ type AccessTuple struct {
 
 // ContinuesIndexedRound Continues latest Indexed Block Round
 type ContinuesIndexedRound struct {
-	Round uint64 `pg:",pk"`
+	Tip   string `pg:",pk"`
+	Round uint64
 }
 
 type AccessList []AccessTuple

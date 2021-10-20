@@ -95,6 +95,19 @@ func (db *PostDb) Store(value interface{}) error {
 	return err
 }
 
+// Update updates record.
+func (db *PostDb) Update(value interface{}) error {
+	var err error
+	query := db.Db.Model(value)
+	exists, _ := query.WherePK().Exists()
+	if !exists {
+		_, err = query.Insert()
+	} else {
+		_, err = query.WherePK().Update()
+	}
+	return err
+}
+
 // GetBlockRound queries block round by block hash.
 func (db *PostDb) GetBlockRound(hash string) (uint64, error) {
 	block := new(model.BlockRef)
