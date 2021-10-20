@@ -220,7 +220,7 @@ func (p *psqlBackend) QueryBlockHash(round uint64) (hash.Hash, error) {
 func (p *psqlBackend) storeIndexedRound(round uint64) {
 	p.indexedRoundMutex.Lock()
 	r := &model.ContinuesIndexedRound{
-		Tip:   "tip",
+		Tip:   model.Continues,
 		Round: round,
 	}
 
@@ -267,7 +267,6 @@ func newPsqlBackend(runtimeID common.Namespace, storage storage.Storage) (Backen
 		storage:           storage,
 		indexedRoundMutex: new(sync.Mutex),
 	}
-	b.storeIndexedRound(0)
 	b.logger.Info("New psql backend")
 
 	return b, nil

@@ -10,6 +10,7 @@ import (
 
 	ethRpc "github.com/ethereum/go-ethereum/rpc"
 
+	"github.com/starfishlabs/oasis-evm-web3-gateway/server"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/eth"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/net"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/web3"
@@ -21,6 +22,7 @@ func GetRPCAPIs(
 	client client.RuntimeClient,
 	logger *logging.Logger,
 	backend indexer.Backend,
+	config server.Config,
 ) []ethRpc.API {
 	var apis []ethRpc.API
 
@@ -34,7 +36,7 @@ func GetRPCAPIs(
 		ethRpc.API{
 			Namespace: "net",
 			Version:   "1.0",
-			Service:   net.NewPublicAPI(),
+			Service:   net.NewPublicAPI(config),
 			Public:    true,
 		},
 		ethRpc.API{

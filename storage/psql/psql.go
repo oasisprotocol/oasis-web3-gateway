@@ -137,7 +137,9 @@ func (db *PostDb) GetBlockHash(round uint64) (string, error) {
 // GetContinuesIndexedRound queries latest continues indexed block round.
 func (db *PostDb) GetContinuesIndexedRound() (uint64, error) {
 	indexedRound := new(model.ContinuesIndexedRound)
-	err := db.Db.Model(indexedRound).Last()
+	err := db.Db.Model(indexedRound).
+		Where("continues_indexed_round.tip=?", model.Continues).
+		Select()
 	if err != nil {
 		return 0, err
 	}

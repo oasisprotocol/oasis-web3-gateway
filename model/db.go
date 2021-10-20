@@ -20,6 +20,8 @@ type AccessTuple struct {
 }
 
 // ContinuesIndexedRound Continues latest Indexed Block Round
+const Continues string = "tip"
+
 type ContinuesIndexedRound struct {
 	Tip   string `pg:",pk"`
 	Round uint64

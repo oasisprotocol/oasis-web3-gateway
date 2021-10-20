@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/spf13/cobra"
 	"github.com/oasisprotocol/oasis-core/go/common"
 	cmnGrpc "github.com/oasisprotocol/oasis-core/go/common/grpc"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
@@ -30,10 +31,32 @@ const (
 	nodeDefaultAddress = "unix:/tmp/eth-runtime-test/net-runner/network/client-0/internal.sock"
 )
 
+var (
+	// Node unix socket path
+	nodeAddr string
+	// Ethereum network id
+	chainId uint
+	// Oasis-web3-gateway root command
+	rootCmd = &cobra.Command{
+		Use:     "oasis-evm-web3-gateway",
+		Short:   "oasis-evm-web3-gateway",
+		Run:    runRoot,
+	}
+)
+
 // The global logger.
 var logger = logging.GetLogger("evm-gateway")
 
+func init() {
+  rootCmd.Flags().StringVar(&nodeAddr, "addr", nodeDefaultAddress,"address of node socket path")
+  rootCmd.Flags().UintVar(&chainId, "chainid", 42261, "ethereum network id")
+}
+
 func main() {
+  rootCmd.Execute()
+}
+
+func runRoot(cmd *cobra.Command, args []string) {
 	// Initialize logging.
 	if err := logging.Initialize(os.Stdout, logging.FmtLogfmt, logging.LevelDebug, nil); err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: Unable to initialize logging: %v\n", err)
@@ -89,7 +112,7 @@ func main() {
 		logger.Error("failed to create web3", err)
 		os.Exit(1)
 	}
-	w3.RegisterAPIs(rpc.GetRPCAPIs(context.Background(), rc, logger, backend))
+	w3.RegisterAPIs(rpc.GetRPCAPIs(context.Background(), rc, logger, backend, srvConfig))
 
 	svr := server.Server{
 		Config: cfg,

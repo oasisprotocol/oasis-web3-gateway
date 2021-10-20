@@ -80,6 +80,9 @@ type Config struct {
 	// private APIs to untrusted users is a major security risk.
 	WSExposeAll bool `toml:",omitempty"`
 
+	// ChainId defines the Ethereum netwrok id.
+	ChainId uint `toml:",omitempty"`
+
 	// Logger is a custom logger to use.
 	Logger log.Logger `toml:",omitempty"`
 }
@@ -92,6 +95,7 @@ var DefaultConfig = Config{
 	HTTPTimeouts:     rpc.DefaultHTTPTimeouts,
 	WSPort:           DefaultWSPort,
 	WSModules:        []string{"net", "web3"},
+	ChainId:          42261,
 }
 
 // HTTPEndpoint resolves an HTTP endpoint based on the configured host interface
