@@ -14,12 +14,14 @@ import (
 func ConvertToEthBlock(
 	block *block.Block,
 	transactions interface{},
+	logs []*ethtypes.Log,
 ) (map[string]interface{}, error) {
 	// TODO tx releated
 	bhash, _ := block.Header.IORoot.MarshalBinary()
 	bprehash, _ := block.Header.PreviousHash.MarshalBinary()
 	bshash, _ := block.Header.StateRoot.MarshalBinary()
 	btxhash, _ := block.Header.MessagesHash.MarshalBinary()
+	bloom := ethtypes.BytesToBloom(ethtypes.LogsBloom(logs))
 
 	res := map[string]interface{}{
 		"number":     hexutil.Uint64(block.Header.Round),
@@ -27,9 +29,9 @@ func ConvertToEthBlock(
 		"parentHash": common.BytesToHash(bprehash),
 		"nonce":      ethtypes.BlockNonce{},
 		"sha3Uncles": ethtypes.EmptyUncleHash,
-		//"logsBloom":        bloom,
-		"stateRoot": hexutil.Bytes(bshash),
-		//"miner":            validatorAddr,
+		"logsBloom":  bloom,
+		"stateRoot":  hexutil.Bytes(bshash),
+		// "miner":      validatorAddr,
 		"mixHash":    common.Hash{},
 		"difficulty": (*hexutil.Big)(big.NewInt(0)),
 		"extraData":  "0x",

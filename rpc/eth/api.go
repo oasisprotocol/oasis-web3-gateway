@@ -3,8 +3,9 @@ package eth
 import (
 	"context"
 	"errors"
-	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"math/big"
+
+	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/indexer"
@@ -73,13 +74,16 @@ func (api *PublicAPI) GetBlockByNumber(blockNum uint64) (map[string]interface{},
 
 	bhash, _ := resBlock.Header.IORoot.MarshalBinary()
 	ethRPCTxs := []interface{}{}
-	var resTxs []*types.UnverifiedTransaction
-	resTxs, err = api.client.GetTransactions(api.ctx, resBlock.Header.Round)
+	var oasisLogs []*Log
+	var logs []*ethtypes.Log
+	txResults, err := api.client.GetTransactionsWithResults(api.ctx, resBlock.Header.Round)
 	if err != nil {
-		api.Logger.Error("GetTransactions failed", "number", blockNum)
+		api.Logger.Error("Failed to get transaction results", "number", blockNum, "error", err.Error())
+		return nil, err
 	}
 
-	for i, oasisTx := range resTxs {
+	for txIndex, item := range txResults {
+		oasisTx := item.Tx
 		if len(oasisTx.AuthProofs) != 1 || oasisTx.AuthProofs[0].Module != "evm.ethereum.v0" {
 			// Skip non-Ethereum transactions.
 			continue
@@ -91,7 +95,7 @@ func (api *PublicAPI) GetBlockByNumber(blockNum uint64) (map[string]interface{},
 		ethTx := &ethtypes.Transaction{}
 		err := rlp.DecodeBytes(rawEthTx, ethTx)
 		if err != nil {
-			api.Logger.Error("Failed to decode UnverifiedTransaction", "height", blockNum, "index", i, "error", err.Error())
+			api.Logger.Error("Failed to decode UnverifiedTransaction", "height", blockNum, "index", txIndex, "error", err.Error())
 			continue
 		}
 
@@ -99,7 +103,7 @@ func (api *PublicAPI) GetBlockByNumber(blockNum uint64) (map[string]interface{},
 			ethTx,
 			common.BytesToHash(bhash),
 			uint64(resBlock.Header.Round),
-			uint64(i),
+			uint64(txIndex),
 		)
 		if err != nil {
 			api.Logger.Error("Failed to ConstructRPCTransaction", "hash", ethTx.Hash().Hex(), "error", err.Error())
@@ -107,9 +111,23 @@ func (api *PublicAPI) GetBlockByNumber(blockNum uint64) (map[string]interface{},
 		}
 
 		ethRPCTxs = append(ethRPCTxs, rpcTx)
+		var resEvents []*types.Event
+		resEvents = item.Events
+		for eventIndex, event := range resEvents {
+			if event.Code == 1 {
+				log := &Log{}
+				if err := cbor.Unmarshal(event.Value, log); err != nil {
+					api.Logger.Error("Failed to unmarshal event value", "index", eventIndex)
+					continue
+				}
+				oasisLogs = append(oasisLogs, log)
+			}
+		}
+
+		logs = logs2EthLogs(oasisLogs, resBlock.Header.Round, common.BytesToHash(bhash), rpcTx.Hash, uint32(txIndex))
 	}
 
-	res, err := utils.ConvertToEthBlock(resBlock, ethRPCTxs)
+	res, err := utils.ConvertToEthBlock(resBlock, ethRPCTxs, logs)
 	if err != nil {
 		api.Logger.Debug("Failed to ConvertToEthBlock", "height", blockNum, "error", err.Error())
 		return nil, err
@@ -272,7 +290,7 @@ func (api *PublicAPI) GetTransactionReceipt(hash common.Hash) (map[string]interf
 		api.Logger.Error("failed to query block hash", "round", round, "error", err.Error())
 		return nil, err
 	}
-	txResults, err := api.client.GetTransactionsWithResults(context.Background(), round)
+	txResults, err := api.client.GetTransactionsWithResults(api.ctx, round)
 	if err != nil {
 		api.Logger.Error("failed to get transaction results", "round", round, "error", err.Error())
 		return nil, err
@@ -347,7 +365,7 @@ func (api *PublicAPI) GetTransactionReceipt(hash common.Hash) (map[string]interf
 }
 
 // logs2EthLogs casts the Oasis Logs to a slice of Ethereum Logs.
-func logs2EthLogs(logs []*Log, round uint64, txHash, blockHash common.Hash, txIndex uint32) []*ethtypes.Log {
+func logs2EthLogs(logs []*Log, round uint64, blockHash, txHash common.Hash, txIndex uint32) []*ethtypes.Log {
 	ethLogs := []*ethtypes.Log{}
 	for i := range logs {
 		ethLogs = append(ethLogs, toEthereum(logs[i], round, blockHash, txHash, uint(txIndex), uint(i)))
