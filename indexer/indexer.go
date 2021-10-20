@@ -77,6 +77,7 @@ func (s *Service) periodIndexWorker() {
 		}
 
 		indexed := s.backend.QueryIndexedRound()
+		s.Logger.Info("Indexed round", "indexed", indexed)
 		if latest == indexed {
 			time.Sleep(storageRetryTimeout)
 			s.Logger.Info("QueryIndexedRound failed, continue!")
@@ -96,6 +97,8 @@ func (s *Service) periodIndexWorker() {
 				s.Logger.Info("IndexedBlock failed, continue!")
 				continue
 			}
+
+			time.Sleep(storageRequestTimeout)
 		}
 	}
 }
