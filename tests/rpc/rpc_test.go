@@ -68,22 +68,24 @@ func TestEth_GetBalance(t *testing.T) {
 
 	t.Logf("Got balance %s for %s\n", res.String(), daveEVMAddr)
 
-	if res.ToInt().Cmp(big.NewInt(0)) != 0 {
-		// t.Errorf("expected balance: %d, got: %s", 0, res.String())
+	if res.ToInt().Cmp(big.NewInt(0)) == 0 {
+		t.Errorf("expected balance: %d, got: %s", 0, res.String())
 	}
 }
 
-// func TestEth_GetTransactionCount(t *testing.T) {
-// 	// TODO: this test passes on when run on its own, but fails when run with the other tests
-// 	if testing.Short() {
-// 		t.Skip("skipping TestEth_GetTransactionCount")
-// 	}
+func getNonce(t *testing.T, from string) hexutil.Uint64 {
+	param := []interface{}{from, "latest"}
+	rpcRes := call(t, "eth_getTransactionCount", param)
 
-// 	prev := getNonce(t)
-// 	sendTestTransaction(t)
-// 	post := getNonce(t)
-// 	require.Equal(t, prev, post-1)
-// }
+	var nonce hexutil.Uint64
+	err := json.Unmarshal(rpcRes.Result, &nonce)
+	require.NoError(t, err)
+	return nonce
+}
+
+func TestEth_GetTransactionCount(t *testing.T) {
+	getNonce(t, daveEVMAddr)
+}
 
 // func TestETH_GetBlockTransactionCountByHash(t *testing.T) {
 // 	txHash := sendTestTransaction(t)
