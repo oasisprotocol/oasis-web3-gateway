@@ -8,8 +8,15 @@ import (
 	"os"
 	"testing"
 	"time"
+	"math/big"
 
 	"github.com/stretchr/testify/require"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+)
+
+const (
+	daveEVMAddr = "0xdce075e1c39b1ae0b75d554558b6451a226ffe00"
+	zeroString = "0x0"
 )
 
 func TestMain(m *testing.M) {
@@ -49,6 +56,21 @@ func call(t *testing.T, method string, params interface{}) *Response {
 	require.Nil(t, rpcRes.Error)
 
 	return rpcRes
+}
+
+func TestEth_GetBalance(t *testing.T) {
+
+	rpcRes := call(t, "eth_getBalance", []string{daveEVMAddr, zeroString})
+
+	var res hexutil.Big
+	err := res.UnmarshalJSON(rpcRes.Result)
+	require.NoError(t, err)
+
+	t.Logf("Got balance %s for %s\n", res.String(), daveEVMAddr)
+
+	if res.ToInt().Cmp(big.NewInt(0)) != 0 {
+		// t.Errorf("expected balance: %d, got: %s", 0, res.String())
+	}
 }
 
 // func TestEth_GetTransactionCount(t *testing.T) {
@@ -151,21 +173,6 @@ func call(t *testing.T, method string, params interface{}) *Response {
 
 // 	t.Logf("Got coinbase block proposer: %s\n", res.String())
 // 	require.NotEqual(t, zeroAddress.String(), res.String(), "expected: not %s got: %s\n", zeroAddress.String(), res.String())
-// }
-
-// func TestEth_GetBalance(t *testing.T) {
-// 	rpcRes := call(t, "eth_getBalance", []string{addrA, zeroString})
-
-// 	var res hexutil.Big
-// 	err := res.UnmarshalJSON(rpcRes.Result)
-// 	require.NoError(t, err)
-
-// 	t.Logf("Got balance %s for %s\n", res.String(), addrA)
-
-// 	// 0 if x == y; where x is res, y is 0
-// 	if res.ToInt().Cmp(big.NewInt(0)) != 0 {
-// 		t.Errorf("expected balance: %d, got: %s", 0, res.String())
-// 	}
 // }
 
 // func TestEth_GetCode(t *testing.T) {
