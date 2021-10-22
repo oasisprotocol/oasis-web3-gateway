@@ -5,6 +5,7 @@ import (
 	"errors"
 	"sync"
 
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/oasisprotocol/oasis-core/go/common"
@@ -84,12 +85,16 @@ func (p *psqlBackend) Decode(utx *types.UnverifiedTransaction) (*model.Transacti
 	v, r, s := ethTx.RawSignatureValues()
 	signer := ethtypes.LatestSignerForChainID(ethTx.ChainId())
 	from, _ := signer.Sender(ethTx)
+	to := ethTx.To()
+	if to == nil {
+		to = &ethcommon.Address{}
+	}
 	innerTx := &model.Transaction{
 		Hash:  ethTx.Hash().String(),
 		Gas:   ethTx.Gas(),
 		Nonce: ethTx.Nonce(),
 		From:  from.String(),
-		To:    ethTx.To().String(),
+		To:    to.String(),
 		Value: ethTx.Value().String(),
 		Data:  hex.EncodeToString(ethTx.Data()),
 		V:     v.String(),
