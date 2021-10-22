@@ -102,7 +102,6 @@ func (s *Service) periodIndexWorker() {
 				continue
 			}
 
-			time.Sleep(storageRequestTimeout)
 		}
 	}
 }
