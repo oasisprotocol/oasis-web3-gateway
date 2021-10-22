@@ -278,6 +278,117 @@ func (api *PublicAPI) EstimateGas(args utils.TransactionArgs, blockNum ethrpc.Bl
 	return hexutil.Uint64(gas), nil
 }
 
+// GetTransactionByHash returns the transaction identified by hash.
+func (api *PublicAPI) GetTransactionByHash(hash common.Hash) (*utils.RPCTransaction, error) {
+	api.Logger.Debug("eth_getTransactionByHash", "hash", hash.Hex())
+	dbTxRef, err := api.backend.QueryTransactionRef(hash.String())
+	if err != nil {
+		api.Logger.Error("Failed to QueryTransactionRef", "hash", hash.String())
+	}
+	dbTx, err := api.backend.QueryTransaction(hash)
+	if err != nil {
+		api.Logger.Error("Failed to QueryTransaction", "hash", hash.String())
+	}
+
+	to := common.HexToAddress(dbTx.To)
+
+	gasPrice, _ := new(big.Int).SetString(dbTx.GasPrice, 10)
+	gasFee, _ := new(big.Int).SetString(dbTx.GasFeeCap, 10)
+	gasTip, _ := new(big.Int).SetString(dbTx.GasTipCap, 10)
+	value, _ := new(big.Int).SetString(dbTx.Value, 10)
+	chainID, _ := new(big.Int).SetString(dbTx.ChainID, 10)
+	v, _ := new(big.Int).SetString(dbTx.V, 10)
+	r, _ := new(big.Int).SetString(dbTx.R, 10)
+	s, _ := new(big.Int).SetString(dbTx.S, 10)
+
+	resTx := &utils.RPCTransaction{
+		From:      common.HexToAddress(dbTx.From),
+		Gas:       hexutil.Uint64(dbTx.Gas),
+		GasPrice:  (*hexutil.Big)(gasPrice),
+		GasFeeCap: (*hexutil.Big)(gasFee),
+		GasTipCap: (*hexutil.Big)(gasTip),
+		Hash:      common.HexToHash(dbTx.Hash),
+		Input:     hexutil.Bytes(dbTx.Data),
+		Nonce:     hexutil.Uint64(dbTx.Nonce),
+		To:        &to,
+		Value:     (*hexutil.Big)(value),
+		Type:      hexutil.Uint64(dbTx.Type),
+		// Accesses: dbTx.AccessList,
+		ChainID: (*hexutil.Big)(chainID),
+		V:       (*hexutil.Big)(v),
+		R:       (*hexutil.Big)(r),
+		S:       (*hexutil.Big)(s),
+	}
+
+	blockHash := common.HexToHash(dbTxRef.BlockHash)
+	txIndex := hexutil.Uint64(dbTxRef.Index)
+
+	if blockHash != (common.Hash{}) {
+		resTx.BlockHash = &blockHash
+		resTx.BlockNumber = (*hexutil.Big)(new(big.Int).SetUint64(dbTxRef.Round))
+		resTx.TransactionIndex = &txIndex
+	}
+
+	return resTx, nil
+}
+
+// GetTransactionByBlockNumberAndIndex returns the transaction identified by number and index.
+func (api *PublicAPI) GetTransactionByBlockNumberAndIndex(blockNum ethrpc.BlockNumber, idx hexutil.Uint) (*utils.RPCTransaction, error) {
+	api.Logger.Debug("eth_getTransactionByBlockNumberAndIndex", "number", blockNum, "index", idx)
+
+	resBlock, err := api.client.GetBlock(api.ctx, uint64(blockNum))
+	if err != nil {
+		api.Logger.Error("Failed to GetBlock", "number", blockNum)
+	}
+
+	bhash, _ := resBlock.Header.IORoot.MarshalBinary()
+	ethRPCTxs := []*utils.RPCTransaction{}
+	txResults, err := api.client.GetTransactionsWithResults(api.ctx, resBlock.Header.Round)
+	if err != nil {
+		api.Logger.Error("Failed to GetTransactions", "number", blockNum, "error", err.Error())
+		return nil, err
+	}
+
+	for txIndex, item := range txResults {
+		oasisTx := item.Tx
+		if len(oasisTx.AuthProofs) != 1 || oasisTx.AuthProofs[0].Module != "evm.ethereum.v0" {
+			// Skip non-Ethereum transactions.
+			continue
+		}
+
+		// Extract raw Ethereum transaction for further processing.
+		rawEthTx := oasisTx.Body
+		// Decode the Ethereum transaction.
+		ethTx := &ethtypes.Transaction{}
+		err := rlp.DecodeBytes(rawEthTx, ethTx)
+		if err != nil {
+			api.Logger.Error("Failed to decode UnverifiedTransaction", "height", blockNum, "index", txIndex, "error", err.Error())
+			continue
+		}
+
+		rpcTx, err := utils.ConstructRPCTransaction(
+			ethTx,
+			common.BytesToHash(bhash),
+			uint64(resBlock.Header.Round),
+			uint64(txIndex),
+		)
+		if err != nil {
+			api.Logger.Error("Failed to ConstructRPCTransaction", "hash", ethTx.Hash().Hex(), "error", err.Error())
+			continue
+		}
+
+		ethRPCTxs = append(ethRPCTxs, rpcTx)
+	}
+
+	i := int(idx)
+	if i >= len(ethRPCTxs) {
+		api.Logger.Info("block txs index out of bound", "index", i)
+		return nil, nil
+	}
+
+	return ethRPCTxs[i], nil
+}
+
 // GetTransactionReceipt returns the transaction receipt by hash.
 func (api *PublicAPI) GetTransactionReceipt(hash common.Hash) (map[string]interface{}, error) {
 	txRef, err := api.backend.QueryTransactionRef(hash.String())

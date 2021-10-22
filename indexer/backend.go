@@ -5,6 +5,7 @@ import (
 	"errors"
 	"sync"
 
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/oasisprotocol/oasis-core/go/common"
@@ -35,10 +36,10 @@ type BackendFactory func(runtimeID common.Namespace, storage storage.Storage) (B
 // QueryableBackend is the read-only indexer backend interface.
 type QueryableBackend interface {
 	// QueryBlockRound queries block round by block hash.
-	QueryBlockRound(blockHash hash.Hash) (uint64, error)
+	QueryBlockRound(blockHash ethcommon.Hash) (uint64, error)
 
 	// QueryBlockHash queries block hash by round.
-	QueryBlockHash(round uint64) (hash.Hash, error)
+	QueryBlockHash(round uint64) (ethcommon.Hash, error)
 
 	// QueryTransactionRef returns block hash, round and index of the transaction.
 	QueryTransactionRef(ethTxHash string) (*model.TransactionRef, error)
@@ -50,7 +51,7 @@ type QueryableBackend interface {
 	QueryIndexedRound() uint64
 
 	// QueryTransaction queries ethereum transaction by hash.
-	QueryTransaction(ethTxHash hash.Hash) (*model.Transaction, error)
+	QueryTransaction(ethTxHash ethcommon.Hash) (*model.Transaction, error)
 
 	// Decode decodes an unverified transaction into ethereum transaction.
 	Decode(utx *types.UnverifiedTransaction) (*model.Transaction, error)
@@ -62,7 +63,7 @@ type Backend interface {
 
 	Index(
 		round uint64,
-		blockHash hash.Hash,
+		blockHash ethcommon.Hash,
 		txs []*types.UnverifiedTransaction,
 	) error
 
@@ -166,7 +167,7 @@ func (p *psqlBackend) DecodeUtx(utx *types.UnverifiedTransaction, blockHash stri
 
 func (p *psqlBackend) Index(
 	round uint64,
-	blockHash hash.Hash,
+	blockHash ethcommon.Hash,
 	txs []*types.UnverifiedTransaction,
 ) error {
 	//block round <-> block hash
@@ -200,7 +201,7 @@ func (p *psqlBackend) Index(
 	return nil
 }
 
-func (p *psqlBackend) QueryBlockRound(blockHash hash.Hash) (uint64, error) {
+func (p *psqlBackend) QueryBlockRound(blockHash ethcommon.Hash) (uint64, error) {
 	round, err := p.storage.GetBlockRound(blockHash.String())
 	if err != nil {
 		p.logger.Error("Can't find matched block")
@@ -210,14 +211,14 @@ func (p *psqlBackend) QueryBlockRound(blockHash hash.Hash) (uint64, error) {
 	return round, nil
 }
 
-func (p *psqlBackend) QueryBlockHash(round uint64) (hash.Hash, error) {
+func (p *psqlBackend) QueryBlockHash(round uint64) (ethcommon.Hash, error) {
 	blockHash, err := p.storage.GetBlockHash(round)
 	if err != nil {
 		p.logger.Error("Indexer error!")
-		return hash.Hash{}, err
+		return ethcommon.Hash{}, err
 	}
 
-	return hash.NewFromBytes([]byte(blockHash)), nil
+	return ethcommon.BytesToHash([]byte(blockHash)), nil
 }
 
 func (p *psqlBackend) storeIndexedRound(round uint64) {
@@ -243,7 +244,7 @@ func (p *psqlBackend) QueryIndexedRound() uint64 {
 	return indexedRound
 }
 
-func (p *psqlBackend) QueryTransaction(ethTxHash hash.Hash) (*model.Transaction, error) {
+func (p *psqlBackend) QueryTransaction(ethTxHash ethcommon.Hash) (*model.Transaction, error) {
 	tx, err := p.storage.GetTransaction(ethTxHash.String())
 	if err != nil {
 		return nil, err
