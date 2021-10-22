@@ -20,7 +20,7 @@ type AccessTuple struct {
 	StorageKeys []string
 }
 
-// ContinuesIndexedRound Continues latest Indexed Block Round
+// Continues is the latest Indexed Block Round.
 const Continues string = "tip"
 
 type ContinuesIndexedRound struct {
