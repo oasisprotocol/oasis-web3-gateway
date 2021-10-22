@@ -78,6 +78,10 @@ func (s *Service) periodIndexWorker() {
 
 		indexed := s.backend.QueryIndexedRound()
 		s.Logger.Info("Indexed round", "indexed", indexed)
+		if latest < indexed {
+			panic("This is a new chain, please clear the db first!")
+		}
+
 		if latest == indexed {
 			time.Sleep(storageRetryTimeout)
 			s.Logger.Info("QueryIndexedRound failed, continue!")
