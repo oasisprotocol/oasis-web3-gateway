@@ -58,11 +58,11 @@ func TestInitPostDb(t *testing.T) {
 	}
 	db.Store(tx1)
 	db.Store(tx2)
-	_, round, index, err := db.GetTransactionRef(tx1.EthTxHash)
+	txRef, err := db.GetTransactionRef(tx1.EthTxHash)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("index: %v, round: %v\n", index, round)
+	fmt.Printf("index: %v, round: %v\n", txRef.Index, txRef.Round)
 
 	legacyTx := &model.Transaction{
 		Hash:       "hello",
