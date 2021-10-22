@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -11,13 +12,25 @@ import (
 	"math/big"
 
 	"github.com/stretchr/testify/require"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 const (
+	// dave address generated from github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing
 	daveEVMAddr = "0xdce075e1c39b1ae0b75d554558b6451a226ffe00"
+	// Zero hex bytes used in jsonrpc
 	zeroString = "0x0"
 )
+
+var (
+	// The dave private key derive from the seed "oasis-runtime-sdk/test-keys: dave"
+	daveKey, _  = crypto.HexToECDSA("c0e43d8755f201b715fd5a9ce0034c568442543ae0a0ee1aec2985ffe40edb99")
+)
+
 
 func TestMain(m *testing.M) {
 
@@ -85,6 +98,32 @@ func getNonce(t *testing.T, from string) hexutil.Uint64 {
 
 func TestEth_GetTransactionCount(t *testing.T) {
 	getNonce(t, daveEVMAddr)
+}
+
+func localClient() *ethclient.Client {
+	HOST = "http://localhost:8545"
+	c, _ := ethclient.Dial(HOST)
+	return c
+}
+
+// TestEth_SendRawTransaction post eth raw transaction with ethclient from go-ethereum
+func TestEth_SendRawTransaction(t *testing.T) {
+	ec := localClient()
+
+	chainID := big.NewInt(42261)
+	nonce, err := ec.NonceAt(context.Background(), common.HexToAddress(daveEVMAddr), nil)
+	require.Nil(t, err, "get nonce failed")
+
+	// Create transaction
+	tx := types.NewTransaction(nonce, common.Address{1}, big.NewInt(1), 22000, big.NewInt(2), nil)
+	signer := types.LatestSignerForChainID(chainID)
+	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), daveKey)
+	require.Nil(t, err, "sign tx")
+
+	signedTx, err := tx.WithSignature(signer, signature)
+	require.Nil(t, err, "pack tx")
+
+	ec.SendTransaction(context.Background(), signedTx)
 }
 
 // func TestETH_GetBlockTransactionCountByHash(t *testing.T) {
