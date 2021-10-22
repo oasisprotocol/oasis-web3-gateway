@@ -280,26 +280,21 @@ func (api *PublicAPI) EstimateGas(args utils.TransactionArgs, blockNum ethrpc.Bl
 
 // GetTransactionReceipt returns the transaction receipt by hash.
 func (api *PublicAPI) GetTransactionReceipt(hash common.Hash) (map[string]interface{}, error) {
-	round, index, err := api.backend.QueryTransactionRoundAndIndex(hash.String())
+	txRef, err := api.backend.QueryTransactionRef(hash.String())
 	if err != nil {
 		api.Logger.Error("failed query transaction round and index", "hash", hash.Hex(), "error", err.Error())
 		return nil, err
 	}
-	blockHash, err := api.backend.QueryBlockHash(round)
+	txResults, err := api.client.GetTransactionsWithResults(api.ctx, txRef.Round)
 	if err != nil {
-		api.Logger.Error("failed to query block hash", "round", round, "error", err.Error())
+		api.Logger.Error("failed to get transaction results", "round", txRef.Round, "error", err.Error())
 		return nil, err
 	}
-	txResults, err := api.client.GetTransactionsWithResults(api.ctx, round)
-	if err != nil {
-		api.Logger.Error("failed to get transaction results", "round", round, "error", err.Error())
-		return nil, err
-	}
-	if len(txResults) == 0 || len(txResults)-1 < int(index) {
+	if len(txResults) == 0 || len(txResults)-1 < int(txRef.Index) {
 		return nil, errors.New("out of index")
 	}
 
-	utx := txResults[index].Tx
+	utx := txResults[txRef.Index].Tx
 	ethTx, err := api.backend.Decode(&utx)
 	if err != nil {
 		api.Logger.Error("decode utx error", err.Error())
@@ -308,7 +303,7 @@ func (api *PublicAPI) GetTransactionReceipt(hash common.Hash) (map[string]interf
 
 	// cumulativeGasUsed
 	cumulativeGasUsed := uint64(0)
-	for i := 0; i <= int(index) && i < len(txResults); i++ {
+	for i := 0; i <= int(txRef.Index) && i < len(txResults); i++ {
 		tx, err := api.backend.Decode(&txResults[i].Tx)
 		if err != nil {
 			api.Logger.Error("decode utx error", err.Error())
@@ -319,7 +314,7 @@ func (api *PublicAPI) GetTransactionReceipt(hash common.Hash) (map[string]interf
 
 	// status
 	status := uint8(0)
-	if txResults[index].Result.IsSuccess() {
+	if txResults[txRef.Index].Result.IsSuccess() {
 		status = uint8(ethtypes.ReceiptStatusSuccessful)
 	} else {
 		status = uint8(ethtypes.ReceiptStatusFailed)
@@ -327,7 +322,7 @@ func (api *PublicAPI) GetTransactionReceipt(hash common.Hash) (map[string]interf
 
 	// logs
 	oasisLogs := []*Log{}
-	for i, ev := range txResults[index].Events {
+	for i, ev := range txResults[txRef.Index].Events {
 		if ev.Code == 1 {
 			log := &Log{}
 			if err := cbor.Unmarshal(ev.Value, log); err != nil {
@@ -337,7 +332,7 @@ func (api *PublicAPI) GetTransactionReceipt(hash common.Hash) (map[string]interf
 			oasisLogs = append(oasisLogs, log)
 		}
 	}
-	logs := logs2EthLogs(oasisLogs, round, common.HexToHash(blockHash.Hex()), hash, index)
+	logs := logs2EthLogs(oasisLogs, txRef.Round, common.HexToHash(txRef.BlockHash), hash, txRef.Index)
 
 	receipt := map[string]interface{}{
 		"status":            status,
@@ -348,9 +343,9 @@ func (api *PublicAPI) GetTransactionReceipt(hash common.Hash) (map[string]interf
 		"contractAddress":   "",
 		"gasUsed":           ethTx.Gas,
 		"type":              ethTx.Type,
-		"blockHash":         blockHash.Hex(),
-		"blockNumber":       round,
-		"transactionIndex":  index,
+		"blockHash":         txRef.BlockHash,
+		"blockNumber":       txRef.Round,
+		"transactionIndex":  txRef.Index,
 		"from":              ethTx.From,
 		"to":                ethTx.To,
 	}

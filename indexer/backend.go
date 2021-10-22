@@ -40,8 +40,8 @@ type QueryableBackend interface {
 	// QueryBlockHash queries block hash by round.
 	QueryBlockHash(round uint64) (hash.Hash, error)
 
-	// QueryTransactionRoundAndIndex queries transaction round and index by transaction hash.
-	QueryTransactionRoundAndIndex(ethTxHash string) (uint64, uint32, error)
+	// QueryTransactionRef returns block hash, round and index of the transaction.
+	QueryTransactionRef(ethTxHash string) (*model.TransactionRef, error)
 
 	// QueryTransactionByRoundAndIndex queries ethereum transaction by round and index.
 	QueryTransactionByRoundAndIndex(round uint64, index uint32) (*model.Transaction, error)
@@ -148,7 +148,7 @@ func (p *psqlBackend) Decode(utx *types.UnverifiedTransaction) (*model.Transacti
 	return innerTx, nil
 }
 
-func (p *psqlBackend) DecodeUtx(utx *types.UnverifiedTransaction, round uint64, idx uint32) (*model.TransactionRef, *model.Transaction, error) {
+func (p *psqlBackend) DecodeUtx(utx *types.UnverifiedTransaction, blockHash string, round uint64, idx uint32) (*model.TransactionRef, *model.Transaction, error) {
 	ethTx, err := p.Decode(utx)
 	if err != nil {
 		return nil, nil, err
@@ -158,6 +158,7 @@ func (p *psqlBackend) DecodeUtx(utx *types.UnverifiedTransaction, round uint64, 
 		EthTxHash: ethTx.Hash,
 		Index:     idx,
 		Round:     round,
+		BlockHash: blockHash,
 	}
 
 	return txRef, ethTx, nil
@@ -180,7 +181,7 @@ func (p *psqlBackend) Index(
 			// Skip non-Ethereum transactions.
 			continue
 		}
-		txRef, ethTx, err := p.DecodeUtx(utx, round, uint32(idx))
+		txRef, ethTx, err := p.DecodeUtx(utx, blockHash.String(), round, uint32(idx))
 		if err != nil {
 			p.logger.Error("decode transaction", err)
 			continue
@@ -250,8 +251,8 @@ func (p *psqlBackend) QueryTransaction(ethTxHash hash.Hash) (*model.Transaction,
 	return tx, nil
 }
 
-func (p *psqlBackend) QueryTransactionRoundAndIndex(hash string) (uint64, uint32, error) {
-	return p.storage.GetTransactionRoundAndIndex(hash)
+func (p *psqlBackend) QueryTransactionRef(hash string) (*model.TransactionRef, error) {
+	return p.storage.GetTransactionRef(hash)
 }
 
 func (p *psqlBackend) QueryTransactionByRoundAndIndex(round uint64, index uint32) (*model.Transaction, error) {

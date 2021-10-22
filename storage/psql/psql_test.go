@@ -48,15 +48,17 @@ func TestInitPostDb(t *testing.T) {
 		EthTxHash: "hello",
 		Index:     1,
 		Round:     1,
+		BlockHash: "abc123",
 	}
 	tx2 := &model.TransactionRef{
 		EthTxHash: "hello",
 		Index:     1,
 		Round:     2,
+		BlockHash: "cde456",
 	}
 	db.Store(tx1)
 	db.Store(tx2)
-	round, index, err := db.GetTransactionRoundAndIndex(tx1.EthTxHash)
+	_, round, index, err := db.GetTransactionRef(tx1.EthTxHash)
 	if err != nil {
 		log.Fatal(err)
 	}

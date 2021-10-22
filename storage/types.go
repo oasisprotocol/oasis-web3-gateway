@@ -17,8 +17,8 @@ type Storage interface {
 	// GetBlockHash queries block hash by block round.
 	GetBlockHash(round uint64) (string, error)
 
-	// GetTransactionRoundAndIndex queries transaction round and index by transaction hash.
-	GetTransactionRoundAndIndex(ethTxHash string) (uint64, uint32, error)
+	// GetTransactionRef returns block hash, round and index of the transaction.
+	GetTransactionRef(ethTxHash string) (*model.TransactionRef, error)
 
 	// GetTransactionByRoundAndIndex queries ethereum transaction by round and index.
 	GetTransactionByRoundAndIndex(round uint64, index uint32) (*model.Transaction, error)

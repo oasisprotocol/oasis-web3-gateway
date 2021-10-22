@@ -42,17 +42,17 @@ func InitDb(cfg *conf.Config) (*PostDb, error) {
 	}, nil
 }
 
-//GetTransactionRoundAndIndex queries transaction round and index by hash.
-func (db *PostDb) GetTransactionRoundAndIndex(hash string) (uint64, uint32, error) {
+// GetTransactionRef returns block hash, round and index of the transaction.
+func (db *PostDb) GetTransactionRef(hash string) (*model.TransactionRef, error) {
 	tx := new(model.TransactionRef)
 	err := db.Db.Model(tx).
 		Where("transaction_ref.eth_tx_hash=?", hash).
 		Select()
 	if err != nil {
-		return 0, 0, err
+		return nil, err
 	}
 
-	return tx.Round, tx.Index, nil
+	return tx, nil
 }
 
 // GetTransactionByRoundAndIndex queries ethereum transaction by round and index.

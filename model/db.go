@@ -11,6 +11,7 @@ type TransactionRef struct {
 	EthTxHash string `pg:",pk"`
 	Index     uint32 `pg:",use_zero"`
 	Round     uint64 `pg:",use_zero"`
+	BlockHash string
 }
 
 // AccessTuple is the element of an AccessList.
