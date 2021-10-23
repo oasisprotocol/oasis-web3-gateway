@@ -6,41 +6,58 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/trie"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
 
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 )
 
+var (
+	defaultValidatorAddr = "0x0000000000000000000000000000000088888888"
+	defaultSize          = 100
+	defaultGasLimit      = 21000 * 1000
+	EmptyRootHash        = common.HexToHash("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
+)
+
 // ConvertToEthBlock returns a JSON-RPC compatible Ethereum block from a given Oasis block and its block result.
 func ConvertToEthBlock(
 	block *block.Block,
-	transactions interface{},
+	transactions ethtypes.Transactions,
 	logs []*ethtypes.Log,
+	gas uint64,
 ) (map[string]interface{}, error) {
 	// TODO tx releated
 	bhash, _ := block.Header.IORoot.MarshalBinary()
 	bprehash, _ := block.Header.PreviousHash.MarshalBinary()
 	bshash, _ := block.Header.StateRoot.MarshalBinary()
-	btxhash, _ := block.Header.MessagesHash.MarshalBinary()
+	// btxhash, _ := block.Header.MessagesHash.MarshalBinary()
 	bloom := ethtypes.BytesToBloom(ethtypes.LogsBloom(logs))
+	gasUsed := big.NewInt(0).SetUint64(gas)
+
+	var btxhash common.Hash
+	if len(transactions) == 0 {
+		btxhash = EmptyRootHash
+	} else {
+		btxhash = ethtypes.DeriveSha(transactions, trie.NewStackTrie(nil))
+	}
 
 	res := map[string]interface{}{
-		"number":     hexutil.Uint64(block.Header.Round),
-		"hash":       hexutil.Bytes(bhash),
-		"parentHash": common.BytesToHash(bprehash),
-		"nonce":      ethtypes.BlockNonce{},
-		"sha3Uncles": ethtypes.EmptyUncleHash,
-		"logsBloom":  bloom,
-		"stateRoot":  hexutil.Bytes(bshash),
-		// "miner":      validatorAddr,
-		"mixHash":    common.Hash{},
-		"difficulty": (*hexutil.Big)(big.NewInt(0)),
-		"extraData":  "0x",
-		//"size":             hexutil.Uint64(size),
-		//"gasLimit":         hexutil.Uint64(gasLimit),
-		//"gasUsed":          (*hexutil.Big)(gasUsed),
+		"number":           hexutil.Uint64(block.Header.Round),
+		"hash":             hexutil.Bytes(bhash),
+		"parentHash":       common.BytesToHash(bprehash),
+		"nonce":            ethtypes.BlockNonce{},
+		"sha3Uncles":       ethtypes.EmptyUncleHash,
+		"logsBloom":        bloom,
+		"stateRoot":        hexutil.Bytes(bshash),
+		"miner":            defaultValidatorAddr,
+		"mixHash":          common.Hash{},
+		"difficulty":       (*hexutil.Big)(big.NewInt(0)),
+		"extraData":        "0x",
+		"size":             hexutil.Uint64(defaultSize),
+		"gasLimit":         hexutil.Uint64(defaultGasLimit),
+		"gasUsed":          (*hexutil.Big)(gasUsed),
 		"timestamp":        hexutil.Uint64(block.Header.Timestamp),
-		"transactionsRoot": hexutil.Bytes(btxhash),
+		"transactionsRoot": btxhash,
 		"receiptsRoot":     ethtypes.EmptyRootHash,
 
 		"uncles":          []common.Hash{},

@@ -218,7 +218,7 @@ func (p *psqlBackend) QueryBlockHash(round uint64) (ethcommon.Hash, error) {
 		return ethcommon.Hash{}, err
 	}
 
-	return ethcommon.BytesToHash([]byte(blockHash)), nil
+	return ethcommon.HexToHash(blockHash), nil
 }
 
 func (p *psqlBackend) storeIndexedRound(round uint64) {

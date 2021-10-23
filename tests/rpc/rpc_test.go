@@ -4,19 +4,18 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
+	"math/big"
 	"net/http"
 	"os"
 	"testing"
 	"time"
-	"math/big"
 
-	"github.com/stretchr/testify/require"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -28,9 +27,8 @@ const (
 
 var (
 	// The dave private key derive from the seed "oasis-runtime-sdk/test-keys: dave"
-	daveKey, _  = crypto.HexToECDSA("c0e43d8755f201b715fd5a9ce0034c568442543ae0a0ee1aec2985ffe40edb99")
+	daveKey, _ = crypto.HexToECDSA("c0e43d8755f201b715fd5a9ce0034c568442543ae0a0ee1aec2985ffe40edb99")
 )
-
 
 func TestMain(m *testing.M) {
 
@@ -61,7 +59,6 @@ func call(t *testing.T, method string, params interface{}) *Response {
 	decoder := json.NewDecoder(res.Body)
 	rpcRes := new(Response)
 	err = decoder.Decode(&rpcRes)
-	fmt.Printf("ret: %v", rpcRes)
 	require.NoError(t, err)
 
 	err = res.Body.Close()
@@ -126,203 +123,28 @@ func TestEth_SendRawTransaction(t *testing.T) {
 	ec.SendTransaction(context.Background(), signedTx)
 }
 
-// func TestETH_GetBlockTransactionCountByHash(t *testing.T) {
-// 	txHash := sendTestTransaction(t)
+func TestEth_GetBlockByNumberAndGetBlockByHash(t *testing.T) {
+	ec := localClient()
+	ctx := context.Background()
 
-// 	receipt := waitForReceipt(t, txHash)
-// 	require.NotNil(t, receipt, "transaction failed")
-// 	require.Equal(t, "0x1", receipt["status"].(string))
-
-// 	blockHash := receipt["blockHash"].(string)
-// 	param := []string{blockHash}
-// 	rpcRes := call(t, "eth_getBlockTransactionCountByHash", param)
-
-// 	var res hexutil.Uint
-// 	err := res.UnmarshalJSON(rpcRes.Result)
-// 	require.NoError(t, err)
-// 	require.Equal(t, "0x1", res.String())
-// }
-
-// func TestETH_GetBlockTransactionCountByHash_BlockHashNotFound(t *testing.T) {
-// 	anyBlockHash := "0xb3b20624f8f0f86eb50dd04688409e5cea4bd02d700bf6e79e9384d47d6a5a35"
-// 	param := []string{anyBlockHash}
-// 	rpcRes := call(t, "eth_getBlockTransactionCountByHash", param)
-
-// 	var result interface{}
-// 	err := json.Unmarshal(rpcRes.Result, &result)
-// 	require.NoError(t, err)
-// 	require.Nil(t, result)
-// }
-
-// func TestETH_GetTransactionByBlockHashAndIndex(t *testing.T) {
-// 	txHash := sendTestTransaction(t)
-
-// 	receipt := waitForReceipt(t, txHash)
-// 	require.NotNil(t, receipt, "transaction failed")
-// 	require.Equal(t, "0x1", receipt["status"].(string))
-// 	blockHash := receipt["blockHash"].(string)
-
-// 	param := []string{blockHash, "0x0"}
-// 	rpcRes := call(t, "eth_getTransactionByBlockHashAndIndex", param)
-
-// 	tx := make(map[string]interface{})
-// 	err := json.Unmarshal(rpcRes.Result, &tx)
-// 	require.NoError(t, err)
-// 	require.NotNil(t, tx)
-// 	require.Equal(t, blockHash, tx["blockHash"].(string))
-// 	require.Equal(t, "0x0", tx["transactionIndex"].(string))
-// }
-
-// func TestETH_GetTransactionByBlockHashAndIndex_BlockHashNotFound(t *testing.T) {
-// 	anyBlockHash := "0xb3b20624f8f0f86eb50dd04688409e5cea4bd02d700bf6e79e9384d47d6a5a35"
-
-// 	param := []string{anyBlockHash, "0x0"}
-// 	rpcRes := call(t, "eth_getTransactionByBlockHashAndIndex", param)
-
-// 	var result interface{}
-// 	err := json.Unmarshal(rpcRes.Result, &result)
-// 	require.NoError(t, err)
-// 	require.Nil(t, result)
-// }
-
-// func TestEth_chainId(t *testing.T) {
-// 	rpcRes := call(t, "eth_chainId", []string{})
-
-// 	var res hexutil.Uint
-// 	err := res.UnmarshalJSON(rpcRes.Result)
-// 	require.NoError(t, err)
-// 	require.NotEqual(t, "0x0", res.String())
-// }
-
-// func TestEth_blockNumber(t *testing.T) {
-// 	rpcRes := call(t, "eth_blockNumber", []string{})
-
-// 	var res hexutil.Uint64
-// 	err := res.UnmarshalJSON(rpcRes.Result)
-// 	require.NoError(t, err)
-
-// 	t.Logf("Got block number: %s\n", res.String())
-// }
-
-// func TestEth_coinbase(t *testing.T) {
-// 	zeroAddress := hexutil.Bytes(common.Address{}.Bytes())
-// 	rpcRes := call(t, "eth_coinbase", []string{})
-
-// 	var res hexutil.Bytes
-// 	err := res.UnmarshalJSON(rpcRes.Result)
-// 	require.NoError(t, err)
-
-// 	t.Logf("Got coinbase block proposer: %s\n", res.String())
-// 	require.NotEqual(t, zeroAddress.String(), res.String(), "expected: not %s got: %s\n", zeroAddress.String(), res.String())
-// }
-
-// func TestEth_GetCode(t *testing.T) {
-// 	expectedRes := hexutil.Bytes{}
-// 	rpcRes := call(t, "eth_getCode", []string{addrA, zeroString})
-
-// 	var code hexutil.Bytes
-// 	err := code.UnmarshalJSON(rpcRes.Result)
-
-// 	require.NoError(t, err)
-
-// 	t.Logf("Got code [%X] for %s\n", code, addrA)
-// 	require.True(t, bytes.Equal(expectedRes, code), "expected: %X got: %X", expectedRes, code)
-// }
-
-// // sendTestTransaction sends a dummy transaction
-// func sendTestTransaction(t *testing.T) hexutil.Bytes {
-// 	param := make([]map[string]string, 1)
-// 	param[0] = make(map[string]string)
-// 	param[0]["from"] = "0x" + fmt.Sprintf("%x", from)
-// 	param[0]["to"] = "0x1122334455667788990011223344556677889900"
-// 	param[0]["value"] = "0x1"
-// 	param[0]["gasPrice"] = "0x1"
-// 	rpcRes := call(t, "eth_sendTransaction", param)
-
-// 	var hash hexutil.Bytes
-// 	err := json.Unmarshal(rpcRes.Result, &hash)
-// 	require.NoError(t, err)
-// 	return hash
-// }
-
-// func TestEth_GetTransactionReceipt(t *testing.T) {
-// 	hash := sendTestTransaction(t)
-
-// 	receipt := waitForReceipt(t, hash)
-
-// 	require.NotNil(t, receipt, "transaction failed")
-// 	require.Equal(t, "0x1", receipt["status"].(string))
-// 	require.Equal(t, []interface{}{}, receipt["logs"].([]interface{}))
-// }
-
-// // deployTestContract deploys a contract that emits an event in the constructor
-// func deployTestContract(t *testing.T) (hexutil.Bytes, map[string]interface{}) {
-// 	param := make([]map[string]string, 1)
-// 	param[0] = make(map[string]string)
-// 	param[0]["from"] = "0x" + fmt.Sprintf("%x", from)
-// 	param[0]["data"] = "0x6080604052348015600f57600080fd5b5060117f775a94827b8fd9b519d36cd827093c664f93347070a554f65e4a6f56cd73889860405160405180910390a2603580604b6000396000f3fe6080604052600080fdfea165627a7a723058206cab665f0f557620554bb45adf266708d2bd349b8a4314bdff205ee8440e3c240029"
-// 	param[0]["gas"] = "0x200000"
-// 	param[0]["gasPrice"] = "0x1"
-
-// 	rpcRes := call(t, "eth_sendTransaction", param)
-
-// 	var hash hexutil.Bytes
-// 	err := json.Unmarshal(rpcRes.Result, &hash)
-// 	require.NoError(t, err)
-
-// 	receipt := waitForReceipt(t, hash)
-// 	require.NotNil(t, receipt, "transaction failed")
-// 	require.Equal(t, "0x1", receipt["status"].(string))
-
-// 	return hash, receipt
-// }
-
-// // hash of Hello event
-// var helloTopic = "0x775a94827b8fd9b519d36cd827093c664f93347070a554f65e4a6f56cd738898"
-
-// // world parameter in Hello event
-// var worldTopic = "0x0000000000000000000000000000000000000000000000000000000000000011"
-
-// func TestEth_EstimateGas(t *testing.T) {
-// 	param := make([]map[string]string, 1)
-// 	param[0] = make(map[string]string)
-// 	param[0]["from"] = "0x" + fmt.Sprintf("%x", from)
-// 	param[0]["to"] = "0x1122334455667788990011223344556677889900"
-// 	param[0]["value"] = "0x1"
-// 	param[0]["gas"] = "0x5209"
-// 	rpcRes := call(t, "eth_estimateGas", param)
-// 	require.NotNil(t, rpcRes)
-
-// 	var gas string
-// 	err := json.Unmarshal(rpcRes.Result, &gas)
-// 	require.NoError(t, err, string(rpcRes.Result))
-// 	require.Equal(t, "0x5208", gas)
-// }
-
-func TestEth_GetBlockByNumber(t *testing.T) {
-	param := []interface{}{"0x1", false}
-	rpcRes := call(t, "eth_getBlockByNumber", param)
-
-	block := make(map[string]interface{})
-	err := json.Unmarshal(rpcRes.Result, &block)
+	number := big.NewInt(1)
+	blk1, err := ec.BlockByNumber(ctx, number)
 	require.NoError(t, err)
-	require.Equal(t, "0x", block["extraData"].(string))
-	require.Equal(t, []interface{}{}, block["uncles"].([]interface{}))
+	_ = blk1
+
+	param := []interface{}{number.String(), false}
+	rpcRes := call(t, "eth_getBlockHash", param)
+	var blk_hash interface{}
+	err = json.Unmarshal(rpcRes.Result, &blk_hash)
+	require.NoError(t, err)
+	_ = rpcRes
+
+	blkhash := blk_hash.(string)
+	hash := common.HexToHash(blkhash)
+	param = []interface{}{hash, false}
+	rpcRes = call(t, "eth_getBlockByHash", param)
+	blk2 := make(map[string]interface{})
+	err = json.Unmarshal(rpcRes.Result, &blk2)
+	require.NoError(t, err)
+	require.Equal(t, "0x1", blk2["number"].(string))
 }
-
-// func TestEth_GetBlockByHash(t *testing.T) {
-// 	param := []interface{}{"0x1", false}
-// 	rpcRes := call(t, "eth_getBlockByNumber", param)
-
-// 	block := make(map[string]interface{})
-// 	err := json.Unmarshal(rpcRes.Result, &block)
-// 	require.NoError(t, err)
-// 	blockHash := block["hash"].(string)
-
-// 	param = []interface{}{blockHash, false}
-// 	rpcRes = call(t, "eth_getBlockByHash", param)
-// 	block = make(map[string]interface{})
-// 	err = json.Unmarshal(rpcRes.Result, &block)
-// 	require.NoError(t, err)
-// 	require.Equal(t, "0x1", block["number"].(string))
-// }
