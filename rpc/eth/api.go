@@ -168,8 +168,33 @@ func (api *PublicAPI) GetBalance(address common.Address, blockNrOrHash ethrpc.Bl
 	return (*hexutil.Big)(res.ToBigInt()), nil
 }
 
+// GetBlockTransactionCountByHash returns the number of transactions in the block identified by hash.
+func (api *PublicAPI) GetBlockTransactionCountByHash(blockHash common.Hash) *hexutil.Uint {
+	api.Logger.Debug("eth_getBlockTransactionCountByHash", "hash", blockHash.Hex())
+
+	round, err := api.backend.QueryBlockRound(blockHash)
+	if err != nil {
+		api.Logger.Error("Matched block error, block hash: ", blockHash)
+	}
+
+	blk, err := api.client.GetBlock(api.ctx, round)
+	if err != nil {
+		api.Logger.Error("Matched block error, block round: ", round)
+	}
+
+	resTxs, err := api.client.GetTransactions(api.ctx, blk.Header.Round)
+	if err != nil {
+		api.Logger.Error("Call GetTransactions error")
+	}
+
+	// TODO: only filter  the eth transactions ?
+	n := hexutil.Uint(len(resTxs))
+	return &n
+}
+
 // GetTransactionCount returns the number of transactions the given address has sent for the given block number.
 func (api *PublicAPI) GetTransactionCount(ethaddr common.Address, blockNrOrHash ethrpc.BlockNumberOrHash) (*hexutil.Uint64, error) {
+	api.Logger.Debug("eth_getTransactionCount", "address", ethaddr.Hex(), "block number or hash", blockNrOrHash)
 	accountsMod := accounts.NewV1(api.client)
 	accountsAddr := types.NewAddressRaw(types.AddressV0Secp256k1EthContext, ethaddr[:])
 	nonce, err := accountsMod.Nonce(api.ctx, client.RoundLatest, (types.Address)(accountsAddr))
