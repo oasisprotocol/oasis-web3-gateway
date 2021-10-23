@@ -487,27 +487,18 @@ func (api *PublicAPI) GetTransactionReceipt(hash common.Hash) (map[string]interf
 func logs2EthLogs(logs []*Log, round uint64, blockHash, txHash common.Hash, txIndex uint32) []*ethtypes.Log {
 	ethLogs := []*ethtypes.Log{}
 	for i := range logs {
-		ethLogs = append(ethLogs, toEthereum(logs[i], round, blockHash, txHash, uint(txIndex), uint(i)))
+		ethLog := &ethtypes.Log{
+			Address:     logs[i].Address,
+			Topics:      logs[i].Topics,
+			Data:        logs[i].Data,
+			BlockNumber: round,
+			TxHash:      txHash,
+			TxIndex:     uint(txIndex),
+			BlockHash:   blockHash,
+			Index:       uint(i),
+			Removed:     false,
+		}
+		ethLogs = append(ethLogs, ethLog)
 	}
 	return ethLogs
-}
-
-//toEthereum returns the Ethereum type Log from an Oasis Log.
-func toEthereum(log *Log, round uint64, blockHash, txHash common.Hash, txIndex, logIndex uint) *ethtypes.Log {
-	topics := []common.Hash{}
-	for i := range log.Topics {
-		topics = append(topics, log.Topics[i])
-	}
-
-	return &ethtypes.Log{
-		Address:     log.Address,
-		Topics:      log.Topics,
-		Data:        log.Data,
-		BlockNumber: round,
-		TxHash:      txHash,
-		TxIndex:     txIndex,
-		BlockHash:   blockHash,
-		Index:       logIndex,
-		Removed:     false,
-	}
 }
