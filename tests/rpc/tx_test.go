@@ -3,8 +3,6 @@ package rpc
 import (
 	"context"
 	_ "embed"
-	"fmt"
-	"log"
 	"math/big"
 	"strings"
 	"testing"
@@ -37,7 +35,7 @@ func waitTransaction(ctx context.Context, ec *ethclient.Client, txhash common.Ha
 			return receipt, nil
 		}
 		if err != nil {
-			fmt.Printf("Receipt retrieval failed\n")
+			// fmt.Printf("Receipt retrieval failed: %s\n", err)
 		}
 		// Wait for the next round.
 		select {
@@ -46,18 +44,6 @@ func waitTransaction(ctx context.Context, ec *ethclient.Client, txhash common.Ha
 		case <-queryTicker.C:
 		}
 	}
-}
-
-func TestGetReceipt(t *testing.T) {
-	HOST = "http://localhost:8545"
-	ec, _ := ethclient.Dial(HOST)
-	tx := common.HexToHash("0xe94f62a66e7868a5b0838539c5ca3fc27bb5e6328223d76ca65161ffd81f24fc")
-	receipt, err := ec.TransactionReceipt(context.Background(), tx)
-	if err != nil {
-		log.Fatalln("TransactionReceipt error:", err)
-	}
-	data, _ := receipt.MarshalJSON()
-	fmt.Println(string(data))
 }
 
 func TestContractCreation(t *testing.T) {
@@ -69,7 +55,7 @@ func TestContractCreation(t *testing.T) {
 	chainID := big.NewInt(42261)
 	nonce, err := ec.NonceAt(context.Background(), common.HexToAddress(daveEVMAddr), nil)
 	require.Nil(t, err, "get nonce failed")
-	fmt.Println("nonce:", nonce)
+
 	// Create transaction
 	tx := types.NewContractCreation(nonce, big.NewInt(0), 3000003, big.NewInt(2), code)
 	signer := types.LatestSignerForChainID(chainID)
@@ -80,10 +66,18 @@ func TestContractCreation(t *testing.T) {
 	require.Nil(t, err, "pack tx")
 
 	ec.SendTransaction(context.Background(), signedTx)
-	fmt.Println(signedTx.Hash().Hex())
-	// ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	// defer cancel()
-	// waitTransaction(ctx, ec, tx.Hash())
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	receipt, err := waitTransaction(ctx, ec, signedTx.Hash())
+	if err != nil {
+		t.Errorf("get receipt failed: %s", err)
+		return
+	}
+	// t.Logf("Contract address: %s", receipt.ContractAddress)
+
+	require.Equal(t, receipt.Status, uint64(1))
 }
 
 func TestContractFailCreation(t *testing.T) {
@@ -107,7 +101,15 @@ func TestContractFailCreation(t *testing.T) {
 
 	ec.SendTransaction(context.Background(), signedTx)
 
-	// ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	// defer cancel()
-	// waitTransaction(ctx, ec, tx.Hash())
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	receipt, err := waitTransaction(ctx, ec, signedTx.Hash())
+	if err != nil {
+		t.Errorf("get receipt failed: %s", err)
+		return
+	}
+	// t.Logf("failed creation receipt: %#v", receipt)
+
+	require.Equal(t, receipt.Status, uint64(0))
 }

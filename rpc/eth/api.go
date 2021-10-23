@@ -408,7 +408,7 @@ func (api *PublicAPI) GetTransactionReceipt(txHash common.Hash) (map[string]inte
 	txRef, err := api.backend.QueryTransactionRef(txHash.String())
 	if err != nil {
 		api.Logger.Error("failed query transaction round and index", "hash", txHash.Hex(), "error", err.Error())
-		return nil, err
+		return nil, nil
 	}
 	txResults, err := api.client.GetTransactionsWithResults(api.ctx, txRef.Round)
 	if err != nil {
