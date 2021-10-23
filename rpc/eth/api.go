@@ -193,11 +193,11 @@ func (api *PublicAPI) GetBlockTransactionCountByHash(blockHash common.Hash) *hex
 }
 
 // GetTransactionCount returns the number of transactions the given address has sent for the given block number.
-func (api *PublicAPI) GetTransactionCount(ethaddr common.Address, blockNrOrHash ethrpc.BlockNumberOrHash) (*hexutil.Uint64, error) {
-	api.Logger.Debug("eth_getTransactionCount", "address", ethaddr.Hex(), "block number or hash", blockNrOrHash)
+func (api *PublicAPI) GetTransactionCount(ethaddr common.Address, blockNum string) (*hexutil.Uint64, error) {
+	api.Logger.Debug("eth_getTransactionCount", "address", ethaddr.Hex(), "blockNumber", blockNum)
 	accountsMod := accounts.NewV1(api.client)
 	accountsAddr := types.NewAddressRaw(types.AddressV0Secp256k1EthContext, ethaddr[:])
-	nonce, err := accountsMod.Nonce(api.ctx, client.RoundLatest, (types.Address)(accountsAddr))
+	nonce, err := accountsMod.Nonce(api.ctx, client.RoundLatest, accountsAddr)
 
 	if err != nil {
 		return nil, err
@@ -403,10 +403,11 @@ func (api *PublicAPI) GetTransactionByBlockNumberAndIndex(blockNum ethrpc.BlockN
 }
 
 // GetTransactionReceipt returns the transaction receipt by hash.
-func (api *PublicAPI) GetTransactionReceipt(hash common.Hash) (map[string]interface{}, error) {
-	txRef, err := api.backend.QueryTransactionRef(hash.String())
+func (api *PublicAPI) GetTransactionReceipt(txHash common.Hash) (map[string]interface{}, error) {
+	api.Logger.Debug("eth_getTransactionReceipt", "hash", txHash.Hex())
+	txRef, err := api.backend.QueryTransactionRef(txHash.String())
 	if err != nil {
-		api.Logger.Error("failed query transaction round and index", "hash", hash.Hex(), "error", err.Error())
+		api.Logger.Error("failed query transaction round and index", "hash", txHash.Hex(), "error", err.Error())
 		return nil, err
 	}
 	txResults, err := api.client.GetTransactionsWithResults(api.ctx, txRef.Round)
@@ -456,20 +457,20 @@ func (api *PublicAPI) GetTransactionReceipt(hash common.Hash) (map[string]interf
 			oasisLogs = append(oasisLogs, log)
 		}
 	}
-	logs := logs2EthLogs(oasisLogs, txRef.Round, common.HexToHash(txRef.BlockHash), hash, txRef.Index)
-
+	logs := logs2EthLogs(oasisLogs, txRef.Round, common.HexToHash(txRef.BlockHash), txHash, txRef.Index)
+	//blockNum:=new(big.Int).SetUint64(txRef.Round).String()
 	receipt := map[string]interface{}{
-		"status":            status,
-		"cumulativeGasUsed": cumulativeGasUsed,
+		"status":            hexutil.Uint(status),
+		"cumulativeGasUsed": hexutil.Uint64(cumulativeGasUsed),
 		"logsBloom":         ethtypes.BytesToBloom(ethtypes.LogsBloom(logs)),
 		"logs":              logs,
-		"transactionHash":   hash,
+		"transactionHash":   txHash.Hex(),
 		"contractAddress":   "",
-		"gasUsed":           ethTx.Gas,
-		"type":              ethTx.Type,
+		"gasUsed":           hexutil.Uint64(ethTx.Gas),
+		"type":              hexutil.Uint64(ethTx.Type),
 		"blockHash":         txRef.BlockHash,
-		"blockNumber":       txRef.Round,
-		"transactionIndex":  txRef.Index,
+		"blockNumber":       hexutil.Uint64(txRef.Round),
+		"transactionIndex":  hexutil.Uint64(txRef.Index),
 		"from":              ethTx.From,
 		"to":                ethTx.To,
 	}
@@ -479,7 +480,7 @@ func (api *PublicAPI) GetTransactionReceipt(hash common.Hash) (map[string]interf
 	if len(ethTx.To) == 0 {
 		receipt["contractAddress"] = crypto.CreateAddress(common.HexToAddress(ethTx.From), ethTx.Nonce).Hex()
 	}
-
+	api.Logger.Debug("eth_getTransactionReceipt end")
 	return receipt, nil
 }
 
