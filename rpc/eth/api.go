@@ -220,7 +220,7 @@ func (api *PublicAPI) GetCode(address common.Address, blockNrOrHash ethrpc.Block
 
 // Call executes the given transaction on the state for the given block number.
 // this function doesn't make any changes in the evm state of blockchain
-func (api *PublicAPI) Call(args utils.TransactionArgs) (hexutil.Bytes, error) {
+func (api *PublicAPI) Call(args utils.TransactionArgs, _ ethrpc.BlockNumberOrHash, _ *utils.StateOverride) (hexutil.Bytes, error) {
 	api.Logger.Debug("eth_call", "from", args.From, "to", args.To, "input", args.Input, "value", args.Value)
 
 	res, err := evm.NewV1(api.client).SimulateCall(

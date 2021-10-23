@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -112,4 +114,85 @@ func TestContractFailCreation(t *testing.T) {
 	// t.Logf("failed creation receipt: %#v", receipt)
 
 	require.Equal(t, receipt.Status, uint64(0))
+}
+
+func TestContractCall(t *testing.T) {
+
+	var abidata = `
+		[
+			{
+				"inputs": [],
+				"stateMutability": "nonpayable",
+				"type": "constructor"
+			},
+			{
+				"inputs": [],
+				"name": "name",
+				"outputs": [
+					{
+						"internalType": "string",
+						"name": "",
+						"type": "string"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			}
+		]
+	`
+	testabi, _ := abi.JSON(strings.NewReader(abidata))
+
+	HOST = "http://localhost:8545"
+	ec, _ := ethclient.Dial(HOST)
+
+	code := common.FromHex(strings.TrimSpace(evmSolTestCompiledHex))
+
+	chainID := big.NewInt(42261)
+	nonce, err := ec.NonceAt(context.Background(), common.HexToAddress(daveEVMAddr), nil)
+	require.Nil(t, err, "get nonce failed")
+
+	// Create transaction
+	tx := types.NewContractCreation(nonce, big.NewInt(0), 3000000, big.NewInt(2), code)
+	signer := types.LatestSignerForChainID(chainID)
+	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), daveKey)
+	require.Nil(t, err, "sign tx")
+
+	signedTx, err := tx.WithSignature(signer, signature)
+	require.Nil(t, err, "pack tx")
+
+	ec.SendTransaction(context.Background(), signedTx)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	receipt, err := waitTransaction(ctx, ec, signedTx.Hash())
+	if err != nil {
+		t.Errorf("get receipt failed: %s", err)
+		return
+	}
+	// t.Logf("Contract address: %s", receipt.ContractAddress)
+
+	require.Equal(t, receipt.Status, uint64(1))
+
+	calldata, err := testabi.Pack("name");
+	if err != nil {
+		t.Error(err)
+	}
+	t.Logf("calldata: %x", calldata)
+
+	msg := ethereum.CallMsg{
+		From:  common.HexToAddress(daveEVMAddr),
+		To:    &receipt.ContractAddress,
+		Gas:   3000000,
+		GasPrice: big.NewInt(2),
+		Value: big.NewInt(0),
+		Data: calldata,
+	}
+
+	// CallContract name method
+	name, err := ec.CallContract(context.Background(), msg, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	t.Logf("contract call return: %x", name)
 }
