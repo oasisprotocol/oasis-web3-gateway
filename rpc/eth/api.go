@@ -7,8 +7,9 @@ import (
 
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
+	"github.com/oasisprotocol/oasis-core/go/common/logging"
+	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/indexer"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
 
@@ -17,9 +18,6 @@ import (
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	ethrpc "github.com/ethereum/go-ethereum/rpc"
-
-	"github.com/oasisprotocol/oasis-core/go/common/logging"
-	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/accounts"
@@ -486,8 +484,12 @@ func (api *PublicAPI) GetTransactionReceipt(txHash common.Hash) (map[string]inte
 	if logs == nil {
 		receipt["logs"] = [][]*ethtypes.Log{}
 	}
-	if len(ethTx.To) == 0 {
-		receipt["contractAddress"] = crypto.CreateAddress(common.HexToAddress(ethTx.From), ethTx.Nonce).Hex()
+	if len(ethTx.To) == 0 && txResults[txRef.Index].Result.IsSuccess() {
+		var out []byte
+		if err := cbor.Unmarshal(txResults[txRef.Index].Result.Ok, &out); err != nil {
+			return nil, err
+		}
+		receipt["contractAddress"] = common.BytesToAddress(out)
 	}
 	api.Logger.Debug("eth_getTransactionReceipt end")
 	return receipt, nil
