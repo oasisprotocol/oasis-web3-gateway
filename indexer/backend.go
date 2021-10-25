@@ -99,6 +99,8 @@ func (p *psqlBackend) Decode(utx *types.UnverifiedTransaction) (*model.Transacti
 	to := ethTx.To()
 	if to == nil {
 		innerTx.To = ""
+	} else {
+		innerTx.To = to.Hex()
 	}
 	accList := []model.AccessTuple{}
 	if ethTx.Type() == ethtypes.AccessListTxType || ethTx.Type() == ethtypes.DynamicFeeTxType {
