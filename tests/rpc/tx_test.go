@@ -61,7 +61,7 @@ func TestContractCreation(t *testing.T) {
 	require.Nil(t, err, "get nonce failed")
 
 	// Create transaction
-	tx := types.NewContractCreation(nonce, big.NewInt(0), 3000003, big.NewInt(2), code)
+	tx := types.NewContractCreation(nonce, big.NewInt(0), 1000000, big.NewInt(2), code)
 	signer := types.LatestSignerForChainID(chainID)
 	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), daveKey)
 	require.Nil(t, err, "sign tx")
@@ -97,7 +97,7 @@ func TestContractFailCreation(t *testing.T) {
 	require.Nil(t, err, "get nonce failed")
 
 	// Create transaction with transfer which is not allowed in solidity non payale
-	tx := types.NewContractCreation(nonce, big.NewInt(1), 3000000, big.NewInt(2), code)
+	tx := types.NewContractCreation(nonce, big.NewInt(1), 1000000, big.NewInt(2), code)
 	signer := types.LatestSignerForChainID(chainID)
 	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), daveKey)
 	require.Nil(t, err, "sign tx")
@@ -133,7 +133,7 @@ func TestEth_GetCode(t *testing.T) {
 	require.Nil(t, err, "get nonce failed")
 
 	// Create transaction
-	tx := types.NewContractCreation(nonce, big.NewInt(0), 3000003, big.NewInt(2), code)
+	tx := types.NewContractCreation(nonce, big.NewInt(0), 1000000, big.NewInt(2), code)
 	signer := types.LatestSignerForChainID(chainID)
 	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), daveKey)
 	require.Nil(t, err, "sign tx")
@@ -198,7 +198,7 @@ func TestEth_Call(t *testing.T) {
 	require.Nil(t, err, "get nonce failed")
 
 	// Create transaction
-	tx := types.NewContractCreation(nonce, big.NewInt(0), 3000000, big.NewInt(2), code)
+	tx := types.NewContractCreation(nonce, big.NewInt(0), 1000000, big.NewInt(2), code)
 	signer := types.LatestSignerForChainID(chainID)
 	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), daveKey)
 	require.Nil(t, err, "sign tx")
@@ -244,4 +244,94 @@ func TestEth_Call(t *testing.T) {
 	ret, err := testabi.Unpack("name", out)
 	require.Nil(t, err)
 	require.Equal(t, "test", ret[0])
+}
+
+// TestERC20 deploy erc20 with no constructor
+//
+// pragma solidity ^0.8.0;
+// import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+// contract TestToken is ERC20 {
+// 	constructor() ERC20("Test", "TST") public {
+// 		_mint(msg.sender, 1000000 * (10 ** uint256(decimals())));
+// 	}
+// }
+func TestERC20(t *testing.T) {
+	testabi, _ := abi.JSON(strings.NewReader(erc20abi))
+
+	HOST = "http://localhost:8545"
+	ec, _ := ethclient.Dial(HOST)
+
+	code := common.FromHex(strings.TrimSpace(evmERC20TestCompiledHex))
+
+	chainID, err := ec.ChainID(context.Background())
+	require.Nil(t, err, "get chainid")
+
+	nonce, err := ec.NonceAt(context.Background(), common.HexToAddress(daveEVMAddr), nil)
+	require.Nil(t, err, "get nonce failed")
+
+	// Deploy ERC20 contract
+	tx := types.NewContractCreation(nonce, big.NewInt(0), 1000000, big.NewInt(2), code)
+	signer := types.LatestSignerForChainID(chainID)
+	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), daveKey)
+	require.Nil(t, err, "sign tx")
+
+	signedTx, err := tx.WithSignature(signer, signature)
+	require.Nil(t, err, "pack tx")
+
+	ec.SendTransaction(context.Background(), signedTx)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	receipt, err := waitTransaction(ctx, ec, signedTx.Hash())
+	if err != nil {
+		t.Errorf("get receipt failed: %s", err)
+		return
+	}
+	require.Equal(t, uint64(1), receipt.Status)
+	var tokenAddr = receipt.ContractAddress
+	t.Logf("ERC20 address: %s", tokenAddr.Hex())
+
+	// Make transfer token transaction
+	nonce, err = ec.NonceAt(context.Background(), common.HexToAddress(daveEVMAddr), nil)
+	require.Nil(t, err, "get nonce failed")
+	transferCall, err := testabi.Pack("transfer", common.Address{1}, big.NewInt(10));
+	if err != nil {
+		t.Error(err)
+	}
+
+	tx = types.NewTransaction(nonce, tokenAddr, big.NewInt(0), 1000000, big.NewInt(2), transferCall)
+	signer = types.LatestSignerForChainID(chainID)
+	signature, err = crypto.Sign(signer.Hash(tx).Bytes(), daveKey)
+	require.Nil(t, err, "sign tx")
+	signedTx, err = tx.WithSignature(signer, signature)
+	require.Nil(t, err, "pack tx")
+	ec.SendTransaction(context.Background(), signedTx)
+
+	receipt, err = waitTransaction(context.Background(), ec, signedTx.Hash())
+	if err != nil {
+		t.Errorf("get receipt failed: %s", err)
+		return
+	}
+	require.Equal(t, uint64(1), receipt.Status)
+
+	// Get balance of token receiver
+	balanceOfCall, err := testabi.Pack("balanceOf", common.Address{1});
+	if err != nil {
+		t.Error(err)
+	}
+	msg := ethereum.CallMsg{
+		From:  common.HexToAddress(daveEVMAddr),
+		To:    &tokenAddr,
+		Gas:   3000000,
+		GasPrice: big.NewInt(2),
+		Value: big.NewInt(0),
+		Data: balanceOfCall,
+	}
+	out, err := ec.CallContract(context.Background(), msg, nil)
+	require.Nil(t, err)
+	t.Logf("contract call return: %x", out)
+
+	ret, err := testabi.Unpack("balanceOf", out)
+	require.Nil(t, err)
+	require.Equal(t, big.NewInt(10), ret[0])
 }
