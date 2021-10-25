@@ -259,7 +259,7 @@ func (api *PublicAPI) SendRawTransaction(data hexutil.Bytes) (common.Hash, error
 		},
 	}
 
-	_, err := api.client.SubmitTx(api.ctx, &utx)
+	err := api.client.SubmitTxNoWait(api.ctx, &utx)
 	if err != nil {
 		api.Logger.Error("Failed to SubmitTx", "error", err.Error())
 	}
