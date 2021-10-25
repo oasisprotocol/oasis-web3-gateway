@@ -54,7 +54,9 @@ func TestContractCreation(t *testing.T) {
 
 	code := common.FromHex(strings.TrimSpace(evmSolTestCompiledHex))
 
-	chainID := big.NewInt(42261)
+	chainID, err := ec.ChainID(context.Background())
+	require.Nil(t, err, "get chainid")
+
 	nonce, err := ec.NonceAt(context.Background(), common.HexToAddress(daveEVMAddr), nil)
 	require.Nil(t, err, "get nonce failed")
 
@@ -88,7 +90,9 @@ func TestContractFailCreation(t *testing.T) {
 
 	code := common.FromHex(strings.TrimSpace(evmSolTestCompiledHex))
 
-	chainID := big.NewInt(42261)
+	chainID, err := ec.ChainID(context.Background())
+	require.Nil(t, err, "get chainid")
+
 	nonce, err := ec.NonceAt(context.Background(), common.HexToAddress(daveEVMAddr), nil)
 	require.Nil(t, err, "get nonce failed")
 
@@ -122,7 +126,9 @@ func TestEth_GetCode(t *testing.T) {
 
 	code := common.FromHex(strings.TrimSpace(evmSolTestCompiledHex))
 
-	chainID := big.NewInt(42261)
+	chainID, err := ec.ChainID(context.Background())
+	require.Nil(t, err, "get chainid")
+
 	nonce, err := ec.NonceAt(context.Background(), common.HexToAddress(daveEVMAddr), nil)
 	require.Nil(t, err, "get nonce failed")
 
@@ -185,7 +191,9 @@ func TestEth_Call(t *testing.T) {
 
 	code := common.FromHex(strings.TrimSpace(evmSolTestCompiledHex))
 
-	chainID := big.NewInt(42261)
+	chainID, err := ec.ChainID(context.Background())
+	require.Nil(t, err, "get chainid")
+
 	nonce, err := ec.NonceAt(context.Background(), common.HexToAddress(daveEVMAddr), nil)
 	require.Nil(t, err, "get nonce failed")
 

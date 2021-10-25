@@ -42,7 +42,7 @@ func GetRPCAPIs(
 		ethRpc.API{
 			Namespace: "eth",
 			Version:   "1.0",
-			Service:   eth.NewPublicAPI(ctx, client, logger, backend),
+			Service:   eth.NewPublicAPI(ctx, client, logger, config, backend),
 			Public:    true,
 		},
 	)

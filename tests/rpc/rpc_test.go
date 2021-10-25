@@ -103,11 +103,23 @@ func localClient() *ethclient.Client {
 	return c
 }
 
+func TestEth_ChainID(t *testing.T) {
+	ec := localClient()
+
+	id, err := ec.ChainID(context.Background())
+	require.Nil(t, err, "get chainid")
+
+	t.Logf("chain id: %v", id)
+	require.Equal(t, big.NewInt(42261), id)
+}
+
 // TestEth_SendRawTransaction post eth raw transaction with ethclient from go-ethereum
 func TestEth_SendRawTransaction(t *testing.T) {
 	ec := localClient()
 
-	chainID := big.NewInt(42261)
+	chainID, err := ec.ChainID(context.Background())
+	require.Nil(t, err, "get chainid")
+
 	nonce, err := ec.NonceAt(context.Background(), common.HexToAddress(daveEVMAddr), nil)
 	require.Nil(t, err, "get nonce failed")
 

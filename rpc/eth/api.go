@@ -25,6 +25,7 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/evm"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 
+	"github.com/starfishlabs/oasis-evm-web3-gateway/server"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/utils"
 )
 
@@ -46,6 +47,7 @@ type PublicAPI struct {
 	ctx     context.Context
 	client  client.RuntimeClient
 	backend indexer.Backend
+	config server.Config
 	Logger  *logging.Logger
 }
 
@@ -54,11 +56,13 @@ func NewPublicAPI(
 	ctx context.Context,
 	client client.RuntimeClient,
 	logger *logging.Logger,
+	config server.Config,
 	backend indexer.Backend,
 ) *PublicAPI {
 	return &PublicAPI{
 		ctx:     ctx,
 		client:  client,
+		config: config,
 		Logger:  logger,
 		backend: backend,
 	}
@@ -173,6 +177,11 @@ func (api *PublicAPI) GetBalance(address common.Address, blockNrOrHash ethrpc.Bl
 	}
 
 	return (*hexutil.Big)(res.ToBigInt()), nil
+}
+
+// ChainId return the EIP-155  chain id for the current network
+func (api *PublicAPI) ChainId() (*hexutil.Big, error) {
+	return (*hexutil.Big)(big.NewInt(int64(api.config.ChainId))), nil
 }
 
 // GetBlockTransactionCountByHash returns the number of transactions in the block identified by hash.
