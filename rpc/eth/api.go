@@ -6,9 +6,9 @@ import (
 	"math/big"
 
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
-	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
+	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 
 	"github.com/starfishlabs/oasis-evm-web3-gateway/indexer"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
@@ -25,8 +25,8 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/evm"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 
-	"github.com/starfishlabs/oasis-evm-web3-gateway/server"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/utils"
+	"github.com/starfishlabs/oasis-evm-web3-gateway/server"
 )
 
 const (
@@ -47,7 +47,7 @@ type PublicAPI struct {
 	ctx     context.Context
 	client  client.RuntimeClient
 	backend indexer.Backend
-	config server.Config
+	config  server.Config
 	Logger  *logging.Logger
 }
 
@@ -62,7 +62,7 @@ func NewPublicAPI(
 	return &PublicAPI{
 		ctx:     ctx,
 		client:  client,
-		config: config,
+		config:  config,
 		Logger:  logger,
 		backend: backend,
 	}
@@ -487,13 +487,13 @@ func (api *PublicAPI) GetTransactionReceipt(txHash common.Hash) (map[string]inte
 		"blockHash":         txRef.BlockHash,
 		"blockNumber":       hexutil.Uint64(txRef.Round),
 		"transactionIndex":  hexutil.Uint64(txRef.Index),
-		"from":              ethTx.From,
-		"to":                ethTx.To,
+		"from":              ethTx.FromAddr,
+		"to":                ethTx.ToAddr,
 	}
 	if logs == nil {
 		receipt["logs"] = [][]*ethtypes.Log{}
 	}
-	if len(ethTx.To) == 0 && txResults[txRef.Index].Result.IsSuccess() {
+	if len(ethTx.ToAddr) == 0 && txResults[txRef.Index].Result.IsSuccess() {
 		var out []byte
 		if err := cbor.Unmarshal(txResults[txRef.Index].Result.Ok, &out); err != nil {
 			return nil, err

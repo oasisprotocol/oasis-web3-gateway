@@ -40,8 +40,8 @@ type Transaction struct {
 	GasTipCap  string
 	GasFeeCap  string
 	Nonce      uint64 `pg:",use_zero"`
-	From       string
-	To         string
+	FromAddr   string
+	ToAddr     string
 	Value      string
 	Data       string
 	AccessList AccessList

@@ -86,21 +86,21 @@ func (p *psqlBackend) Decode(utx *types.UnverifiedTransaction) (*model.Transacti
 	signer := ethtypes.LatestSignerForChainID(ethTx.ChainId())
 	from, _ := signer.Sender(ethTx)
 	innerTx := &model.Transaction{
-		Hash:  ethTx.Hash().String(),
-		Gas:   ethTx.Gas(),
-		Nonce: ethTx.Nonce(),
-		From:  from.String(),
-		Value: ethTx.Value().String(),
-		Data:  hex.EncodeToString(ethTx.Data()),
-		V:     v.String(),
-		R:     r.String(),
-		S:     s.String(),
+		Hash:     ethTx.Hash().String(),
+		Gas:      ethTx.Gas(),
+		Nonce:    ethTx.Nonce(),
+		FromAddr: from.String(),
+		Value:    ethTx.Value().String(),
+		Data:     hex.EncodeToString(ethTx.Data()),
+		V:        v.String(),
+		R:        r.String(),
+		S:        s.String(),
 	}
 	to := ethTx.To()
 	if to == nil {
-		innerTx.To = ""
+		innerTx.ToAddr = ""
 	} else {
-		innerTx.To = to.Hex()
+		innerTx.ToAddr = to.Hex()
 	}
 	accList := []model.AccessTuple{}
 	if ethTx.Type() == ethtypes.AccessListTxType || ethTx.Type() == ethtypes.DynamicFeeTxType {

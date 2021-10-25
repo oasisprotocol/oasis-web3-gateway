@@ -126,7 +126,7 @@ func NewRPCTransaction(
 	index hexutil.Uint64,
 ) (*RPCTransaction, error) {
 
-	to := common.HexToAddress(dbTx.To)
+	to := common.HexToAddress(dbTx.ToAddr)
 
 	gasPrice, _ := new(big.Int).SetString(dbTx.GasPrice, 10)
 	gasFee, _ := new(big.Int).SetString(dbTx.GasFeeCap, 10)
@@ -148,7 +148,7 @@ func NewRPCTransaction(
 	}
 
 	resTx := &RPCTransaction{
-		From:      common.HexToAddress(dbTx.From),
+		From:      common.HexToAddress(dbTx.FromAddr),
 		Gas:       hexutil.Uint64(dbTx.Gas),
 		GasPrice:  (*hexutil.Big)(gasPrice),
 		GasFeeCap: (*hexutil.Big)(gasFee),
