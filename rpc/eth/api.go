@@ -530,3 +530,15 @@ func (api *PublicAPI) GetBlockHash(number string, _ bool) (common.Hash, error) {
 
 	return api.backend.QueryBlockHash(blockNum)
 }
+
+func (api *PublicAPI) BlockNumber() (hexutil.Uint64, error) {
+	api.Logger.Debug("eth_getBlockNumber start")
+	blk, err := api.client.GetBlock(api.ctx, client.RoundLatest)
+	if err != nil {
+		api.Logger.Debug("eth_getBlockNumber get the latest number", "err", err)
+		return 0, err
+	}
+
+	api.Logger.Debug("eth_getBlockNumber get the current number", "blockNumber", blk.Header.Round)
+	return hexutil.Uint64(blk.Header.Round), nil
+}

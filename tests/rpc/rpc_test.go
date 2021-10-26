@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"math/big"
 	"net/http"
 	"os"
@@ -159,4 +160,13 @@ func TestEth_GetBlockByNumberAndGetBlockByHash(t *testing.T) {
 	err = json.Unmarshal(rpcRes.Result, &blk2)
 	require.NoError(t, err)
 	require.Equal(t, "0x1", blk2["number"].(string))
+}
+
+func TestEth_BlockNumber(t *testing.T) {
+	ec := localClient()
+	ctx := context.Background()
+
+	ret, err := ec.BlockNumber(ctx)
+	require.NoError(t, err)
+	fmt.Println("The current block number is ", ret)
 }
