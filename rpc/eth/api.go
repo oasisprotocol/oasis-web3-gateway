@@ -481,7 +481,6 @@ func (api *PublicAPI) GetTransactionReceipt(txHash common.Hash) (map[string]inte
 		"logsBloom":         ethtypes.BytesToBloom(ethtypes.LogsBloom(logs)),
 		"logs":              logs,
 		"transactionHash":   txHash.Hex(),
-		"contractAddress":   "",
 		"gasUsed":           hexutil.Uint64(ethTx.Gas),
 		"type":              hexutil.Uint64(ethTx.Type),
 		"blockHash":         txRef.BlockHash,
