@@ -114,6 +114,15 @@ func TestEth_ChainID(t *testing.T) {
 	require.Equal(t, big.NewInt(42261), id)
 }
 
+func TestEth_GasPrice(t *testing.T) {
+	ec := localClient()
+
+	price, err := ec.SuggestGasPrice(context.Background())
+	require.Nil(t, err, "get gasPrice")
+
+	t.Logf("gas price: %v", price)
+}
+
 // TestEth_SendRawTransaction post eth raw transaction with ethclient from go-ethereum
 func TestEth_SendRawTransaction(t *testing.T) {
 	ec := localClient()

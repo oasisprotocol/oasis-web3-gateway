@@ -171,6 +171,18 @@ func (api *PublicAPI) ChainId() (*hexutil.Big, error) {
 	return (*hexutil.Big)(big.NewInt(int64(api.config.ChainId))), nil
 }
 
+// GasPrice returns a suggestion for a gas price for legacy transactions.
+func (api *PublicAPI) GasPrice() (*hexutil.Big, error) {
+	coremod := core.NewV1(api.client)
+	mgp, err := coremod.MinGasPrice(api.ctx)
+	if err != nil {
+		api.Logger.Error("Qeury MinGasPrice failed", "error", err)
+		return nil, err
+	}
+	nativeMGP := mgp[types.NativeDenomination]
+	return (*hexutil.Big)(nativeMGP.ToBigInt()), nil
+}
+
 // GetBlockTransactionCountByHash returns the number of transactions in the block identified by hash.
 func (api *PublicAPI) GetBlockTransactionCountByHash(blockHash common.Hash) *hexutil.Uint {
 	api.Logger.Debug("eth_getBlockTransactionCountByHash", "hash", blockHash.Hex())
@@ -224,16 +236,42 @@ func (api *PublicAPI) GetCode(address common.Address, blockNrOrHash ethrpc.Block
 // Call executes the given transaction on the state for the given block number.
 // this function doesn't make any changes in the evm state of blockchain
 func (api *PublicAPI) Call(args utils.TransactionArgs, _ ethrpc.BlockNumberOrHash, _ *utils.StateOverride) (hexutil.Bytes, error) {
-	api.Logger.Debug("eth_call", "from", args.From, "to", args.To, "input", args.Input, "value", args.Value)
+	var (
+		amount = []byte{0}
+		input = []byte{}
+		sender = common.Address{1}
+		gasPrice = []byte{1}
+		// This gas cap should be enough for SimulateCall an ethereum transaction
+		gas uint64 = 30_000_000
+	)
+
+	if args.To == nil {
+		return []byte{}, errors.New("to address not specified")
+	}
+	if args.GasPrice != nil {
+		gasPrice = args.GasPrice.ToInt().Bytes()
+	}
+	if args.Gas != nil {
+		gas = uint64(*args.Gas)
+	}
+	if args.Value != nil {
+		amount = args.Value.ToInt().Bytes()
+	}
+	if args.Data != nil {
+		input = *args.Data
+	}
+	if args.From != nil {
+		sender = *args.From
+	}
 
 	res, err := evm.NewV1(api.client).SimulateCall(
 		api.ctx,
-		args.GasPrice.ToInt().Bytes(),
-		uint64(*args.Gas),
-		args.From.Bytes(),
+		gasPrice,
+		gas,
+		sender.Bytes(),
 		args.To.Bytes(),
-		args.Value.ToInt().Bytes(),
-		*args.Data)
+		amount,
+		input)
 
 	if err != nil {
 		api.Logger.Error("Failed to execute SimulateCall", "error", err.Error())

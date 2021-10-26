@@ -227,11 +227,7 @@ func TestEth_Call(t *testing.T) {
 	t.Logf("calldata: %x", calldata)
 
 	msg := ethereum.CallMsg{
-		From:  common.HexToAddress(daveEVMAddr),
 		To:    &receipt.ContractAddress,
-		Gas:   3000000,
-		GasPrice: big.NewInt(2),
-		Value: big.NewInt(0),
 		Data: calldata,
 	}
 
@@ -320,11 +316,7 @@ func TestERC20(t *testing.T) {
 		t.Error(err)
 	}
 	msg := ethereum.CallMsg{
-		From:  common.HexToAddress(daveEVMAddr),
 		To:    &tokenAddr,
-		Gas:   3000000,
-		GasPrice: big.NewInt(2),
-		Value: big.NewInt(0),
 		Data: balanceOfCall,
 	}
 	out, err := ec.CallContract(context.Background(), msg, nil)
