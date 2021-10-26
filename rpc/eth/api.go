@@ -71,8 +71,7 @@ func NewPublicAPI(
 func (api *PublicAPI) getRPCBlock(oasisBlock *block.Block) (map[string]interface{}, error) {
 	bhash, _ := oasisBlock.Header.IORoot.MarshalBinary()
 	blockNum := oasisBlock.Header.Round
-	// ethRPCTxs := []interface{}{}
-	var ethTxs ethtypes.Transactions
+	ethTxs := ethtypes.Transactions{}
 	var gasUsed uint64
 	var oasisLogs []*Log
 	var logs []*ethtypes.Log
@@ -99,19 +98,7 @@ func (api *PublicAPI) getRPCBlock(oasisBlock *block.Block) (map[string]interface
 			continue
 		}
 
-		// rpcTx, err := utils.ConstructRPCTransaction(
-		// 	ethTx,
-		// 	common.BytesToHash(bhash),
-		// 	uint64(blockNum),
-		// 	uint64(txIndex),
-		// )
-		// if err != nil {
-		// 	api.Logger.Error("Failed to ConstructRPCTransaction", "hash", ethTx.Hash().Hex(), "error", err.Error())
-		// 	continue
-		// }
-
 		gasUsed += uint64(ethTx.Gas())
-		// ethRPCTxs = append(ethRPCTxs, rpcTx)
 		ethTxs = append(ethTxs, ethTx)
 
 		resEvents := item.Events
