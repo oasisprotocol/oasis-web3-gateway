@@ -35,6 +35,10 @@ const (
 	methodCall   = "evm.Call"
 )
 
+var (
+	ErrInternalQuery = errors.New("internal query error")
+)
+
 // Log is the Oasis Log.
 type Log struct {
 	Address common.Address
@@ -357,7 +361,7 @@ func (api *PublicAPI) GetBlockByHash(blockHash common.Hash, fullTx bool) (map[st
 	round, err := api.backend.QueryBlockRound(blockHash)
 	if err != nil {
 		api.Logger.Error("Matched block error, block hash: ", blockHash)
-		return nil, err
+		return nil, ErrInternalQuery
 	}
 
 	blk, err := api.client.GetBlock(api.ctx, round)
@@ -373,14 +377,13 @@ func (api *PublicAPI) getRPCTransaction(dbTx *model.Transaction) (*utils.RPCTran
 	dbTxRef, err := api.backend.QueryTransactionRef(dbTx.Hash)
 	if err != nil {
 		api.Logger.Error("Failed to QueryTransactionRef", "hash", dbTx.Hash)
-		return nil, err
+		return nil, ErrInternalQuery
 	}
 	blockHash := common.HexToHash(dbTxRef.BlockHash)
 	txIndex := hexutil.Uint64(dbTxRef.Index)
 	resTx, err := utils.NewRPCTransaction(dbTx, blockHash, dbTxRef.Round, txIndex)
 	if err != nil {
 		api.Logger.Error("Failed to NewRPCTransaction", "hash", dbTx.Hash)
-		return nil, err
 	}
 	return resTx, nil
 }
@@ -392,9 +395,13 @@ func (api *PublicAPI) GetTransactionByHash(hash common.Hash) (*utils.RPCTransact
 	dbTx, err := api.backend.QueryTransaction(hash)
 	if err != nil {
 		api.Logger.Error("Failed to QueryTransaction", "hash", hash.String())
-		return nil, err
+		return nil, ErrInternalQuery
 	}
 
+	if dbTx == nil {
+		err = errors.New("transaction not found with the hash: " + hash.Hex())
+		return nil, err
+	}
 	return api.getRPCTransaction(dbTx)
 }
 
@@ -403,7 +410,7 @@ func (api *PublicAPI) GetTransactionByBlockHashAndIndex(blockHash common.Hash, i
 	round, err := api.backend.QueryBlockRound(blockHash)
 	if err != nil {
 		api.Logger.Error("Matched block error, block hash: ", blockHash)
-		return nil, err
+		return nil, ErrInternalQuery
 	}
 
 	blk, err := api.client.GetBlock(api.ctx, round)
@@ -437,7 +444,7 @@ func (api *PublicAPI) GetTransactionByBlockNumberAndIndex(blockNum ethrpc.BlockN
 	blockHash, err := api.backend.QueryBlockHash(uint64(blockNum))
 	if err != nil {
 		api.Logger.Error("Failed to QueryBlockHash", "number", blockNum)
-		return nil, err
+		return nil, ErrInternalQuery
 	}
 
 	return api.GetTransactionByBlockHashAndIndex(blockHash, index)
@@ -449,7 +456,7 @@ func (api *PublicAPI) GetTransactionReceipt(txHash common.Hash) (map[string]inte
 	txRef, err := api.backend.QueryTransactionRef(txHash.String())
 	if err != nil {
 		api.Logger.Error("failed query transaction round and index", "hash", txHash.Hex(), "error", err.Error())
-		return nil, nil
+		return nil, ErrInternalQuery
 	}
 	txResults, err := api.client.GetTransactionsWithResults(api.ctx, txRef.Round)
 	if err != nil {
