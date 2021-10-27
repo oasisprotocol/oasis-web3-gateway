@@ -227,5 +227,5 @@ func TestEth_GetTransactionByHash(t *testing.T) {
 	rpcErr := json.Unmarshal(rpcRes.Result, &rpcTx)
 	require.NoError(t, rpcErr)
 	require.NotNil(t, rpcTx)
-	require.Equal(t, txHash, rpcTx["hash"].(string))
+	require.Equal(t, txHash[0], rpcTx["hash"].(string))
 }
