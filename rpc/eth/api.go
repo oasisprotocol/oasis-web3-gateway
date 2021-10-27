@@ -189,15 +189,19 @@ func (api *PublicAPI) GetBlockTransactionCountByNumber(blockNum ethrpc.BlockNumb
 func (api *PublicAPI) GetStorageAt(address common.Address, position hexutil.Big, blockNum ethrpc.BlockNumber) (hexutil.Big, error) {
 	api.Logger.Debug("eth_getStorage", "address", address, "position", position, "block_num", blockNum)
 
+	round, err := api.roundParamFromBlockNum(blockNum)
+	if err != nil {
+		api.Logger.Error("GetBlock failed", "number", blockNum, "error", err.Error())
+		return hexutil.Big{}, fmt.Errorf("convert block number to round: %w", err)
+	}
+
 	// EVM module takes index as H256, which needs leading zeros.
 	position256 := make([]byte, 32)
 	// Unmarshalling to hexutil.Big rejects overlong inputs. Verify in `TestRejectOverlong`.
 	position.ToInt().FillBytes(position256)
 
 	ethmod := evm.NewV1(api.client)
-	// TODO: blockNum ignored as EVM wrapper doesn't support queries for past rounds:
-	// https://github.com/oasisprotocol/oasis-sdk/issues/590
-	res, err := ethmod.Storage(api.ctx, address[:], position256)
+	res, err := ethmod.Storage(api.ctx, round, address[:], position256)
 	if err != nil {
 		api.Logger.Error("failed to query storage", "err", err)
 		return hexutil.Big{}, ErrInternalQuery
@@ -209,9 +213,15 @@ func (api *PublicAPI) GetStorageAt(address common.Address, position hexutil.Big,
 }
 
 // GetBalance returns the provided account's balance up to the provided block number.
-func (api *PublicAPI) GetBalance(address common.Address, blockNrOrHash ethrpc.BlockNumberOrHash) (*hexutil.Big, error) {
+func (api *PublicAPI) GetBalance(address common.Address, blockNum ethrpc.BlockNumber) (*hexutil.Big, error) {
+	round, err := api.roundParamFromBlockNum(blockNum)
+	if err != nil {
+		api.Logger.Error("GetBlock failed", "number", blockNum, "error", err.Error())
+		return nil, fmt.Errorf("convert block number to round: %w", err)
+	}
+
 	ethmod := evm.NewV1(api.client)
-	res, err := ethmod.Balance(api.ctx, address[:])
+	res, err := ethmod.Balance(api.ctx, round, address[:])
 	if err != nil {
 		api.Logger.Error("Get balance failed")
 		return nil, err
@@ -280,9 +290,16 @@ func (api *PublicAPI) GetTransactionCount(ethaddr common.Address, blockNum ethrp
 }
 
 // GetCode returns the contract code at the given address and block number.
-func (api *PublicAPI) GetCode(address common.Address, blockNrOrHash ethrpc.BlockNumberOrHash) (hexutil.Bytes, error) {
+func (api *PublicAPI) GetCode(address common.Address, blockNum ethrpc.BlockNumber) (hexutil.Bytes, error) {
+	round, err := api.roundParamFromBlockNum(blockNum)
+	if err != nil {
+		err = fmt.Errorf("convert block number to round: %w", err)
+		api.Logger.Error("GetBlock failed", "number", blockNum, "error", err.Error())
+		return nil, err
+	}
+
 	ethmod := evm.NewV1(api.client)
-	res, err := ethmod.Code(api.ctx, address[:])
+	res, err := ethmod.Code(api.ctx, round, address[:])
 	if err != nil {
 		return nil, err
 	}
@@ -292,7 +309,7 @@ func (api *PublicAPI) GetCode(address common.Address, blockNrOrHash ethrpc.Block
 
 // Call executes the given transaction on the state for the given block number.
 // this function doesn't make any changes in the evm state of blockchain
-func (api *PublicAPI) Call(args utils.TransactionArgs, _ ethrpc.BlockNumberOrHash, _ *utils.StateOverride) (hexutil.Bytes, error) {
+func (api *PublicAPI) Call(args utils.TransactionArgs, blockNum ethrpc.BlockNumber, _ *utils.StateOverride) (hexutil.Bytes, error) {
 	var (
 		amount   = []byte{0}
 		input    = []byte{}
@@ -301,6 +318,12 @@ func (api *PublicAPI) Call(args utils.TransactionArgs, _ ethrpc.BlockNumberOrHas
 		// This gas cap should be enough for SimulateCall an ethereum transaction
 		gas uint64 = 30_000_000
 	)
+
+	round, err := api.roundParamFromBlockNum(blockNum)
+	if err != nil {
+		api.Logger.Error("GetBlock failed", "number", blockNum, "error", err.Error())
+		return nil, fmt.Errorf("convert block number to round: %w", err)
+	}
 
 	if args.To == nil {
 		return []byte{}, errors.New("to address not specified")
@@ -323,6 +346,7 @@ func (api *PublicAPI) Call(args utils.TransactionArgs, _ ethrpc.BlockNumberOrHas
 
 	res, err := evm.NewV1(api.client).SimulateCall(
 		api.ctx,
+		round,
 		gasPrice,
 		gas,
 		sender.Bytes(),
@@ -365,49 +389,57 @@ func (api *PublicAPI) SendRawTransaction(data hexutil.Bytes) (common.Hash, error
 }
 
 // EstimateGas returns an estimate of gas usage for the given transaction .
-func (api *PublicAPI) EstimateGas(args utils.TransactionArgs, blockNum ethrpc.BlockNumber) (hexutil.Uint64, error) {
-	api.Logger.Debug("eth_estimateGas")
+func (api *PublicAPI) EstimateGas(args utils.TransactionArgs, blockNum *ethrpc.BlockNumber) (hexutil.Uint64, error) {
+	if args.From == nil {
+		// This may make sense if from not specified
+		args.From = &common.Address{}
+	}
+	if args.Gas == nil {
+		// The gas cap is enough for current ethereum transaction
+		gasCap := hexutil.Uint64(15_000_000)
+		args.Gas = &gasCap
+	}
+	if args.GasPrice == nil {
+		args.GasPrice = (*hexutil.Big)(big.NewInt(1))
+	}
+	if args.Value == nil {
+		args.Value = (*hexutil.Big)(big.NewInt(0))
+	}
+	if args.Data == nil {
+		args.Data = (*hexutil.Bytes)(&[]byte{})
+	}
 
 	var q quantity.Quantity
 	totalFee := new(big.Int).Mul(args.GasPrice.ToInt(), new(big.Int).SetUint64(uint64(*args.Gas)))
 	q.FromBigInt(totalFee)
 	amount := types.NewBaseUnits(q, types.NativeDenomination)
 
-	fee := &types.Fee{
-		Amount: amount,
-		Gas:    uint64(*args.Gas),
-	}
-
 	ethTxValue := args.Value.ToInt().Bytes()
 	ethTxData := args.Data
 
 	var tx *types.Transaction
+	var caller = types.NewAddressRaw(types.AddressV0Secp256k1EthContext, args.From[:])
+	var round = client.RoundLatest
 
+	if blockNum != nil {
+		var err error
+		round, err = api.roundParamFromBlockNum(*blockNum)
+		if err != nil {
+			return 0, fmt.Errorf("convert block number to round: %w", err)
+		}
+	}
 	if args.To == nil {
 		// evm.create
-		tx = types.NewTransaction(fee, methodCreate, &evm.Create{
-			Value:    ethTxValue,
-			InitCode: *ethTxData,
-		})
+		tx = evm.NewV1(api.client).Create(ethTxValue, *ethTxData).SetFeeAmount(amount).SetFeeGas(uint64(*args.Gas)).GetTransaction()
 	} else {
 		// evm.call
-		tx = types.NewTransaction(fee, methodCall, &evm.Call{
-			Address: args.To.Bytes(), // contract address, ignore non-contract call
-			Value:   ethTxValue,
-			Data:    *ethTxData,
-		})
+		tx = evm.NewV1(api.client).Call(args.To.Bytes(), ethTxValue, *ethTxData).SetFeeAmount(amount).SetFeeGas(uint64(*args.Gas)).GetTransaction()
 	}
 
-	round, err := api.roundParamFromBlockNum(blockNum)
-	if err != nil {
-		err = fmt.Errorf("convert block number to round: %w", err)
-		api.Logger.Error("Failed to EstimateGas", "error", err.Error())
-		return 0, err
-	}
-	gas, err := core.NewV1(api.client).EstimateGas(api.ctx, round, tx)
+	gas, err := core.NewV1(api.client).EstimateGasForCaller(api.ctx, round, caller, tx)
 	if err != nil {
 		api.Logger.Error("Failed to EstimateGas", "error", err.Error())
-		return 0, err
+		return 0, ErrInternalQuery
 	}
 
 	return hexutil.Uint64(gas), nil
