@@ -3,6 +3,7 @@ package eth
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -167,6 +168,26 @@ func (api *PublicAPI) GetBlockTransactionCountByNumber(blockNum ethrpc.BlockNumb
 	// TODO: only filter the eth transactions ?
 	n := hexutil.Uint(len(resTxs))
 	return &n
+}
+
+func (api *PublicAPI) GetStorageAt(address common.Address, position string, blockNum ethrpc.BlockNumber) (string, error) {
+	api.Logger.Debug("eth_getStorage", "address", address, "position", position, "block_num", blockNum)
+
+	pos, err := hexutil.Decode(position)
+	if err != nil {
+		api.Logger.Error("failed to decode position", "err", err)
+		return "", fmt.Errorf("failed to decode position: %w", err)
+	}
+
+	ethmod := evm.NewV1(api.client)
+	// TODO: blockNum ignored as EVM wrapper doesn't support queries for past rounds:
+	// https://github.com/oasisprotocol/oasis-sdk/issues/590
+	res, err := ethmod.Storage(api.ctx, address[:], pos)
+	if err != nil {
+		api.Logger.Error("failed to query storage", "err", err)
+		return "", ErrInternalQuery
+	}
+	return hexutil.Encode(res), nil
 }
 
 // GetBalance returns the provided account's balance up to the provided block number.
