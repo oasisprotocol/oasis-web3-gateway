@@ -144,8 +144,10 @@ func (api *PublicAPI) GetBlockByNumber(blockNum ethrpc.BlockNumber, _ bool) (map
 
 	resBlock, err := api.client.GetBlock(api.ctx, api.roundParamFromBlockNum(blockNum))
 	if err != nil {
-		api.Logger.Error("GetBlock failed", "number", blockNum)
-		return nil, err
+		api.Logger.Error("GetBlock failed", "number", blockNum, "err", err)
+		// Block doesn't exist, by web3 spec an empty response should be retuned, not an error.
+		// TODO: ensure that the error is actually that the block doesn't exist.
+		return nil, nil
 	}
 
 	return api.getRPCBlock(resBlock)
@@ -221,7 +223,9 @@ func (api *PublicAPI) GetTransactionCount(ethaddr common.Address, blockNum ethrp
 	api.Logger.Debug("eth_getTransactionCount", "address", ethaddr.Hex(), "blockNumber", blockNum)
 	accountsMod := accounts.NewV1(api.client)
 	accountsAddr := types.NewAddressRaw(types.AddressV0Secp256k1EthContext, ethaddr[:])
-	nonce, err := accountsMod.Nonce(api.ctx, client.RoundLatest, accountsAddr)
+
+	round := api.roundParamFromBlockNum(blockNum)
+	nonce, err := accountsMod.Nonce(api.ctx, round, accountsAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -579,7 +583,7 @@ func (api *PublicAPI) BlockNumber() (hexutil.Uint64, error) {
 	api.Logger.Debug("eth_getBlockNumber start")
 	blk, err := api.client.GetBlock(api.ctx, client.RoundLatest)
 	if err != nil {
-		api.Logger.Debug("eth_getBlockNumber get the latest number", "err", err)
+		api.Logger.Error("eth_getBlockNumber get the latest number", "err", err)
 		return 0, err
 	}
 
