@@ -219,7 +219,7 @@ func TestEth_GetTransactionByHash(t *testing.T) {
 
 	require.Equal(t, receipt.Status, uint64(1))
 	require.NotNil(t, receipt, "transaction failed")
-	txHash := receipt.TxHash
+	txHash := []string{receipt.TxHash.Hex()}
 
 	rpcRes := call(t, "eth_getTransactionByHash", txHash)
 
