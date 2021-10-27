@@ -120,6 +120,38 @@ func TestContractFailCreation(t *testing.T) {
 	require.Equal(t, receipt.Status, uint64(0))
 }
 
+func TestEth_EstimateGas(t *testing.T) {
+	ec := localClient()
+	code := common.FromHex(strings.TrimSpace(evmSolTestCompiledHex))
+
+	chainID, err := ec.ChainID(context.Background())
+	require.Nil(t, err, "get chainid")
+
+	nonce, err := ec.NonceAt(context.Background(), common.HexToAddress(daveEVMAddr), nil)
+	require.Nil(t, err, "get nonce failed")
+
+	// Build call args for estimate gas
+	msg := ethereum.CallMsg{
+		From:  common.HexToAddress(daveEVMAddr),
+		Value: big.NewInt(0),
+		Data: code,
+	}
+	gas, err := ec.EstimateGas(context.Background(), msg)
+	require.Nil(t, err, "gas estimation")
+	t.Logf("estimate gas: %v", gas)
+
+	// Create transaction
+	tx := types.NewContractCreation(nonce, big.NewInt(0), gas, big.NewInt(2), code)
+	signer := types.LatestSignerForChainID(chainID)
+	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), daveKey)
+	require.Nil(t, err, "sign tx")
+
+	signedTx, err := tx.WithSignature(signer, signature)
+	require.Nil(t, err, "pack tx")
+
+	ec.SendTransaction(context.Background(), signedTx)
+}
+
 func TestEth_GetCode(t *testing.T) {
 	HOST = "http://localhost:8545"
 	ec, _ := ethclient.Dial(HOST)

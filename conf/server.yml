@@ -10,6 +10,7 @@ postdb:
   timeout: 5
 
 gateway:
+  chain_id: 42261
   http:
     host: "localhost"
     port: 8545

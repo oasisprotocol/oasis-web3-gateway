@@ -35,7 +35,7 @@ type GatewayConfig struct {
 	WS *GatewayWSConfig `yaml:"ws,omitempty"`
 
 	// ChainId defines the Ethereum netwrok chain id.
-	ChainId uint32 `toml:",omitempty"`
+	ChainId uint32 `yaml:"chain_id,omitempty"`
 }
 
 type GatewayHttpConfig struct {
