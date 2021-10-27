@@ -43,10 +43,10 @@ func InitDb(cfg *conf.Config) (*PostDb, error) {
 }
 
 // GetTransactionRef returns block hash, round and index of the transaction.
-func (db *PostDb) GetTransactionRef(hash string) (*model.TransactionRef, error) {
+func (db *PostDb) GetTransactionRef(txHash string) (*model.TransactionRef, error) {
 	tx := new(model.TransactionRef)
 	err := db.Db.Model(tx).
-		Where("transaction_ref.eth_tx_hash=?", hash).
+		Where("eth_tx_hash=?", txHash).
 		Select()
 	if err != nil {
 		return nil, err
@@ -59,7 +59,7 @@ func (db *PostDb) GetTransactionRef(hash string) (*model.TransactionRef, error) 
 func (db *PostDb) GetTransactionByRoundAndIndex(round uint64, index uint32) (*model.Transaction, error) {
 	txRef := new(model.TransactionRef)
 	err := db.Db.Model(txRef).
-		Where("transaction_ref.round=? and transaction_ref.index=?", round, index).
+		Where("round=? and index=?", round, index).
 		Select()
 	if err != nil {
 		return nil, err
@@ -67,7 +67,7 @@ func (db *PostDb) GetTransactionByRoundAndIndex(round uint64, index uint32) (*mo
 
 	ethTx := new(model.Transaction)
 	err = db.Db.Model(ethTx).
-		Where("transaction.hash=?", txRef.EthTxHash).
+		Where("hash=?", txRef.EthTxHash).
 		Select()
 	if err != nil {
 		return nil, err
@@ -80,7 +80,7 @@ func (db *PostDb) GetTransactionByRoundAndIndex(round uint64, index uint32) (*mo
 func (db *PostDb) GetTransaction(hash string) (*model.Transaction, error) {
 	tx := new(model.Transaction)
 	err := db.Db.Model(tx).
-		Where("transaction.hash=?", hash).
+		Where("hash=?", hash).
 		Select()
 	if err != nil {
 		return nil, err
@@ -108,11 +108,17 @@ func (db *PostDb) Update(value interface{}) error {
 	return err
 }
 
+// Delete deletes all records with round less than the given round.
+func (db *PostDb) Delete(table interface{}, round uint64) error {
+	_, err := db.Db.Model(table).Where("round<?", round).Delete()
+	return err
+}
+
 // GetBlockRound queries block round by block hash.
 func (db *PostDb) GetBlockRound(hash string) (uint64, error) {
 	block := new(model.BlockRef)
 	err := db.Db.Model(block).
-		Where("block_ref.hash=?", hash).
+		Where("hash=?", hash).
 		Select()
 	if err != nil {
 		return 0, err
@@ -125,7 +131,7 @@ func (db *PostDb) GetBlockRound(hash string) (uint64, error) {
 func (db *PostDb) GetBlockHash(round uint64) (string, error) {
 	blk := new(model.BlockRef)
 	err := db.Db.Model(blk).
-		Where("block_ref.round=?", round).
+		Where("round=?", round).
 		Select()
 	if err != nil {
 		return "", err
@@ -138,7 +144,7 @@ func (db *PostDb) GetBlockHash(round uint64) (string, error) {
 func (db *PostDb) GetContinuesIndexedRound() (uint64, error) {
 	indexedRound := new(model.ContinuesIndexedRound)
 	err := db.Db.Model(indexedRound).
-		Where("continues_indexed_round.tip=?", model.Continues).
+		Where("tip=?", model.Continues).
 		Select()
 	if err != nil {
 		return 0, err

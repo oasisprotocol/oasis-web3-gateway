@@ -73,7 +73,7 @@ func TestInitPostDb(t *testing.T) {
 		GasTipCap:  "0",
 		GasFeeCap:  "0",
 		Nonce:      1,
-		To:         "hellohello",
+		ToAddr:     "hellohello",
 		Value:      "4321000000000000000",
 		Data:       "123456abcdef",
 		AccessList: []model.AccessTuple{},
@@ -93,7 +93,7 @@ func TestInitPostDb(t *testing.T) {
 		GasTipCap:  "0",
 		GasFeeCap:  "0",
 		Nonce:      2,
-		To:         "worldworld",
+		ToAddr:     "worldworld",
 		Value:      "2137000000000000000",
 		Data:       "abcdefabcdef",
 		AccessList: accList,
@@ -110,7 +110,7 @@ func TestInitPostDb(t *testing.T) {
 		GasTipCap:  "123123",
 		GasFeeCap:  "345321",
 		Nonce:      3,
-		To:         "goodgood",
+		ToAddr:     "goodgood",
 		Value:      "1123450000000000000",
 		Data:       "123456123456",
 		AccessList: accList,
@@ -128,7 +128,7 @@ func TestInitPostDb(t *testing.T) {
 	}
 	fmt.Printf("hash: %v, type: %v, chai_id: %v \n", tx.Hash, tx.Type, tx.ChainID)
 	fmt.Printf("gas: %v, gas_price: %v, gas_fee_cap: %v, gas_tip_cap: %v\n", tx.Gas, tx.GasPrice, tx.GasTipCap, tx.GasTipCap)
-	fmt.Printf("to: %v, value: %v\n", tx.To, tx.Value)
+	fmt.Printf("to: %v, value: %v\n", tx.ToAddr, tx.Value)
 	fmt.Printf("access_list: %v\n", tx.AccessList)
 }
 
@@ -180,4 +180,50 @@ func TestUpdate(t *testing.T) {
 	} else {
 		fmt.Println("round:", r3)
 	}
+}
+
+func TestDelete(t *testing.T) {
+	cfg, err := conf.InitConfig("../../conf/server.yml")
+	if err != nil {
+		log.Fatal("initialize config error:", err)
+	}
+	db, err := InitDb(cfg)
+	if err != nil {
+		log.Fatal("initialize postdb error:", err)
+	}
+	if err := db.Delete(new(model.BlockRef), 10); err != nil {
+		log.Fatalln("delete from db", err)
+	}
+}
+
+func TestGetBlockHash(t *testing.T) {
+	cfg, err := conf.InitConfig("../../conf/server.yml")
+	if err != nil {
+		log.Fatal("initialize config error:", err)
+	}
+	db, err := InitDb(cfg)
+	if err != nil {
+		log.Fatal("initialize postdb error:", err)
+	}
+	hash, err := db.GetBlockHash(256)
+	if err != nil {
+		log.Fatalln("get block hash", err)
+	}
+	fmt.Println("block hash:", hash)
+}
+
+func TestGetTransactionRef(t *testing.T) {
+	cfg, err := conf.InitConfig("../../conf/server.yml")
+	if err != nil {
+		log.Fatal("initialize config error:", err)
+	}
+	db, err := InitDb(cfg)
+	if err != nil {
+		log.Fatal("initialize postdb error:", err)
+	}
+	txRef, err := db.GetTransactionRef("0xec826b483b27e3a4f9b68994d2f4768533ab4d1ae0b7d05867fcc9da18064715")
+	if err != nil {
+		log.Fatalln("get transaction ref", err)
+	}
+	fmt.Println(txRef.EthTxHash, txRef.BlockHash, txRef.Round, txRef.Index)
 }

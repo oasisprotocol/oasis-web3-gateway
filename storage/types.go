@@ -11,6 +11,9 @@ type Storage interface {
 	// Update updates record.
 	Update(value interface{}) error
 
+	// Delete deletes all records with round less than the given round.
+	Delete(table interface{}, round uint64) error
+
 	// GetBlockRound queries block round by block hash.
 	GetBlockRound(hash string) (uint64, error)
 
