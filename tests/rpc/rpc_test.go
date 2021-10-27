@@ -179,3 +179,53 @@ func TestEth_BlockNumber(t *testing.T) {
 	require.NoError(t, err)
 	fmt.Println("The current block number is ", ret)
 }
+
+func TestEth_GetTransactionByHash(t *testing.T) {
+	HOST = "http://localhost:8545"
+	ec, _ := ethclient.Dial(HOST)
+
+	chainID := big.NewInt(42261)
+	data := common.FromHex("0x7f7465737432000000000000000000000000000000000000000000000000000000600057")
+	to := common.BytesToAddress(common.FromHex("0x1122334455667788990011223344556677889900"))
+	nonce, err := ec.NonceAt(context.Background(), common.HexToAddress(daveEVMAddr), nil)
+	require.Nil(t, err, "get nonce failed")
+
+	// Create transaction
+	tx := types.NewTransaction(
+		nonce,
+		to,
+		big.NewInt(1),
+		3000003,
+		big.NewInt(2),
+		data,
+	)
+	signer := types.LatestSignerForChainID(chainID)
+	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), daveKey)
+	require.Nil(t, err, "sign tx")
+
+	signedTx, err := tx.WithSignature(signer, signature)
+	require.Nil(t, err, "pack tx")
+
+	ec.SendTransaction(context.Background(), signedTx)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	receipt, err := waitTransaction(ctx, ec, signedTx.Hash())
+	if err != nil {
+		t.Errorf("get receipt failed: %s", err)
+		return
+	}
+
+	require.Equal(t, receipt.Status, uint64(1))
+	require.NotNil(t, receipt, "transaction failed")
+	txHash := receipt.TxHash
+
+	rpcRes := call(t, "eth_getTransactionByHash", txHash)
+
+	rpcTx := make(map[string]interface{})
+	rpcErr := json.Unmarshal(rpcRes.Result, &rpcTx)
+	require.NoError(t, rpcErr)
+	require.NotNil(t, rpcTx)
+	require.Equal(t, txHash, rpcTx["hash"].(string))
+}
