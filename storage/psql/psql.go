@@ -67,7 +67,7 @@ func (db *PostDb) GetTransactionByRoundAndIndex(round uint64, index uint32) (*mo
 
 	ethTx := new(model.Transaction)
 	err = db.Db.Model(ethTx).
-		Where("eth_transaction.hash=?", txRef.EthTxHash).
+		Where("transaction.hash=?", txRef.EthTxHash).
 		Select()
 	if err != nil {
 		return nil, err
@@ -80,7 +80,7 @@ func (db *PostDb) GetTransactionByRoundAndIndex(round uint64, index uint32) (*mo
 func (db *PostDb) GetTransaction(hash string) (*model.Transaction, error) {
 	tx := new(model.Transaction)
 	err := db.Db.Model(tx).
-		Where("eth_transaction.hash=?", hash).
+		Where("transaction.hash=?", hash).
 		Select()
 	if err != nil {
 		return nil, err
