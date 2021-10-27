@@ -72,6 +72,21 @@ func NewPublicAPI(
 	}
 }
 
+// roundParamFromBlockNum converts special BlockNumber values to the corresponding special round numbers.
+func (api *PublicAPI) roundParamFromBlockNum(blockNum ethrpc.BlockNumber) uint64 {
+	switch blockNum {
+	case ethrpc.PendingBlockNumber:
+		// Oasis does not expose a pending block. Use the latest.
+		return client.RoundLatest
+	case ethrpc.LatestBlockNumber:
+		return client.RoundLatest
+	case ethrpc.EarliestBlockNumber:
+		return 1
+	default:
+		return uint64(blockNum)
+	}
+}
+
 func (api *PublicAPI) getRPCBlock(oasisBlock *block.Block) (map[string]interface{}, error) {
 	bhash, _ := oasisBlock.Header.IORoot.MarshalBinary()
 	blockNum := oasisBlock.Header.Round
@@ -130,13 +145,10 @@ func (api *PublicAPI) getRPCBlock(oasisBlock *block.Block) (map[string]interface
 }
 
 // GetBlockByNumber returns the block identified by number.
-func (api *PublicAPI) GetBlockByNumber(number string, _ bool) (map[string]interface{}, error) {
-	api.Logger.Debug("eth_getBlockByNumber", "number", number)
-	bigNumber := big.NewInt(0)
-	bigNumber.SetString(number, 10)
-	blockNum := bigNumber.Uint64()
+func (api *PublicAPI) GetBlockByNumber(blockNum ethrpc.BlockNumber, _ bool) (map[string]interface{}, error) {
+	api.Logger.Debug("eth_getBlockByNumber", "number", blockNum)
 
-	resBlock, err := api.client.GetBlock(api.ctx, blockNum)
+	resBlock, err := api.client.GetBlock(api.ctx, api.roundParamFromBlockNum(blockNum))
 	if err != nil {
 		api.Logger.Error("GetBlock failed", "number", blockNum)
 		return nil, err
@@ -147,7 +159,7 @@ func (api *PublicAPI) GetBlockByNumber(number string, _ bool) (map[string]interf
 
 // GetBlockTransactionCountByNumber returns the number of transactions in the block.
 func (api *PublicAPI) GetBlockTransactionCountByNumber(blockNum ethrpc.BlockNumber) *hexutil.Uint {
-	resTxs, err := api.client.GetTransactions(api.ctx, (uint64)(blockNum))
+	resTxs, err := api.client.GetTransactions(api.ctx, api.roundParamFromBlockNum(blockNum))
 	if err != nil {
 		api.Logger.Error("Get Transactions failed", "number", blockNum)
 	}
@@ -212,7 +224,7 @@ func (api *PublicAPI) GetBlockTransactionCountByHash(blockHash common.Hash) *hex
 }
 
 // GetTransactionCount returns the number of transactions the given address has sent for the given block number.
-func (api *PublicAPI) GetTransactionCount(ethaddr common.Address, blockNum string) (*hexutil.Uint64, error) {
+func (api *PublicAPI) GetTransactionCount(ethaddr common.Address, blockNum ethrpc.BlockNumber) (*hexutil.Uint64, error) {
 	api.Logger.Debug("eth_getTransactionCount", "address", ethaddr.Hex(), "blockNumber", blockNum)
 	accountsMod := accounts.NewV1(api.client)
 	accountsAddr := types.NewAddressRaw(types.AddressV0Secp256k1EthContext, ethaddr[:])
@@ -346,7 +358,7 @@ func (api *PublicAPI) EstimateGas(args utils.TransactionArgs, blockNum ethrpc.Bl
 		})
 	}
 
-	gas, err := core.NewV1(api.client).EstimateGas(api.ctx, uint64(blockNum), tx)
+	gas, err := core.NewV1(api.client).EstimateGas(api.ctx, api.roundParamFromBlockNum(blockNum), tx)
 	if err != nil {
 		api.Logger.Error("Failed to EstimateGas", "error", err.Error())
 		return 0, err
@@ -441,7 +453,7 @@ func (api *PublicAPI) GetTransactionByBlockHashAndIndex(blockHash common.Hash, i
 // GetTransactionByBlockNumberAndIndex returns the transaction identified by number and index.
 func (api *PublicAPI) GetTransactionByBlockNumberAndIndex(blockNum ethrpc.BlockNumber, index uint32) (*utils.RPCTransaction, error) {
 	api.Logger.Debug("eth_getTransactionByBlockNumberAndIndex", "number", blockNum, "index", index)
-	blockHash, err := api.backend.QueryBlockHash(uint64(blockNum))
+	blockHash, err := api.backend.QueryBlockHash(api.roundParamFromBlockNum(blockNum))
 	if err != nil {
 		api.Logger.Error("Failed to QueryBlockHash", "number", blockNum)
 		return nil, ErrInternalQuery
@@ -555,12 +567,8 @@ func logs2EthLogs(logs []*Log, round uint64, blockHash, txHash common.Hash, txIn
 	return ethLogs
 }
 
-func (api *PublicAPI) GetBlockHash(number string, _ bool) (common.Hash, error) {
-	bigNumber := big.NewInt(0)
-	bigNumber.SetString(number, 10)
-	blockNum := bigNumber.Uint64()
-
-	return api.backend.QueryBlockHash(blockNum)
+func (api *PublicAPI) GetBlockHash(blockNum ethrpc.BlockNumber, _ bool) (common.Hash, error) {
+	return api.backend.QueryBlockHash(api.roundParamFromBlockNum(blockNum))
 }
 
 func (api *PublicAPI) BlockNumber() (hexutil.Uint64, error) {
