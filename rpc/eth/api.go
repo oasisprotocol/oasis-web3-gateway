@@ -237,9 +237,9 @@ func (api *PublicAPI) GetCode(address common.Address, blockNrOrHash ethrpc.Block
 // this function doesn't make any changes in the evm state of blockchain
 func (api *PublicAPI) Call(args utils.TransactionArgs, _ ethrpc.BlockNumberOrHash, _ *utils.StateOverride) (hexutil.Bytes, error) {
 	var (
-		amount = []byte{0}
-		input = []byte{}
-		sender = common.Address{1}
+		amount   = []byte{0}
+		input    = []byte{}
+		sender   = common.Address{1}
 		gasPrice = []byte{1}
 		// This gas cap should be enough for SimulateCall an ethereum transaction
 		gas uint64 = 30_000_000
@@ -566,4 +566,25 @@ func (api *PublicAPI) BlockNumber() (hexutil.Uint64, error) {
 
 	api.Logger.Debug("eth_getBlockNumber get the current number", "blockNumber", blk.Header.Round)
 	return hexutil.Uint64(blk.Header.Round), nil
+}
+
+// Accounts returns the list of accounts available to this node.
+func (api *PublicAPI) Accounts() ([]common.Address, error) {
+	api.Logger.Debug("eth_accounts")
+
+	addresses := make([]common.Address, 0) // return [] instead of nil if empty
+
+	return addresses, nil
+}
+
+// Mining returns whether or not this node is currently mining. Always false.
+func (api *PublicAPI) Mining() bool {
+	api.Logger.Debug("eth_mining")
+	return false
+}
+
+// Hashrate returns the current node's hashrate. Always 0.
+func (api *PublicAPI) Hashrate() hexutil.Uint64 {
+	api.Logger.Debug("eth_hashrate")
+	return 0
 }
