@@ -5,26 +5,23 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/oasisprotocol/oasis-core/go/common/cbor"
-	"github.com/oasisprotocol/oasis-core/go/common/logging"
-	"github.com/oasisprotocol/oasis-core/go/common/quantity"
-	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
-
-	"github.com/starfishlabs/oasis-evm-web3-gateway/indexer"
-	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	ethrpc "github.com/ethereum/go-ethereum/rpc"
-
+	"github.com/oasisprotocol/oasis-core/go/common/cbor"
+	"github.com/oasisprotocol/oasis-core/go/common/logging"
+	"github.com/oasisprotocol/oasis-core/go/common/quantity"
+	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/accounts"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/evm"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 
+	"github.com/starfishlabs/oasis-evm-web3-gateway/indexer"
+	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/utils"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/server"
 )
@@ -35,9 +32,7 @@ const (
 	methodCall   = "evm.Call"
 )
 
-var (
-	ErrInternalQuery = errors.New("internal query error")
-)
+var ErrInternalQuery = errors.New("internal query error")
 
 // Log is the Oasis Log.
 type Log struct {
@@ -136,7 +131,6 @@ func (api *PublicAPI) getRPCBlock(oasisBlock *block.Block) (map[string]interface
 	}
 
 	res, err := utils.ConvertToEthBlock(oasisBlock, ethTxs, logs, gasUsed)
-
 	if err != nil {
 		api.Logger.Debug("Failed to ConvertToEthBlock", "height", blockNum, "error", err.Error())
 		return nil, err
@@ -173,7 +167,6 @@ func (api *PublicAPI) GetBlockTransactionCountByNumber(blockNum ethrpc.BlockNumb
 func (api *PublicAPI) GetBalance(address common.Address, blockNrOrHash ethrpc.BlockNumberOrHash) (*hexutil.Big, error) {
 	ethmod := evm.NewV1(api.client)
 	res, err := ethmod.Balance(api.ctx, address[:])
-
 	if err != nil {
 		api.Logger.Error("Get balance failed")
 		return nil, err
@@ -229,7 +222,6 @@ func (api *PublicAPI) GetTransactionCount(ethaddr common.Address, blockNum ethrp
 	accountsMod := accounts.NewV1(api.client)
 	accountsAddr := types.NewAddressRaw(types.AddressV0Secp256k1EthContext, ethaddr[:])
 	nonce, err := accountsMod.Nonce(api.ctx, client.RoundLatest, accountsAddr)
-
 	if err != nil {
 		return nil, err
 	}
@@ -241,7 +233,6 @@ func (api *PublicAPI) GetTransactionCount(ethaddr common.Address, blockNum ethrp
 func (api *PublicAPI) GetCode(address common.Address, blockNrOrHash ethrpc.BlockNumberOrHash) (hexutil.Bytes, error) {
 	ethmod := evm.NewV1(api.client)
 	res, err := ethmod.Code(api.ctx, address[:])
-
 	if err != nil {
 		return nil, err
 	}
@@ -288,7 +279,6 @@ func (api *PublicAPI) Call(args utils.TransactionArgs, _ ethrpc.BlockNumberOrHas
 		args.To.Bytes(),
 		amount,
 		input)
-
 	if err != nil {
 		api.Logger.Error("Failed to execute SimulateCall", "error", err.Error())
 		return nil, err
@@ -518,7 +508,7 @@ func (api *PublicAPI) GetTransactionReceipt(txHash common.Hash) (map[string]inte
 		}
 	}
 	logs := logs2EthLogs(oasisLogs, txRef.Round, common.HexToHash(txRef.BlockHash), txHash, txRef.Index)
-	//blockNum:=new(big.Int).SetUint64(txRef.Round).String()
+	// blockNum:=new(big.Int).SetUint64(txRef.Round).String()
 	receipt := map[string]interface{}{
 		"status":            hexutil.Uint(status),
 		"cumulativeGasUsed": hexutil.Uint64(cumulativeGasUsed),

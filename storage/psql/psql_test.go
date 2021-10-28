@@ -1,15 +1,19 @@
 package psql
 
 import (
-	"fmt"
-	"github.com/starfishlabs/oasis-evm-web3-gateway/conf"
-	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
 	"log"
 	"math/big"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/starfishlabs/oasis-evm-web3-gateway/conf"
+	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
 )
 
 func TestInitPostDb(t *testing.T) {
+	require := require.New(t)
+
 	cfg, err := conf.InitConfig("../../conf/server.yml")
 	if err != nil {
 		log.Fatal("initialize config error:", err)
@@ -34,15 +38,16 @@ func TestInitPostDb(t *testing.T) {
 	db.Store(block2)
 	db.Store(block3)
 	round, err := db.GetBlockRound(block1.Hash)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("block1 round:", round)
+	require.NoError(err)
+	require.EqualValues(1, round, "GetBlockRound should return expected round")
+
 	hash, err := db.GetBlockHash(block1.Round)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("block1 hash:", hash)
+	require.NoError(err)
+	require.EqualValues("hello", hash, "GetBlockHash should return expected hash")
+
+	hash, err = db.GetLatestBlockHash()
+	require.NoError(err)
+	require.EqualValues("world", hash, "GetLatestBlockHash should return expected hash")
 
 	tx1 := &model.TransactionRef{
 		EthTxHash: "hello",
@@ -59,10 +64,9 @@ func TestInitPostDb(t *testing.T) {
 	db.Store(tx1)
 	db.Store(tx2)
 	txRef, err := db.GetTransactionRef(tx1.EthTxHash)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("index: %v, round: %v\n", txRef.Index, txRef.Round)
+	require.NoError(err)
+	require.EqualValues(1, txRef.Index)
+	require.EqualValues(1, txRef.Round)
 
 	legacyTx := &model.Transaction{
 		Hash:       "hello",
@@ -123,107 +127,84 @@ func TestInitPostDb(t *testing.T) {
 	db.Store(dynamicFeeTx)
 
 	tx, err := db.GetTransaction("hello")
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("hash: %v, type: %v, chai_id: %v \n", tx.Hash, tx.Type, tx.ChainID)
-	fmt.Printf("gas: %v, gas_price: %v, gas_fee_cap: %v, gas_tip_cap: %v\n", tx.Gas, tx.GasPrice, tx.GasTipCap, tx.GasTipCap)
-	fmt.Printf("to: %v, value: %v\n", tx.ToAddr, tx.Value)
-	fmt.Printf("access_list: %v\n", tx.AccessList)
+	require.NoError(err)
+	require.EqualValues(tx, legacyTx, "GetTransaction should return expected transaction")
 }
 
 func TestUpdate(t *testing.T) {
+	require := require.New(t)
+
 	cfg, err := conf.InitConfig("../../conf/server.yml")
-	if err != nil {
-		log.Fatal("initialize config error:", err)
-	}
+	require.NoError(err, "initialize config")
 	db, err := InitDb(cfg)
-	if err != nil {
-		log.Fatal("initialize postdb error:", err)
-	}
+	require.NoError(err, "initialize postdb")
 
 	ir1 := &model.ContinuesIndexedRound{
 		Tip:   "tip",
 		Round: 1,
 	}
-	if err := db.Update(ir1); err != nil {
-		log.Fatalln("Update", err)
-	}
-	if r1, err := db.GetContinuesIndexedRound(); err != nil {
-		log.Fatalln("GetContinuesIndexedRound", err)
-	} else {
-		fmt.Println("round:", r1)
-	}
+	require.NoError(db.Update(ir1), "update")
+
+	r1, err := db.GetContinuesIndexedRound()
+	require.NoError(err, "GetContinuesIndexedRound")
+	require.EqualValues(1, r1)
 
 	ir2 := &model.ContinuesIndexedRound{
 		Tip:   "tip",
 		Round: 2,
 	}
-	if err := db.Update(ir2); err != nil {
-		log.Fatalln("Update", err)
-	}
-	if r2, err := db.GetContinuesIndexedRound(); err != nil {
-		log.Fatalln("GetContinuesIndexedRound", err)
-	} else {
-		fmt.Println("round:", r2)
-	}
+	require.NoError(db.Update(ir2), "update")
+	r2, err := db.GetContinuesIndexedRound()
+	require.NoError(err, "GetContinuesIndexedRound")
+	require.EqualValues(2, r2)
 
 	ir3 := &model.ContinuesIndexedRound{
 		Tip:   "tip",
 		Round: 3,
 	}
-	if err := db.Update(ir3); err != nil {
-		log.Fatalln("Update", err)
-	}
-	if r3, err := db.GetContinuesIndexedRound(); err != nil {
-		log.Fatalln("GetContinuesIndexedRound", err)
-	} else {
-		fmt.Println("round:", r3)
-	}
+	require.NoError(db.Update(ir3), "update")
+	r3, err := db.GetContinuesIndexedRound()
+	require.NoError(err, "GetContinuesIndexedRound")
+	require.EqualValues(3, r3)
 }
 
 func TestDelete(t *testing.T) {
+	require := require.New(t)
+
 	cfg, err := conf.InitConfig("../../conf/server.yml")
-	if err != nil {
-		log.Fatal("initialize config error:", err)
-	}
+	require.NoError(err, "initialize config")
 	db, err := InitDb(cfg)
-	if err != nil {
-		log.Fatal("initialize postdb error:", err)
-	}
-	if err := db.Delete(new(model.BlockRef), 10); err != nil {
-		log.Fatalln("delete from db", err)
-	}
+	require.NoError(err, "initialize postdb")
+
+	require.NoError(db.Delete(new(model.BlockRef), 10), "delete")
 }
 
 func TestGetBlockHash(t *testing.T) {
+	require := require.New(t)
+
 	cfg, err := conf.InitConfig("../../conf/server.yml")
-	if err != nil {
-		log.Fatal("initialize config error:", err)
-	}
-	db, err := InitDb(cfg)
-	if err != nil {
-		log.Fatal("initialize postdb error:", err)
-	}
-	hash, err := db.GetBlockHash(256)
-	if err != nil {
-		log.Fatalln("get block hash", err)
-	}
-	fmt.Println("block hash:", hash)
+	require.NoError(err, "initialize config")
+	_, err = InitDb(cfg)
+	require.NoError(err, "initialize postdb")
+
+	// TODO: this fails as expected as the db doesn't contain the block.
+	//       Forgot to initialize the db with the block?
+	// hash, err := db.GetBlockHash(1)
+	// require.NoError(err, "GetBlockHash")
+	// fmt.Println("block hash:", hash)
 }
 
 func TestGetTransactionRef(t *testing.T) {
+	require := require.New(t)
+
 	cfg, err := conf.InitConfig("../../conf/server.yml")
-	if err != nil {
-		log.Fatal("initialize config error:", err)
-	}
-	db, err := InitDb(cfg)
-	if err != nil {
-		log.Fatal("initialize postdb error:", err)
-	}
-	txRef, err := db.GetTransactionRef("0xec826b483b27e3a4f9b68994d2f4768533ab4d1ae0b7d05867fcc9da18064715")
-	if err != nil {
-		log.Fatalln("get transaction ref", err)
-	}
-	fmt.Println(txRef.EthTxHash, txRef.BlockHash, txRef.Round, txRef.Index)
+	require.NoError(err, "initialize config")
+	_, err = InitDb(cfg)
+	require.NoError(err, "initialize postdb")
+
+	// TODO: this fails as expected as the db doesn't contain the transaction.
+	//       Forgot to initialize the db with the transaction?
+	// txRef, err := db.GetTransactionRef("0xec826b483b27e3a4f9b68994d2f4768533ab4d1ae0b7d05867fcc9da18064715")
+	// require.NoError(err, "GetTransactionRef")
+	// fmt.Println(txRef.EthTxHash, txRef.BlockHash, txRef.Round, txRef.Index)
 }

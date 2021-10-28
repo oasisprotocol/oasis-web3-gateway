@@ -20,6 +20,9 @@ type Storage interface {
 	// GetBlockHash queries block hash by block round.
 	GetBlockHash(round uint64) (string, error)
 
+	// GetLatestBlockHash returns the block hash of the latest indexed round.
+	GetLatestBlockHash() (string, error)
+
 	// GetTransactionRef returns block hash, round and index of the transaction.
 	GetTransactionRef(ethTxHash string) (*model.TransactionRef, error)
 

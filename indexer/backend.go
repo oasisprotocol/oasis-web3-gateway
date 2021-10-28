@@ -12,6 +12,7 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/hash"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
+
 	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/storage"
 )
@@ -172,7 +173,7 @@ func (p *psqlBackend) Index(
 	blockHash ethcommon.Hash,
 	txs []*types.UnverifiedTransaction,
 ) error {
-	//block round <-> block hash
+	// block round <-> block hash
 	blockRef := &model.BlockRef{
 		Round: round,
 		Hash:  blockHash.String(),
@@ -214,12 +215,19 @@ func (p *psqlBackend) QueryBlockRound(blockHash ethcommon.Hash) (uint64, error) 
 }
 
 func (p *psqlBackend) QueryBlockHash(round uint64) (ethcommon.Hash, error) {
-	blockHash, err := p.storage.GetBlockHash(round)
-	if err != nil {
-		p.logger.Error("Indexer error!")
-		return ethcommon.Hash{}, err
+	var blockHash string
+	var err error
+	switch round {
+	case RoundLatest:
+		blockHash, err = p.storage.GetLatestBlockHash()
+	default:
+		blockHash, err = p.storage.GetBlockHash(round)
 	}
 
+	if err != nil {
+		p.logger.Error("indexer error", "err", err)
+		return ethcommon.Hash{}, err
+	}
 	return ethcommon.HexToHash(blockHash), nil
 }
 
