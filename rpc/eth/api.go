@@ -363,7 +363,9 @@ func (api *PublicAPI) GetBlockByHash(blockHash common.Hash, fullTx bool) (map[st
 	round, err := api.backend.QueryBlockRound(blockHash)
 	if err != nil {
 		api.Logger.Error("Matched block error, block hash: ", blockHash)
-		return nil, ErrInternalQuery
+		// Block doesn't exist, by web3 spec an empty response should be retuned, not an error.
+		// TODO: ensure that the error is actually that the block doesn't exist.
+		return nil, nil
 	}
 
 	blk, err := api.client.GetBlock(api.ctx, round)
@@ -385,7 +387,8 @@ func (api *PublicAPI) getRPCTransaction(dbTx *model.Transaction) (*utils.RPCTran
 	txIndex := hexutil.Uint64(dbTxRef.Index)
 	resTx, err := utils.NewRPCTransaction(dbTx, blockHash, dbTxRef.Round, txIndex)
 	if err != nil {
-		api.Logger.Error("Failed to NewRPCTransaction", "hash", dbTx.Hash)
+		api.Logger.Error("Failed to NewRPCTransaction", "hash", dbTx.Hash, "err", err)
+		return nil, ErrInternalQuery
 	}
 	return resTx, nil
 }
@@ -396,23 +399,31 @@ func (api *PublicAPI) GetTransactionByHash(hash common.Hash) (*utils.RPCTransact
 
 	dbTx, err := api.backend.QueryTransaction(hash)
 	if err != nil {
-		api.Logger.Error("Failed to QueryTransaction", "hash", hash.String())
-		return nil, ErrInternalQuery
+		api.Logger.Error("Failed to QueryTransaction", "hash", hash.String(), "err", err)
+		// Transaction doesn't exist, by web3 spec an empty response should be retuned, not an error.
+		// TODO: ensure that the error is actually that the transaction doesn't exist.
+		return nil, nil
 	}
 
 	if dbTx == nil {
-		err = errors.New("transaction not found with the hash: " + hash.Hex())
-		return nil, err
+		api.Logger.Error("transaction not found with the hash", "hash", hash.Hex())
+		// Transaction doesn't exist, by web3 spec an empty response should be retuned, not an error.
+		// TODO: ensure that the error is actually that the transaction doesn't exist.
+		return nil, nil
 	}
 	return api.getRPCTransaction(dbTx)
 }
 
 // GetTransactionByBlockHashAndIndex returns the transaction for the given block hash and index.
 func (api *PublicAPI) GetTransactionByBlockHashAndIndex(blockHash common.Hash, index uint32) (*utils.RPCTransaction, error) {
+	api.Logger.Debug("eth_getTransactionByBlockHashAndIndex", "hash", blockHash.Hex(), "index", index)
+
 	round, err := api.backend.QueryBlockRound(blockHash)
 	if err != nil {
 		api.Logger.Error("Matched block error, block hash: ", blockHash)
-		return nil, ErrInternalQuery
+		// Block doesn't exist, by web3 spec an empty response should be retuned, not an error.
+		// TODO: ensure that the error is actually that the block doesn't exist.
+		return nil, nil
 	}
 
 	blk, err := api.client.GetBlock(api.ctx, round)
@@ -446,7 +457,9 @@ func (api *PublicAPI) GetTransactionByBlockNumberAndIndex(blockNum ethrpc.BlockN
 	blockHash, err := api.backend.QueryBlockHash(api.roundParamFromBlockNum(blockNum))
 	if err != nil {
 		api.Logger.Error("Failed to QueryBlockHash", "number", blockNum)
-		return nil, ErrInternalQuery
+		// Block doesn't exist, by web3 spec an empty response should be retuned, not an error.
+		// TODO: ensure that the error is actually that the block doesn't exist.
+		return nil, nil
 	}
 
 	return api.GetTransactionByBlockHashAndIndex(blockHash, index)
@@ -458,7 +471,9 @@ func (api *PublicAPI) GetTransactionReceipt(txHash common.Hash) (map[string]inte
 	txRef, err := api.backend.QueryTransactionRef(txHash.String())
 	if err != nil {
 		api.Logger.Error("failed query transaction round and index", "hash", txHash.Hex(), "error", err.Error())
-		return nil, ErrInternalQuery
+		// Transaction doesn't exist, don't return an error, but empty response.
+		// TODO: ensure that the error is actually that the transaction doesn't exist.
+		return nil, nil
 	}
 	txResults, err := api.client.GetTransactionsWithResults(api.ctx, txRef.Round)
 	if err != nil {
@@ -508,7 +523,6 @@ func (api *PublicAPI) GetTransactionReceipt(txHash common.Hash) (map[string]inte
 		}
 	}
 	logs := logs2EthLogs(oasisLogs, txRef.Round, common.HexToHash(txRef.BlockHash), txHash, txRef.Index)
-	// blockNum:=new(big.Int).SetUint64(txRef.Round).String()
 	receipt := map[string]interface{}{
 		"status":            hexutil.Uint(status),
 		"cumulativeGasUsed": hexutil.Uint64(cumulativeGasUsed),
