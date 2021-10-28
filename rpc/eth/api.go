@@ -3,6 +3,7 @@ package eth
 import (
 	"context"
 	"errors"
+	"github.com/go-pg/pg/v10"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -160,7 +161,7 @@ func (api *PublicAPI) GetBlockTransactionCountByNumber(blockNum ethrpc.BlockNumb
 		api.Logger.Error("Get Transactions failed", "number", blockNum)
 	}
 
-	// TODO: only filter  the eth transactions ?
+	// TODO: only filter the eth transactions ?
 	n := hexutil.Uint(len(resTxs))
 	return &n
 }
@@ -213,7 +214,7 @@ func (api *PublicAPI) GetBlockTransactionCountByHash(blockHash common.Hash) *hex
 		api.Logger.Error("Call GetTransactions error")
 	}
 
-	// TODO: only filter  the eth transactions ?
+	// TODO: only filter the eth transactions ?
 	n := hexutil.Uint(len(resTxs))
 	return &n
 }
@@ -288,7 +289,7 @@ func (api *PublicAPI) Call(args utils.TransactionArgs, _ ethrpc.BlockNumberOrHas
 		return nil, err
 	}
 
-	return (hexutil.Bytes)(res), nil
+	return res, nil
 }
 
 // SendRawTransaction send a raw Ethereum transaction.
@@ -367,9 +368,11 @@ func (api *PublicAPI) GetBlockByHash(blockHash common.Hash, fullTx bool) (map[st
 	round, err := api.backend.QueryBlockRound(blockHash)
 	if err != nil {
 		api.Logger.Error("Matched block error, block hash: ", blockHash)
-		// Block doesn't exist, by web3 spec an empty response should be retuned, not an error.
-		// TODO: ensure that the error is actually that the block doesn't exist.
-		return nil, nil
+		// Block doesn't exist, by web3 spec an empty response should be returned, not an error.
+		if err == pg.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
 	}
 
 	blk, err := api.client.GetBlock(api.ctx, round)
@@ -405,16 +408,12 @@ func (api *PublicAPI) GetTransactionByHash(hash common.Hash) (*utils.RPCTransact
 	if err != nil {
 		api.Logger.Error("Failed to QueryTransaction", "hash", hash.String(), "err", err)
 		// Transaction doesn't exist, by web3 spec an empty response should be retuned, not an error.
-		// TODO: ensure that the error is actually that the transaction doesn't exist.
-		return nil, nil
+		if err == pg.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
 	}
 
-	if dbTx == nil {
-		api.Logger.Error("transaction not found with the hash", "hash", hash.Hex())
-		// Transaction doesn't exist, by web3 spec an empty response should be retuned, not an error.
-		// TODO: ensure that the error is actually that the transaction doesn't exist.
-		return nil, nil
-	}
 	return api.getRPCTransaction(dbTx)
 }
 
@@ -425,9 +424,11 @@ func (api *PublicAPI) GetTransactionByBlockHashAndIndex(blockHash common.Hash, i
 	round, err := api.backend.QueryBlockRound(blockHash)
 	if err != nil {
 		api.Logger.Error("Matched block error, block hash: ", blockHash)
-		// Block doesn't exist, by web3 spec an empty response should be retuned, not an error.
-		// TODO: ensure that the error is actually that the block doesn't exist.
-		return nil, nil
+		// Block doesn't exist, by web3 spec an empty response should be returned, not an error.
+		if err == pg.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
 	}
 
 	blk, err := api.client.GetBlock(api.ctx, round)
@@ -461,9 +462,11 @@ func (api *PublicAPI) GetTransactionByBlockNumberAndIndex(blockNum ethrpc.BlockN
 	blockHash, err := api.backend.QueryBlockHash(api.roundParamFromBlockNum(blockNum))
 	if err != nil {
 		api.Logger.Error("Failed to QueryBlockHash", "number", blockNum)
-		// Block doesn't exist, by web3 spec an empty response should be retuned, not an error.
-		// TODO: ensure that the error is actually that the block doesn't exist.
-		return nil, nil
+		// Block doesn't exist, by web3 spec an empty response should be returned, not an error.
+		if err == pg.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
 	}
 
 	return api.GetTransactionByBlockHashAndIndex(blockHash, index)
@@ -476,8 +479,10 @@ func (api *PublicAPI) GetTransactionReceipt(txHash common.Hash) (map[string]inte
 	if err != nil {
 		api.Logger.Error("failed query transaction round and index", "hash", txHash.Hex(), "error", err.Error())
 		// Transaction doesn't exist, don't return an error, but empty response.
-		// TODO: ensure that the error is actually that the transaction doesn't exist.
-		return nil, nil
+		if err == pg.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
 	}
 	txResults, err := api.client.GetTransactionsWithResults(api.ctx, txRef.Round)
 	if err != nil {
