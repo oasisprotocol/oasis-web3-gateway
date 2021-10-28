@@ -14,8 +14,9 @@ import (
 )
 
 const (
-	storageRequestTimeout = 5 * time.Second
-	storageRetryTimeout   = 1 * time.Second
+	storageRequestTimeout    = 5 * time.Second
+	storageRetryTimeout      = 1 * time.Second
+	CheckPruningTimeInterval = 60 * time.Second
 )
 
 const RoundLatest = client.RoundLatest
@@ -29,12 +30,14 @@ var (
 // Service is an indexer service.
 type Service struct {
 	service.BaseBackgroundService
-	runtimeID common.Namespace
-	backend   Backend
-	client    client.RuntimeClient
-	ctx       context.Context
-	cancelCtx context.CancelFunc
-	stopFlag  bool
+	runtimeID     common.Namespace
+	backend       Backend
+	client        client.RuntimeClient
+	ctx           context.Context
+	cancelCtx     context.CancelFunc
+	stopFlag      bool
+	enablePruning bool
+	pruningStep   uint64
 }
 
 func (s *Service) indexBlock(round uint64) error {
@@ -63,6 +66,24 @@ func (s *Service) getRoundLatest() (uint64, error) {
 	}
 
 	return blk.Header.Round, nil
+}
+
+func (s *Service) puring() {
+	for {
+		if s.stopFlag {
+			break
+		}
+
+		indexed := s.backend.QueryIndexedRound()
+		if indexed <= s.pruningStep {
+			time.Sleep(CheckPruningTimeInterval)
+			continue
+		}
+
+		pruningPoint := indexed - s.pruningStep
+		s.backend.Pruning(pruningPoint)
+		time.Sleep(CheckPruningTimeInterval)
+	}
 }
 
 func (s *Service) periodIndexWorker() {
@@ -108,6 +129,10 @@ func (s *Service) periodIndexWorker() {
 
 func (s *Service) Start() {
 	go s.periodIndexWorker()
+
+	if s.enablePruning {
+		go s.puring()
+	}
 }
 
 func (s *Service) Stop() {
@@ -116,7 +141,13 @@ func (s *Service) Stop() {
 }
 
 // New creates a new indexer service.
-func New(backendFactory BackendFactory, client client.RuntimeClient, runtimeID common.Namespace, storage storage.Storage) (*Service, Backend, error) {
+func New(backendFactory BackendFactory,
+	client client.RuntimeClient,
+	runtimeID common.Namespace,
+	storage storage.Storage,
+	enablePruning bool,
+	pruningStep uint64) (*Service, Backend, error) {
+
 	backend, err := backendFactory(runtimeID, storage)
 	if err != nil {
 		return nil, nil, err
@@ -132,6 +163,8 @@ func New(backendFactory BackendFactory, client client.RuntimeClient, runtimeID c
 		ctx:                   ctx,
 		cancelCtx:             cancelCtx,
 		stopFlag:              false,
+		enablePruning:         enablePruning,
+		pruningStep:           pruningStep,
 	}
 	s.Logger = s.Logger.With("runtime_id", s.runtimeID.String())
 

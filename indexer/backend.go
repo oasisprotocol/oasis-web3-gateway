@@ -65,6 +65,8 @@ type Backend interface {
 		txs []*types.UnverifiedTransaction,
 	) error
 
+	Pruning(step uint64) error
+
 	Close()
 }
 
@@ -197,6 +199,16 @@ func (p *psqlBackend) Index(
 	}
 
 	p.logger.Info("Indexed block: ", "round", round)
+
+	return nil
+}
+func (p *psqlBackend) Pruning(step uint64) error {
+	if err := p.storage.Delete(new(model.BlockRef), step); err != nil {
+		p.logger.Error("Pruning failed with these error ", "err", err)
+		return err
+	}
+
+	//TO DO: Will remove ethblock, logs, transactions latter
 
 	return nil
 }

@@ -27,6 +27,10 @@ import (
 const (
 	// This is the default client node address as set in oasis-net-runner.
 	nodeDefaultAddress = "unix:/tmp/eth-runtime-test/net-runner/network/client-0/internal.sock"
+	// This is the default runtime ID as used in oasis-net-runner.
+	defaultRuntimeIdHex = "8000000000000000000000000000000000000000000000000000000000000000"
+	// This is the default pruningstep.
+	defaultPruningStep = 100000
 )
 
 var (
@@ -36,6 +40,12 @@ var (
 	chainId uint
 	// Runtime identifier.
 	runtimeIDHex string
+	// Switch for pruning in indexer
+	enablePruning bool
+	// Pruning step for indexer.
+	// When the pruning function is enabled,
+	// all information with a block number less than (latest- pruningStep) will be deleted.
+	pruningStep uint64
 	// Oasis-web3-gateway root command
 	rootCmd = &cobra.Command{
 		Use:   "oasis-evm-web3-gateway",
@@ -50,7 +60,9 @@ var logger = logging.GetLogger("evm-gateway")
 func init() {
 	rootCmd.Flags().StringVar(&nodeAddr, "addr", nodeDefaultAddress, "address of node socket path")
 	rootCmd.Flags().UintVar(&chainId, "chainid", 42261, "ethereum network id")
-	rootCmd.Flags().StringVar(&runtimeIDHex, "runtime-id", "8000000000000000000000000000000000000000000000000000000000000000", "runtime id in hex")
+	rootCmd.Flags().StringVar(&runtimeIDHex, "runtime-id", defaultRuntimeIdHex, "runtime id in hex")
+	rootCmd.Flags().BoolVar(&enablePruning, "enablePruning", false, "enable pruning feature for indexer")
+	rootCmd.Flags().Uint64Var(&pruningStep, "pruningStep", defaultPruningStep, "information with blockNumber less then (latestBlockNumber-pruningStep) will be deleted")
 }
 
 func main() {
@@ -99,7 +111,7 @@ func runRoot(cmd *cobra.Command, args []string) {
 
 	// Create Indexer
 	f := indexer.NewPsqlBackend()
-	indx, backend, err := indexer.New(f, rc, runtimeID, db)
+	indx, backend, err := indexer.New(f, rc, runtimeID, db, enablePruning, pruningStep)
 	if err != nil {
 		logger.Error("failed to create indexer", err)
 		os.Exit(1)
