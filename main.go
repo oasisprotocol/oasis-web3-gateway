@@ -7,10 +7,10 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/spf13/cobra"
 	"github.com/oasisprotocol/oasis-core/go/common"
 	cmnGrpc "github.com/oasisprotocol/oasis-core/go/common/grpc"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
+	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
@@ -36,11 +36,15 @@ var (
 	nodeAddr string
 	// Ethereum network id
 	chainId uint
+	// Switch for purning in indexer
+	enablePurning bool
+	// Purning step for indexer
+	purningStep uint64
 	// Oasis-web3-gateway root command
 	rootCmd = &cobra.Command{
-		Use:     "oasis-evm-web3-gateway",
-		Short:   "oasis-evm-web3-gateway",
-		Run:    runRoot,
+		Use:   "oasis-evm-web3-gateway",
+		Short: "oasis-evm-web3-gateway",
+		Run:   runRoot,
 	}
 )
 
@@ -48,12 +52,14 @@ var (
 var logger = logging.GetLogger("evm-gateway")
 
 func init() {
-  rootCmd.Flags().StringVar(&nodeAddr, "addr", nodeDefaultAddress,"address of node socket path")
-  rootCmd.Flags().UintVar(&chainId, "chainid", 42261, "ethereum network id")
+	rootCmd.Flags().StringVar(&nodeAddr, "addr", nodeDefaultAddress, "address of node socket path")
+	rootCmd.Flags().UintVar(&chainId, "chainid", 42261, "ethereum network id")
+	rootCmd.Flags().BoolVar(&enablePurning, "enablePurning", false, "enable purning feature for indexer")
+	rootCmd.Flags().Uint64Var(&purningStep, "purningStep", 100000, "puring step for indexer")
 }
 
 func main() {
-  rootCmd.Execute()
+	rootCmd.Execute()
 }
 
 func runRoot(cmd *cobra.Command, args []string) {
@@ -98,7 +104,7 @@ func runRoot(cmd *cobra.Command, args []string) {
 
 	// Create Indexer
 	f := indexer.NewPsqlBackend()
-	indx, backend, err := indexer.New(f, rc, runtimeID, db)
+	indx, backend, err := indexer.New(f, rc, runtimeID, db, enablePurning, purningStep)
 	if err != nil {
 		logger.Error("failed to create indexer", err)
 		os.Exit(1)
