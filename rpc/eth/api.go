@@ -33,7 +33,12 @@ const (
 	methodCall   = "evm.Call"
 )
 
-var ErrInternalQuery = errors.New("internal query error")
+var (
+	ErrInternalQuery              = errors.New("internal query error")
+	ErrBlockNotFound              = errors.New("block not found")
+	ErrTransactionNotFound        = errors.New("transaction not found")
+	ErrTransactionReceiptNotFound = errors.New("transaction receipt not found")
+)
 
 // Log is the Oasis Log.
 type Log struct {
@@ -148,9 +153,9 @@ func (api *PublicAPI) GetBlockByNumber(blockNum ethrpc.BlockNumber, _ bool) (map
 		api.Logger.Error("GetBlock failed", "number", blockNum, "err", err)
 		// Block doesn't exist, by web3 spec an empty response should be returned, not an error.
 		if err == pg.ErrNoRows {
-			return nil, nil
+			return nil, ErrBlockNotFound
 		}
-		return nil, err
+		return nil, ErrInternalQuery
 	}
 
 	return api.getRPCBlock(resBlock)
@@ -372,9 +377,9 @@ func (api *PublicAPI) GetBlockByHash(blockHash common.Hash, fullTx bool) (map[st
 		api.Logger.Error("Matched block error, block hash: ", blockHash)
 		// Block doesn't exist, by web3 spec an empty response should be returned, not an error.
 		if err == pg.ErrNoRows {
-			return nil, nil
+			return nil, ErrBlockNotFound
 		}
-		return nil, err
+		return nil, ErrInternalQuery
 	}
 
 	blk, err := api.client.GetBlock(api.ctx, round)
@@ -411,9 +416,9 @@ func (api *PublicAPI) GetTransactionByHash(hash common.Hash) (*utils.RPCTransact
 		api.Logger.Error("Failed to QueryTransaction", "hash", hash.String(), "err", err)
 		// Transaction doesn't exist, by web3 spec an empty response should be retuned, not an error.
 		if err == pg.ErrNoRows {
-			return nil, nil
+			return nil, ErrTransactionNotFound
 		}
-		return nil, err
+		return nil, ErrInternalQuery
 	}
 
 	return api.getRPCTransaction(dbTx)
@@ -428,9 +433,9 @@ func (api *PublicAPI) GetTransactionByBlockHashAndIndex(blockHash common.Hash, i
 		api.Logger.Error("Matched block error, block hash: ", blockHash)
 		// Block doesn't exist, by web3 spec an empty response should be returned, not an error.
 		if err == pg.ErrNoRows {
-			return nil, nil
+			return nil, ErrBlockNotFound
 		}
-		return nil, err
+		return nil, ErrInternalQuery
 	}
 
 	blk, err := api.client.GetBlock(api.ctx, round)
@@ -466,9 +471,9 @@ func (api *PublicAPI) GetTransactionByBlockNumberAndIndex(blockNum ethrpc.BlockN
 		api.Logger.Error("Failed to QueryBlockHash", "number", blockNum)
 		// Block doesn't exist, by web3 spec an empty response should be returned, not an error.
 		if err == pg.ErrNoRows {
-			return nil, nil
+			return nil, ErrTransactionNotFound
 		}
-		return nil, err
+		return nil, ErrInternalQuery
 	}
 
 	return api.GetTransactionByBlockHashAndIndex(blockHash, index)
@@ -482,9 +487,9 @@ func (api *PublicAPI) GetTransactionReceipt(txHash common.Hash) (map[string]inte
 		api.Logger.Error("failed query transaction round and index", "hash", txHash.Hex(), "error", err.Error())
 		// Transaction doesn't exist, don't return an error, but empty response.
 		if err == pg.ErrNoRows {
-			return nil, nil
+			return nil, ErrTransactionNotFound
 		}
-		return nil, err
+		return nil, ErrInternalQuery
 	}
 	txResults, err := api.client.GetTransactionsWithResults(api.ctx, txRef.Round)
 	if err != nil {
