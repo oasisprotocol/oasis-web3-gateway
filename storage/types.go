@@ -26,9 +26,6 @@ type Storage interface {
 	// GetTransactionRef returns block hash, round and index of the transaction.
 	GetTransactionRef(ethTxHash string) (*model.TransactionRef, error)
 
-	// GetTransactionByRoundAndIndex queries ethereum transaction by round and index.
-	GetTransactionByRoundAndIndex(round uint64, index uint32) (*model.Transaction, error)
-
 	// GetContinuesIndexedRound query continues indexed block round.
 	GetContinuesIndexedRound() (uint64, error)
 

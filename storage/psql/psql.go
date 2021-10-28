@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/go-pg/pg/v10"
+
 	"github.com/starfishlabs/oasis-evm-web3-gateway/conf"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
 )
@@ -53,27 +54,6 @@ func (db *PostDb) GetTransactionRef(txHash string) (*model.TransactionRef, error
 	}
 
 	return tx, nil
-}
-
-// GetTransactionByRoundAndIndex queries ethereum transaction by round and index.
-func (db *PostDb) GetTransactionByRoundAndIndex(round uint64, index uint32) (*model.Transaction, error) {
-	txRef := new(model.TransactionRef)
-	err := db.Db.Model(txRef).
-		Where("round=? and index=?", round, index).
-		Select()
-	if err != nil {
-		return nil, err
-	}
-
-	ethTx := new(model.Transaction)
-	err = db.Db.Model(ethTx).
-		Where("hash=?", txRef.EthTxHash).
-		Select()
-	if err != nil {
-		return nil, err
-	}
-
-	return ethTx, nil
 }
 
 // GetTransaction queries ethereum transaction by hash.

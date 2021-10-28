@@ -45,9 +45,6 @@ type QueryableBackend interface {
 	// QueryTransactionRef returns block hash, round and index of the transaction.
 	QueryTransactionRef(ethTxHash string) (*model.TransactionRef, error)
 
-	// QueryTransactionByRoundAndIndex queries ethereum transaction by round and index.
-	QueryTransactionByRoundAndIndex(round uint64, index uint32) (*model.Transaction, error)
-
 	// QueryIndexedRound query continues indexed block round.
 	QueryIndexedRound() uint64
 
@@ -264,10 +261,6 @@ func (p *psqlBackend) QueryTransaction(ethTxHash ethcommon.Hash) (*model.Transac
 
 func (p *psqlBackend) QueryTransactionRef(hash string) (*model.TransactionRef, error) {
 	return p.storage.GetTransactionRef(hash)
-}
-
-func (p *psqlBackend) QueryTransactionByRoundAndIndex(round uint64, index uint32) (*model.Transaction, error) {
-	return p.storage.GetTransactionByRoundAndIndex(round, index)
 }
 
 func (p *psqlBackend) Close() {
