@@ -146,9 +146,11 @@ func (api *PublicAPI) GetBlockByNumber(blockNum ethrpc.BlockNumber, _ bool) (map
 	resBlock, err := api.client.GetBlock(api.ctx, api.roundParamFromBlockNum(blockNum))
 	if err != nil {
 		api.Logger.Error("GetBlock failed", "number", blockNum, "err", err)
-		// Block doesn't exist, by web3 spec an empty response should be retuned, not an error.
-		// TODO: ensure that the error is actually that the block doesn't exist.
-		return nil, nil
+		// Block doesn't exist, by web3 spec an empty response should be returned, not an error.
+		if err == pg.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
 	}
 
 	return api.getRPCBlock(resBlock)
