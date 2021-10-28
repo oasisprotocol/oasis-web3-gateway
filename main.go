@@ -85,14 +85,14 @@ func runRoot(cmd *cobra.Command, args []string) {
 	// Initialize server config
 	cfg, err := conf.InitConfig("./conf/server.yml")
 	if err != nil {
-		logger.Error("failed to initialize config", err)
+		logger.Error("failed to initialize config", "err", err)
 		os.Exit(1)
 	}
 
 	// Initialize db
 	db, err := psql.InitDb(cfg)
 	if err != nil {
-		logger.Error("failed to initialize db", err)
+		logger.Error("failed to initialize db", "err", err)
 		os.Exit(1)
 	}
 
