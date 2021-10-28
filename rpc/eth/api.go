@@ -3,7 +3,6 @@ package eth
 import (
 	"context"
 	"errors"
-	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -170,24 +169,26 @@ func (api *PublicAPI) GetBlockTransactionCountByNumber(blockNum ethrpc.BlockNumb
 	return &n
 }
 
-func (api *PublicAPI) GetStorageAt(address common.Address, position string, blockNum ethrpc.BlockNumber) (string, error) {
+func (api *PublicAPI) GetStorageAt(address common.Address, position hexutil.Big, blockNum ethrpc.BlockNumber) (hexutil.Big, error) {
 	api.Logger.Debug("eth_getStorage", "address", address, "position", position, "block_num", blockNum)
 
-	pos, err := hexutil.Decode(position)
-	if err != nil {
-		api.Logger.Error("failed to decode position", "err", err)
-		return "", fmt.Errorf("failed to decode position: %w", err)
-	}
+	// EVM module takes index as H256, which needs leading zeros.
+	position256 := make([]byte, 32)
+	// Unmarshalling to hexutil.Big rejects overlong inputs. Verify in `TestRejectOverlong`.
+	position.ToInt().FillBytes(position256)
 
 	ethmod := evm.NewV1(api.client)
 	// TODO: blockNum ignored as EVM wrapper doesn't support queries for past rounds:
 	// https://github.com/oasisprotocol/oasis-sdk/issues/590
-	res, err := ethmod.Storage(api.ctx, address[:], pos)
+	res, err := ethmod.Storage(api.ctx, address[:], position256)
 	if err != nil {
 		api.Logger.Error("failed to query storage", "err", err)
-		return "", ErrInternalQuery
+		return hexutil.Big{}, ErrInternalQuery
 	}
-	return hexutil.Encode(res), nil
+	// Some apps expect no leading zeros, so output as big integer.
+	var resultBI big.Int
+	resultBI.SetBytes(res)
+	return hexutil.Big(resultBI), nil
 }
 
 // GetBalance returns the provided account's balance up to the provided block number.
