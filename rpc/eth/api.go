@@ -3,7 +3,6 @@ package eth
 import (
 	"context"
 	"errors"
-	"github.com/go-pg/pg/v10"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -152,9 +151,6 @@ func (api *PublicAPI) GetBlockByNumber(blockNum ethrpc.BlockNumber, _ bool) (map
 	if err != nil {
 		api.Logger.Error("GetBlock failed", "number", blockNum, "err", err)
 		// Block doesn't exist, by web3 spec an empty response should be returned, not an error.
-		if err == pg.ErrNoRows {
-			return nil, ErrBlockNotFound
-		}
 		return nil, ErrInternalQuery
 	}
 
@@ -376,10 +372,7 @@ func (api *PublicAPI) GetBlockByHash(blockHash common.Hash, fullTx bool) (map[st
 	if err != nil {
 		api.Logger.Error("Matched block error, block hash: ", blockHash)
 		// Block doesn't exist, by web3 spec an empty response should be returned, not an error.
-		if err == pg.ErrNoRows {
-			return nil, ErrBlockNotFound
-		}
-		return nil, ErrInternalQuery
+		return nil, nil
 	}
 
 	blk, err := api.client.GetBlock(api.ctx, round)
@@ -414,11 +407,8 @@ func (api *PublicAPI) GetTransactionByHash(hash common.Hash) (*utils.RPCTransact
 	dbTx, err := api.backend.QueryTransaction(hash)
 	if err != nil {
 		api.Logger.Error("Failed to QueryTransaction", "hash", hash.String(), "err", err)
-		// Transaction doesn't exist, by web3 spec an empty response should be retuned, not an error.
-		if err == pg.ErrNoRows {
-			return nil, ErrTransactionNotFound
-		}
-		return nil, ErrInternalQuery
+		// Transaction doesn't exist, by web3 spec an empty response should be returned, not an error.
+		return nil, nil
 	}
 
 	return api.getRPCTransaction(dbTx)
@@ -432,10 +422,7 @@ func (api *PublicAPI) GetTransactionByBlockHashAndIndex(blockHash common.Hash, i
 	if err != nil {
 		api.Logger.Error("Matched block error, block hash: ", blockHash)
 		// Block doesn't exist, by web3 spec an empty response should be returned, not an error.
-		if err == pg.ErrNoRows {
-			return nil, ErrBlockNotFound
-		}
-		return nil, ErrInternalQuery
+		return nil, nil
 	}
 
 	blk, err := api.client.GetBlock(api.ctx, round)
@@ -470,10 +457,7 @@ func (api *PublicAPI) GetTransactionByBlockNumberAndIndex(blockNum ethrpc.BlockN
 	if err != nil {
 		api.Logger.Error("Failed to QueryBlockHash", "number", blockNum)
 		// Block doesn't exist, by web3 spec an empty response should be returned, not an error.
-		if err == pg.ErrNoRows {
-			return nil, ErrTransactionNotFound
-		}
-		return nil, ErrInternalQuery
+		return nil, nil
 	}
 
 	return api.GetTransactionByBlockHashAndIndex(blockHash, index)
@@ -486,10 +470,7 @@ func (api *PublicAPI) GetTransactionReceipt(txHash common.Hash) (map[string]inte
 	if err != nil {
 		api.Logger.Error("failed query transaction round and index", "hash", txHash.Hex(), "error", err.Error())
 		// Transaction doesn't exist, don't return an error, but empty response.
-		if err == pg.ErrNoRows {
-			return nil, ErrTransactionNotFound
-		}
-		return nil, ErrInternalQuery
+		return nil, nil
 	}
 	txResults, err := api.client.GetTransactionsWithResults(api.ctx, txRef.Round)
 	if err != nil {
