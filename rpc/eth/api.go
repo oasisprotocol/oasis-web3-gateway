@@ -172,6 +172,8 @@ func (api *PublicAPI) GetBlockTransactionCountByNumber(blockNum ethrpc.BlockNumb
 // GetBalance returns the provided account's balance up to the provided block number.
 func (api *PublicAPI) GetBalance(address common.Address, blockNrOrHash ethrpc.BlockNumberOrHash) (*hexutil.Big, error) {
 	ethmod := evm.NewV1(api.client)
+	// TODO: blockNrOrHash ignored as EVM wrapper doesn't support queries for past rounds:
+	// https://github.com/oasisprotocol/oasis-sdk/issues/590
 	res, err := ethmod.Balance(api.ctx, address[:])
 	if err != nil {
 		api.Logger.Error("Get balance failed")
@@ -240,6 +242,8 @@ func (api *PublicAPI) GetTransactionCount(ethaddr common.Address, blockNum ethrp
 // GetCode returns the contract code at the given address and block number.
 func (api *PublicAPI) GetCode(address common.Address, blockNrOrHash ethrpc.BlockNumberOrHash) (hexutil.Bytes, error) {
 	ethmod := evm.NewV1(api.client)
+	// TODO: blockNrOrHash ignored as EVM wrapper doesn't support queries for past rounds:
+	// https://github.com/oasisprotocol/oasis-sdk/issues/590
 	res, err := ethmod.Code(api.ctx, address[:])
 	if err != nil {
 		return nil, err
@@ -279,6 +283,8 @@ func (api *PublicAPI) Call(args utils.TransactionArgs, _ ethrpc.BlockNumberOrHas
 		sender = *args.From
 	}
 
+	// TODO: blockNrOrHash ignored as EVM wrapper doesn't support queries for past rounds:
+	// https://github.com/oasisprotocol/oasis-sdk/issues/590
 	res, err := evm.NewV1(api.client).SimulateCall(
 		api.ctx,
 		gasPrice,
