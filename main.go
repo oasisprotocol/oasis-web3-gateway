@@ -86,7 +86,7 @@ func runRoot(cmd *cobra.Command, args []string) {
 
 	// Create Indexer
 	f := indexer.NewPsqlBackend()
-	indx, backend, err := indexer.New(f, rc, runtimeID, db)
+	indx, backend, err := indexer.New(f, rc, runtimeID, db, cfg.EnablePruning, cfg.PruningStep)
 	if err != nil {
 		logger.Error("failed to create indexer", err)
 		os.Exit(1)

@@ -1,5 +1,7 @@
 runtime_id: "8000000000000000000000000000000000000000000000000000000000000000"
 node_address: "unix:/tmp/eth-runtime-test/net-runner/network/client-0/internal.sock"
+enable_pruing: false 
+pruning_step: 100000
 
 postdb:
   host: "127.0.0.1"

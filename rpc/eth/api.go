@@ -96,7 +96,6 @@ func (api *PublicAPI) getRPCBlock(oasisBlock *block.Block) (map[string]interface
 	blockNum := oasisBlock.Header.Round
 	ethTxs := ethtypes.Transactions{}
 	var gasUsed uint64
-	var oasisLogs []*Log
 	var logs []*ethtypes.Log
 	txResults, err := api.client.GetTransactionsWithResults(api.ctx, blockNum)
 	if err != nil {
@@ -124,6 +123,7 @@ func (api *PublicAPI) getRPCBlock(oasisBlock *block.Block) (map[string]interface
 		gasUsed += uint64(ethTx.Gas())
 		ethTxs = append(ethTxs, ethTx)
 
+		var oasisLogs []*Log
 		resEvents := item.Events
 		for eventIndex, event := range resEvents {
 			if event.Code == 1 {

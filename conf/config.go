@@ -9,8 +9,10 @@ import (
 
 // Config is gateway server configuration.
 type Config struct {
-	RuntimeID   string `yaml:"runtime_id"`
-	NodeAddress string `yaml:"node_address"`
+	RuntimeID     string `yaml:"runtime_id"`
+	NodeAddress   string `yaml:"node_address"`
+	EnablePruning bool   `yaml:"enable_pruing"`
+	PruningStep   uint64 `yaml:"pruning_step"`
 
 	PostDb  *PostDbConfig  `yaml:"postdb,omitempty"`
 	Gateway *GatewayConfig `yaml:"gateway,omitempty"`

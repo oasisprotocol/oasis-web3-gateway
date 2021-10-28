@@ -14,8 +14,9 @@ import (
 )
 
 const (
-	storageRequestTimeout = 5 * time.Second
-	storageRetryTimeout   = 1 * time.Second
+	storageRequestTimeout    = 5 * time.Second
+	storageRetryTimeout      = 1 * time.Second
+	CheckPruningTimeInterval = 60 * time.Second
 )
 
 const RoundLatest = client.RoundLatest
@@ -29,12 +30,14 @@ var (
 // Service is an indexer service.
 type Service struct {
 	service.BaseBackgroundService
-	runtimeID common.Namespace
-	backend   Backend
-	client    client.RuntimeClient
-	ctx       context.Context
-	cancelCtx context.CancelFunc
-	stopFlag  bool
+	runtimeID     common.Namespace
+	backend       Backend
+	client        client.RuntimeClient
+	ctx           context.Context
+	cancelCtx     context.CancelFunc
+	stopFlag      bool
+	enablePruning bool
+	pruningStep   uint64
 }
 
 func (s *Service) indexBlock(round uint64) error {
@@ -65,49 +68,87 @@ func (s *Service) getRoundLatest() (uint64, error) {
 	return blk.Header.Round, nil
 }
 
-func (s *Service) periodIndexWorker() {
+func (s *Service) puring() {
+	s.Logger.Debug("start purning!")
 	for {
-		if s.stopFlag {
-			break
-		}
-
-		latest, err := s.getRoundLatest()
-		if err != nil {
-			time.Sleep(storageRequestTimeout)
-			s.Logger.Info("Can't get round latest, continue!")
-			continue
-		}
-
-		indexed := s.backend.QueryIndexedRound()
-		if latest < indexed {
-			panic("This is a new chain, please clear the db first!")
-		}
-
-		if latest == indexed {
-			time.Sleep(storageRetryTimeout)
-			continue
-		}
-
-		for {
-			if s.stopFlag || latest == indexed {
-				break
+		select {
+		case <-s.ctx.Done():
+			return
+		case <-time.After(CheckPruningTimeInterval):
+			indexed := s.backend.QueryIndexedRound()
+			if indexed > s.pruningStep {
+				pruningCheckPoint := indexed - s.pruningStep
+				s.backend.Pruning(pruningCheckPoint)
 			}
+		}
+	}
+}
 
-			indexed++
-			err := s.indexBlock(indexed)
+func (s *Service) periodIndexWorker() {
+ContinusFor:
+	for {
+		select {
+		case <-s.ctx.Done():
+			return
+		case <-time.After(storageRequestTimeout):
+			latest, err := s.getRoundLatest()
 			if err != nil {
-				indexed--
-				time.Sleep(storageRequestTimeout)
-				s.Logger.Info("IndexedBlock failed, continue!")
+				s.Logger.Info("Can't get round latest, continue!")
 				continue
 			}
 
+			indexed := s.backend.QueryIndexedRound()
+			if latest < indexed {
+				panic("This is a new chain, please clear the db first!")
+			}
+			if latest == indexed {
+				continue
+			}
+			continueIndex := make(chan int, 1)
+			continueIndex <- 1
+			s.Logger.Info("Start index!")
+
+		IndexFor:
+			for {
+				select {
+				case <-s.ctx.Done():
+					return
+				case <-continueIndex:
+					indexed++
+					err := s.indexBlock(indexed)
+					if err != nil {
+						indexed--
+						s.Logger.Info("IndexedBlock failed, continue!")
+						goto IndexFor
+					}
+					if latest == indexed {
+						goto ContinusFor
+					}
+					continueIndex <- 1
+				case <-time.After(storageRetryTimeout):
+					indexed++
+					err := s.indexBlock(indexed)
+					if err != nil {
+						indexed--
+						s.Logger.Info("IndexedBlock failed, continue!")
+						goto IndexFor
+					}
+					if latest == indexed {
+						goto ContinusFor
+					}
+					continueIndex <- 1
+				}
+			}
 		}
 	}
 }
 
 func (s *Service) Start() {
 	go s.periodIndexWorker()
+
+	if s.enablePruning {
+		go s.puring()
+	}
 }
 
 func (s *Service) Stop() {
@@ -116,7 +157,13 @@ func (s *Service) Stop() {
 }
 
 // New creates a new indexer service.
-func New(backendFactory BackendFactory, client client.RuntimeClient, runtimeID common.Namespace, storage storage.Storage) (*Service, Backend, error) {
+func New(backendFactory BackendFactory,
+	client client.RuntimeClient,
+	runtimeID common.Namespace,
+	storage storage.Storage,
+	enablePruning bool,
+	pruningStep uint64) (*Service, Backend, error) {
+
 	backend, err := backendFactory(runtimeID, storage)
 	if err != nil {
 		return nil, nil, err
@@ -132,6 +179,8 @@ func New(backendFactory BackendFactory, client client.RuntimeClient, runtimeID c
 		ctx:                   ctx,
 		cancelCtx:             cancelCtx,
 		stopFlag:              false,
+		enablePruning:         enablePruning,
+		pruningStep:           pruningStep,
 	}
 	s.Logger = s.Logger.With("runtime_id", s.runtimeID.String())
 
