@@ -24,7 +24,6 @@ import (
 	"github.com/starfishlabs/oasis-evm-web3-gateway/indexer"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/utils"
-	"github.com/starfishlabs/oasis-evm-web3-gateway/server"
 )
 
 const (
@@ -52,7 +51,7 @@ type PublicAPI struct {
 	ctx     context.Context
 	client  client.RuntimeClient
 	backend indexer.Backend
-	config  server.Config
+	chainID uint32
 	Logger  *logging.Logger
 }
 
@@ -61,13 +60,13 @@ func NewPublicAPI(
 	ctx context.Context,
 	client client.RuntimeClient,
 	logger *logging.Logger,
-	config server.Config,
+	chainID uint32,
 	backend indexer.Backend,
 ) *PublicAPI {
 	return &PublicAPI{
 		ctx:     ctx,
 		client:  client,
-		config:  config,
+		chainID: chainID,
 		Logger:  logger,
 		backend: backend,
 	}
@@ -223,7 +222,7 @@ func (api *PublicAPI) GetBalance(address common.Address, blockNrOrHash ethrpc.Bl
 
 // ChainId return the EIP-155  chain id for the current network
 func (api *PublicAPI) ChainId() (*hexutil.Big, error) {
-	return (*hexutil.Big)(big.NewInt(int64(api.config.ChainId))), nil
+	return (*hexutil.Big)(big.NewInt(int64(api.chainID))), nil
 }
 
 // GasPrice returns a suggestion for a gas price for legacy transactions.

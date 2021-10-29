@@ -7,7 +7,7 @@ import (
 )
 
 func TestInitConfig(t *testing.T) {
-	cfg, err := InitConfig("")
+	cfg, err := InitConfig("server.yml")
 	if err != nil {
 		log.Fatalln(err)
 	}

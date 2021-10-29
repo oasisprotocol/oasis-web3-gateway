@@ -8,6 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
+
 	"github.com/starfishlabs/oasis-evm-web3-gateway/conf"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/storage"
 )
@@ -32,17 +33,17 @@ func (s *Server) Close() error {
 
 // Web3Gateway is a container on which services can be registered.
 type Web3Gateway struct {
-	config *Config
+	config *conf.GatewayConfig
 	log    log.Logger
 
 	stop          chan struct{} // Channel to wait for termination notifications
 	startStopLock sync.Mutex    // Start/Stop are protected by an additional lock
 	state         int           // Tracks state of node lifecycle
 
-	lock          sync.Mutex
-	rpcAPIs       []rpc.API   // List of APIs currently provided by the node
-	http          *httpServer //
-	ws            *httpServer //
+	lock    sync.Mutex
+	rpcAPIs []rpc.API   // List of APIs currently provided by the node
+	http    *httpServer //
+	ws      *httpServer //
 }
 
 const (
@@ -56,34 +57,52 @@ var (
 	ErrServerRunning = errors.New("web3 gateway server already running")
 )
 
-// New creates a new web3 gateway.
-func New(conf *Config) (*Web3Gateway, error) {
-	confCopy := *conf
-	conf = &confCopy
-
-	if conf.Logger == nil {
-		conf.Logger = log.New()
+func timeoutsFromCfg(cfg *conf.HttpTimeouts) rpc.HTTPTimeouts {
+	timeouts := rpc.DefaultHTTPTimeouts
+	if cfg != nil {
+		if cfg.Idle != nil {
+			timeouts.IdleTimeout = *cfg.Idle
+		}
+		if cfg.Read != nil {
+			timeouts.ReadTimeout = *cfg.Read
+		}
+		if cfg.Write != nil {
+			timeouts.WriteTimeout = *cfg.Write
+		}
 	}
+	return timeouts
+}
+
+// New creates a new web3 gateway.
+func New(conf *conf.GatewayConfig) (*Web3Gateway, error) {
+	if conf == nil {
+		return nil, fmt.Errorf("missing gateway config")
+	}
+
+	logger := log.New()
 	log.Root().SetHandler(log.LvlFilterHandler(log.LvlInfo, log.StreamHandler(os.Stdout, log.LogfmtFormat())))
 
 	server := &Web3Gateway{
-		config:        conf,
-		// inprocHandler: rpc.NewServer(),
-		log:           conf.Logger,
-		stop:          make(chan struct{}),
+		config: conf,
+		log:    logger,
+		stop:   make(chan struct{}),
 	}
 
 	// Check HTTP/WS prefixes are valid.
-	if err := validatePrefix("HTTP", conf.HTTPPathPrefix); err != nil {
+	if err := validatePrefix("HTTP", conf.Http.PathPrefix); err != nil {
 		return nil, err
 	}
-	if err := validatePrefix("WebSocket", conf.WSPathPrefix); err != nil {
+	if err := validatePrefix("WebSocket", conf.WS.PathPrefix); err != nil {
 		return nil, err
 	}
 
 	// Configure RPC servers.
-	server.http = newHTTPServer(server.log, conf.HTTPTimeouts)
-	server.ws = newHTTPServer(server.log, rpc.DefaultHTTPTimeouts)
+	if conf.Http != nil {
+		server.http = newHTTPServer(server.log, timeoutsFromCfg(conf.Http.Timeouts))
+	}
+	if conf.WS != nil {
+		server.ws = newHTTPServer(server.log, timeoutsFromCfg(conf.WS.Timeouts))
+	}
 
 	return server, nil
 }
@@ -161,14 +180,14 @@ func (srv *Web3Gateway) doClose(errs []error) error {
 // startRPC is a helper method to configure all the various RPC endpoints during server startup.
 func (srv *Web3Gateway) startRPC() error {
 	// Configure HTTP.
-	if srv.config.HTTPHost != "" {
+	if srv.config.Http != nil {
 		config := httpConfig{
-			CorsAllowedOrigins: srv.config.HTTPCors,
-			Vhosts:             srv.config.HTTPVirtualHosts,
-			Modules:            srv.config.HTTPModules,
-			prefix:             srv.config.HTTPPathPrefix,
+			Modules:            []string{"eth"},
+			CorsAllowedOrigins: srv.config.Http.Cors,
+			Vhosts:             srv.config.Http.VirtualHosts,
+			prefix:             srv.config.Http.PathPrefix,
 		}
-		if err := srv.http.setListenAddr(srv.config.HTTPHost, srv.config.HTTPPort); err != nil {
+		if err := srv.http.setListenAddr(srv.config.Http.Host, srv.config.Http.Port); err != nil {
 			return err
 		}
 		if err := srv.http.enableRPC(srv.rpcAPIs, config); err != nil {
@@ -177,17 +196,16 @@ func (srv *Web3Gateway) startRPC() error {
 	}
 
 	// Configure WebSocket.
-	if srv.config.WSHost != "" {
-		server := srv.wsServerForPort(srv.config.WSPort)
+	if srv.config.WS != nil {
 		config := wsConfig{
-			Modules: srv.config.WSModules,
-			Origins: srv.config.WSOrigins,
-			prefix:  srv.config.WSPathPrefix,
+			Modules: []string{"eth"},
+			Origins: srv.config.WS.Origins,
+			prefix:  srv.config.WS.PathPrefix,
 		}
-		if err := server.setListenAddr(srv.config.WSHost, srv.config.WSPort); err != nil {
+		if err := srv.ws.setListenAddr(srv.config.WS.Host, srv.config.WS.Port); err != nil {
 			return err
 		}
-		if err := server.enableWS(srv.rpcAPIs, config); err != nil {
+		if err := srv.ws.enableWS(srv.rpcAPIs, config); err != nil {
 			return err
 		}
 	}
@@ -196,13 +214,6 @@ func (srv *Web3Gateway) startRPC() error {
 		return err
 	}
 	return srv.ws.start()
-}
-
-func (srv *Web3Gateway) wsServerForPort(port int) *httpServer {
-	if srv.config.HTTPHost == "" || srv.http.port == port {
-		return srv.http
-	}
-	return srv.ws
 }
 
 func (srv *Web3Gateway) stopRPC() {
