@@ -169,6 +169,28 @@ func (api *PublicAPI) GetBlockTransactionCountByNumber(blockNum ethrpc.BlockNumb
 	return &n
 }
 
+func (api *PublicAPI) GetStorageAt(address common.Address, position hexutil.Big, blockNum ethrpc.BlockNumber) (hexutil.Big, error) {
+	api.Logger.Debug("eth_getStorage", "address", address, "position", position, "block_num", blockNum)
+
+	// EVM module takes index as H256, which needs leading zeros.
+	position256 := make([]byte, 32)
+	// Unmarshalling to hexutil.Big rejects overlong inputs. Verify in `TestRejectOverlong`.
+	position.ToInt().FillBytes(position256)
+
+	ethmod := evm.NewV1(api.client)
+	// TODO: blockNum ignored as EVM wrapper doesn't support queries for past rounds:
+	// https://github.com/oasisprotocol/oasis-sdk/issues/590
+	res, err := ethmod.Storage(api.ctx, address[:], position256)
+	if err != nil {
+		api.Logger.Error("failed to query storage", "err", err)
+		return hexutil.Big{}, ErrInternalQuery
+	}
+	// Some apps expect no leading zeros, so output as big integer.
+	var resultBI big.Int
+	resultBI.SetBytes(res)
+	return hexutil.Big(resultBI), nil
+}
+
 // GetBalance returns the provided account's balance up to the provided block number.
 func (api *PublicAPI) GetBalance(address common.Address, blockNrOrHash ethrpc.BlockNumberOrHash) (*hexutil.Big, error) {
 	ethmod := evm.NewV1(api.client)
