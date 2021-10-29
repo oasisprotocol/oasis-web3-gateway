@@ -1,3 +1,6 @@
+runtime_id: "8000000000000000000000000000000000000000000000000000000000000000"
+node_address: "unix:/tmp/eth-runtime-test/net-runner/network/client-0/internal.sock"
+
 postdb:
   host: "127.0.0.1"
   port: 5432
@@ -6,6 +9,13 @@ postdb:
   password: "postgres"
   timeout: 5
 
+gateway:
+  http:
+    host: "localhost"
+    port: 8545
+  ws:
+    host: "localhost"
+    port: 8546
 
 
 

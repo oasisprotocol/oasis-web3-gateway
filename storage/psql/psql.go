@@ -17,17 +17,17 @@ type PostDb struct {
 }
 
 // InitDb creates postgresql db instance
-func InitDb(cfg *conf.Config) (*PostDb, error) {
+func InitDb(cfg *conf.PostDbConfig) (*PostDb, error) {
 	if cfg == nil {
 		return nil, errors.New("nil configuration")
 	}
 	// Connect db
 	db := pg.Connect(&pg.Options{
-		Addr:        fmt.Sprintf("%v:%v", cfg.PostDb.Host, cfg.PostDb.Port),
-		Database:    cfg.PostDb.Db,
-		User:        cfg.PostDb.User,
-		Password:    cfg.PostDb.Password,
-		DialTimeout: time.Duration(cfg.PostDb.Timeout) * time.Second,
+		Addr:        fmt.Sprintf("%v:%v", cfg.Host, cfg.Port),
+		Database:    cfg.Db,
+		User:        cfg.User,
+		Password:    cfg.Password,
+		DialTimeout: time.Duration(cfg.Timeout) * time.Second,
 	})
 	// Ping
 	if err := db.Ping(context.TODO()); err != nil {

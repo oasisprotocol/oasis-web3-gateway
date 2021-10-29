@@ -10,14 +10,20 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/starfishlabs/oasis-evm-web3-gateway/conf"
 )
 
 func createServer(t *testing.T, httpPort, wsPort int) *Web3Gateway {
-	conf := &Config{
-		HTTPHost: "127.0.0.1",
-		HTTPPort: httpPort,
-		WSHost:   "127.0.0.1",
-		WSPort:   wsPort,
+	conf := &conf.GatewayConfig{
+		Http: &conf.GatewayHttpConfig{
+			Host: "127.0.0.1",
+			Port: httpPort,
+		},
+		WS: &conf.GatewayWSConfig{
+			Host: "127.0.0.1",
+			Port: wsPort,
+		},
 	}
 	server, err := New(conf)
 	if err != nil {
@@ -31,7 +37,6 @@ func doHTTPRequest(t *testing.T, req *http.Request) *http.Response {
 	resp, err := client.Do(req)
 	if err != nil {
 		t.Fatalf("could not issue a GET request to the given endpoint: %v", err)
-
 	}
 	return resp
 }
