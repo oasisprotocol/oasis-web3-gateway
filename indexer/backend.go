@@ -8,9 +8,12 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
+
 	"github.com/oasisprotocol/oasis-core/go/common"
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/hash"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
+	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 
 	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
@@ -60,9 +63,10 @@ type Backend interface {
 	QueryableBackend
 
 	Index(
+		oasisBlock *block.Block,
 		round uint64,
 		blockHash ethcommon.Hash,
-		txs []*types.UnverifiedTransaction,
+		txResults []*client.TransactionWithResults,
 	) error
 
 	Pruning(step uint64) error
@@ -168,25 +172,35 @@ func (p *psqlBackend) DecodeUtx(utx *types.UnverifiedTransaction, blockHash stri
 }
 
 func (p *psqlBackend) Index(
-	round uint64,
-	blockHash ethcommon.Hash,
-	txs []*types.UnverifiedTransaction,
+	oasisBlock *block.Block,
+	round uint64, //should remove latter
+	blockHash ethcommon.Hash, //should remove latter
+	txResults []*client.TransactionWithResults,
 ) error {
-	// block round <-> block hash
+	// block round <-> block hash   //should remove latter
 	blockRef := &model.BlockRef{
 		Round: round,
 		Hash:  blockHash.String(),
 	}
 	p.storage.Store(blockRef)
 
-	for idx, utx := range txs {
+	// oasis block -> eth block    //should modify
+	ethblock, err := p.generateEthBlock(oasisBlock, txResults)
+	p.storage.Store(ethblock)
+	if err != nil {
+		p.logger.Error("generateEthBlock failed", "err", err)
+		return errors.New("Convert to eth block failed")
+	}
+
+	for idx, item := range txResults {
+		utx := item.Tx
 		if len(utx.AuthProofs) != 1 || utx.AuthProofs[0].Module != "evm.ethereum.v0" {
 			// Skip non-Ethereum transactions.
 			continue
 		}
-		txRef, ethTx, err := p.DecodeUtx(utx, blockHash.String(), round, uint32(idx))
+		txRef, ethTx, err := p.DecodeUtx(&utx, blockHash.String(), round, uint32(idx))
 		if err != nil {
-			p.logger.Error("decode transaction", err)
+			p.logger.Error("decode transaction", "err", err)
 			continue
 		}
 		p.storage.Store(txRef)

@@ -46,12 +46,13 @@ func (s *Service) indexBlock(round uint64) error {
 		return ErrGetBlockFailed
 	}
 
-	txs, err2 := s.client.GetTransactions(s.ctx, blk.Header.Round)
+	txs, err2 := s.client.GetTransactionsWithResults(s.ctx, blk.Header.Round)
 	if err2 != nil {
 		return ErrGetTransactionsFailed
 	}
 
-	err3 := s.backend.Index(blk.Header.Round, ethcommon.HexToHash(blk.Header.EncodedHash().Hex()), txs)
+	err3 := s.backend.Index(blk, blk.Header.Round, ethcommon.HexToHash(blk.Header.EncodedHash().Hex()), &txs)
+
 	if err3 != nil {
 		return ErrIndexedFailed
 	}
