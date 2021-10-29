@@ -47,3 +47,31 @@ type Transaction struct {
 	AccessList AccessList
 	V, R, S    string
 }
+
+// Block represents ethereum block.
+type Block struct {
+	Round        uint64 `pg:",pk"`
+	Header       *Header
+	Uncles       []*Header
+	Transactions []*Transaction
+}
+
+// Header represents ethereum block header.
+type Header struct {
+	ParentHash  string
+	UncleHash   string
+	Coinbase    string
+	Root        string
+	TxHash      string
+	ReceiptHash string
+	Bloom       string
+	Difficulty  string
+	Number      string
+	GasLimit    uint64
+	GasUsed     uint64
+	Time        uint64
+	Extra       string
+	MixDigest   string
+	Nonce       uint64
+	BaseFee     string
+}
