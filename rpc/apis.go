@@ -10,10 +10,10 @@ import (
 
 	ethRpc "github.com/ethereum/go-ethereum/rpc"
 
-	"github.com/starfishlabs/oasis-evm-web3-gateway/server"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/eth"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/net"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/web3"
+	"github.com/starfishlabs/oasis-evm-web3-gateway/server"
 )
 
 // GetRPCAPIs returns the list of all APIs

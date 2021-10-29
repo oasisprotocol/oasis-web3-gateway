@@ -220,14 +220,14 @@ func TestEth_Call(t *testing.T) {
 
 	require.Equal(t, receipt.Status, uint64(1))
 
-	calldata, err := testabi.Pack("name");
+	calldata, err := testabi.Pack("name")
 	if err != nil {
 		t.Error(err)
 	}
 	t.Logf("calldata: %x", calldata)
 
 	msg := ethereum.CallMsg{
-		To:    &receipt.ContractAddress,
+		To:   &receipt.ContractAddress,
 		Data: calldata,
 	}
 
@@ -290,7 +290,7 @@ func TestERC20(t *testing.T) {
 	// Make transfer token transaction
 	nonce, err = ec.NonceAt(context.Background(), common.HexToAddress(daveEVMAddr), nil)
 	require.Nil(t, err, "get nonce failed")
-	transferCall, err := testabi.Pack("transfer", common.Address{1}, big.NewInt(10));
+	transferCall, err := testabi.Pack("transfer", common.Address{1}, big.NewInt(10))
 	if err != nil {
 		t.Error(err)
 	}
@@ -311,12 +311,12 @@ func TestERC20(t *testing.T) {
 	require.Equal(t, uint64(1), receipt.Status)
 
 	// Get balance of token receiver
-	balanceOfCall, err := testabi.Pack("balanceOf", common.Address{1});
+	balanceOfCall, err := testabi.Pack("balanceOf", common.Address{1})
 	if err != nil {
 		t.Error(err)
 	}
 	msg := ethereum.CallMsg{
-		To:    &tokenAddr,
+		To:   &tokenAddr,
 		Data: balanceOfCall,
 	}
 	out, err := ec.CallContract(context.Background(), msg, nil)

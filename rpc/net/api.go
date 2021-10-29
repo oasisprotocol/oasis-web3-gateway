@@ -7,7 +7,7 @@ import (
 )
 
 // PublicAPI is the net_ prefixed set of APIs in the Web3 JSON-RPC spec.
-type PublicAPI struct{config server.Config}
+type PublicAPI struct{ config server.Config }
 
 // NewPublicAPI creates an instance of the Web3 API.
 func NewPublicAPI(config server.Config) *PublicAPI {

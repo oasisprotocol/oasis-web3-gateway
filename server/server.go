@@ -39,10 +39,10 @@ type Web3Gateway struct {
 	startStopLock sync.Mutex    // Start/Stop are protected by an additional lock
 	state         int           // Tracks state of node lifecycle
 
-	lock          sync.Mutex
-	rpcAPIs       []rpc.API   // List of APIs currently provided by the node
-	http          *httpServer //
-	ws            *httpServer //
+	lock    sync.Mutex
+	rpcAPIs []rpc.API   // List of APIs currently provided by the node
+	http    *httpServer //
+	ws      *httpServer //
 }
 
 const (
@@ -67,10 +67,10 @@ func New(conf *Config) (*Web3Gateway, error) {
 	log.Root().SetHandler(log.LvlFilterHandler(log.LvlInfo, log.StreamHandler(os.Stdout, log.LogfmtFormat())))
 
 	server := &Web3Gateway{
-		config:        conf,
+		config: conf,
 		// inprocHandler: rpc.NewServer(),
-		log:           conf.Logger,
-		stop:          make(chan struct{}),
+		log:  conf.Logger,
+		stop: make(chan struct{}),
 	}
 
 	// Check HTTP/WS prefixes are valid.

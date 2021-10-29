@@ -143,3 +143,13 @@ func (db *PostDb) GetContinuesIndexedRound() (uint64, error) {
 
 	return indexedRound.Round, nil
 }
+
+// GetBlock queries the block for the given hash.
+func (db *PostDb) GetBlock(hash string) (*model.Block, error) {
+	blk := new(model.Block)
+	err := db.Db.Model(blk).Where("hash=?", hash).Select()
+	if err != nil {
+		return nil, err
+	}
+	return blk, nil
+}

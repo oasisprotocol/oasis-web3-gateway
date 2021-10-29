@@ -50,7 +50,8 @@ type Transaction struct {
 
 // Block represents ethereum block.
 type Block struct {
-	Round        uint64 `pg:",pk"`
+	Hash         string `pg:",pk"`
+	Round        uint64
 	Header       *Header
 	Uncles       []*Header
 	Transactions []*Transaction
@@ -67,11 +68,11 @@ type Header struct {
 	Bloom       string
 	Difficulty  string
 	Number      string
-	GasLimit    uint64
-	GasUsed     uint64
-	Time        uint64
+	GasLimit    uint64 `pg:",use_zero"`
+	GasUsed     uint64 `pg:",use_zero"`
+	Time        uint64 `pg:",use_zero"`
 	Extra       string
 	MixDigest   string
-	Nonce       uint64
+	Nonce       uint64 `pg:",use_zero"`
 	BaseFee     string
 }

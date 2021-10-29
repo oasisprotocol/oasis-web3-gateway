@@ -31,4 +31,7 @@ type Storage interface {
 
 	// GetTransaction queries ethereum transaction by hash.
 	GetTransaction(hash string) (*model.Transaction, error)
+
+	// GetBlock queries the block for the given hash.
+	GetBlock(hash string) (*model.Block, error)
 }
