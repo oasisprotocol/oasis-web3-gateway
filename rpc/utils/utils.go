@@ -30,7 +30,6 @@ func ConvertToEthBlock(
 	bhash, _ := block.Header.IORoot.MarshalBinary()
 	bprehash, _ := block.Header.PreviousHash.MarshalBinary()
 	bshash, _ := block.Header.StateRoot.MarshalBinary()
-	// btxhash, _ := block.Header.MessagesHash.MarshalBinary()
 	bloom := ethtypes.BytesToBloom(ethtypes.LogsBloom(logs))
 	gasUsed := big.NewInt(0).SetUint64(gas)
 

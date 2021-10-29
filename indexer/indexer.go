@@ -51,7 +51,7 @@ func (s *Service) indexBlock(round uint64) error {
 		return ErrGetTransactionsFailed
 	}
 
-	err3 := s.backend.Index(blk, blk.Header.Round, ethcommon.HexToHash(blk.Header.EncodedHash().Hex()), &txs)
+	err3 := s.backend.Index(blk, blk.Header.Round, ethcommon.HexToHash(blk.Header.EncodedHash().Hex()), txs)
 
 	if err3 != nil {
 		return ErrIndexedFailed
