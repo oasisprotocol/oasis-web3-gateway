@@ -182,7 +182,7 @@ func (srv *Web3Gateway) startRPC() error {
 	// Configure HTTP.
 	if srv.config.Http != nil {
 		config := httpConfig{
-			Modules:            []string{"eth"},
+			Modules:            []string{"net", "web3", "eth"},
 			CorsAllowedOrigins: srv.config.Http.Cors,
 			Vhosts:             srv.config.Http.VirtualHosts,
 			prefix:             srv.config.Http.PathPrefix,
@@ -198,7 +198,7 @@ func (srv *Web3Gateway) startRPC() error {
 	// Configure WebSocket.
 	if srv.config.WS != nil {
 		config := wsConfig{
-			Modules: []string{"eth"},
+			Modules: []string{"net", "web3", "eth"},
 			Origins: srv.config.WS.Origins,
 			prefix:  srv.config.WS.PathPrefix,
 		}
