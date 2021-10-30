@@ -7,8 +7,8 @@ require (
 	github.com/go-pg/pg/v10 v10.10.6
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
-	github.com/oasisprotocol/oasis-core/go v0.2103.3
-	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.1.1-0.20211029110842-87e1e8e47e24
+	github.com/oasisprotocol/oasis-core/go v0.2103.4
+	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.1.1-0.20211030201836-b3f4c44af122
 	github.com/pkg/errors v0.9.1
 	github.com/rs/cors v1.7.0
 	github.com/spf13/cobra v1.2.1
