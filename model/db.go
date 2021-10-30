@@ -51,7 +51,7 @@ type Transaction struct {
 // Block represents ethereum block.
 type Block struct {
 	Hash         string `pg:",pk"`
-	Round        uint64
+	Round        uint64 `pg:",use_zero"`
 	Header       *Header
 	Uncles       []*Header
 	Transactions []*Transaction

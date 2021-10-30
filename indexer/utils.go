@@ -1,10 +1,11 @@
 package indexer
 
 import (
+	"encoding/hex"
+	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
@@ -52,7 +53,7 @@ func convertToEthBlock(
 	transactions ethtypes.Transactions,
 	logs []*ethtypes.Log,
 	gas uint64,
-) (map[string]interface{}, error) {
+) (*model.Block, error) {
 	bprehash, _ := block.Header.PreviousHash.MarshalBinary()
 	bshash, _ := block.Header.StateRoot.MarshalBinary()
 	bloom := ethtypes.BytesToBloom(ethtypes.LogsBloom(logs))
@@ -64,10 +65,11 @@ func convertToEthBlock(
 		btxhash = ethtypes.DeriveSha(transactions, trie.NewStackTrie(nil))
 	}
 
-	basefee := big.NewInt(10)
+	baseFee := big.NewInt(10)
 	number := big.NewInt(0)
 	number.SetUint64(block.Header.Round)
-	header := &ethtypes.Header{
+	bloomData, _ := bloom.MarshalText()
+	ethHeader := &ethtypes.Header{
 		ParentHash:  common.BytesToHash(bprehash),
 		UncleHash:   ethtypes.EmptyUncleHash,
 		Coinbase:    common.HexToAddress(defaultValidatorAddr),
@@ -83,23 +85,78 @@ func convertToEthBlock(
 		Extra:       []byte{},
 		MixDigest:   common.Hash{},
 		Nonce:       ethtypes.BlockNonce{},
-		BaseFee:     basefee,
+		BaseFee:     baseFee,
+	}
+	bhash := ethHeader.Hash()
+
+	innerHeader := &model.Header{
+		ParentHash:  common.BytesToHash(bprehash).Hex(),
+		UncleHash:   ethtypes.EmptyUncleHash.Hex(),
+		Coinbase:    common.HexToAddress(defaultValidatorAddr).Hex(),
+		Root:        common.BytesToHash(bshash).Hex(),
+		TxHash:      btxhash.Hex(),
+		ReceiptHash: ethtypes.EmptyRootHash.Hex(),
+		Bloom:       string(bloomData),
+		Difficulty:  big.NewInt(0).String(),
+		Number:      number.String(),
+		GasLimit:    uint64(defaultGasLimit),
+		GasUsed:     gas,
+		Time:        uint64(block.Header.Timestamp),
+		Extra:       "",
+		MixDigest:   "",
+		Nonce:       ethtypes.BlockNonce{}.Uint64(),
+		BaseFee:     baseFee.String(),
 	}
 
-	bhash := header.Hash()
-	res := map[string]interface{}{
-		"header":          header,
-		"uncles":          []common.Hash{},
-		"transactions":    transactions,
-		"hash":            bhash.Hex(),
-		"size":            hexutil.Uint64(defaultSize),
-		"totalDifficulty": (*hexutil.Big)(big.NewInt(0)),
+	innerTxs := []*model.Transaction{}
+	for _, ethTx := range transactions {
+		r, s, v := ethTx.RawSignatureValues()
+		signer := ethtypes.LatestSignerForChainID(ethTx.ChainId())
+		from, _ := signer.Sender(ethTx)
+		ethAccList := ethTx.AccessList()
+		accList := []model.AccessTuple{}
+		for _, ethAcc := range ethAccList {
+			keys := []string{}
+			for _, ethStorageKey := range ethAcc.StorageKeys {
+				keys = append(keys, ethStorageKey.Hex())
+			}
+			acc := model.AccessTuple{
+				Address:     ethAcc.Address.Hex(),
+				StorageKeys: keys,
+			}
+			accList = append(accList, acc)
+		}
+		tx := &model.Transaction{
+			Hash:       ethTx.Hash().Hex(),
+			Type:       ethTx.Type(),
+			ChainID:    ethTx.ChainId().String(),
+			Gas:        ethTx.Gas(),
+			GasPrice:   ethTx.GasPrice().String(),
+			GasTipCap:  ethTx.GasTipCap().String(),
+			GasFeeCap:  ethTx.GasFeeCap().String(),
+			Nonce:      ethTx.Nonce(),
+			FromAddr:   from.Hex(),
+			ToAddr:     ethTx.To().Hex(),
+			Value:      ethTx.Value().String(),
+			Data:       hex.EncodeToString(ethTx.Data()),
+			AccessList: accList,
+			V:          v.String(),
+			R:          r.String(),
+			S:          s.String(),
+		}
+		innerTxs = append(innerTxs, tx)
 	}
-
-	return res, nil
+	innerBlock := &model.Block{
+		Hash:         bhash.Hex(),
+		Round:        number.Uint64(),
+		Header:       innerHeader,
+		Uncles:       []*model.Header{},
+		Transactions: innerTxs,
+	}
+	return innerBlock, nil
 }
 
-func (p *psqlBackend) generateEthBlock(oasisBlock *block.Block, txResults []*client.TransactionWithResults) (map[string]interface{}, error) {
+func (p *psqlBackend) generateEthBlock(oasisBlock *block.Block, txResults []*client.TransactionWithResults) (*model.Block, error) {
 	bhash, _ := oasisBlock.Header.IORoot.MarshalBinary()
 	blockNum := oasisBlock.Header.Round
 	ethTxs := ethtypes.Transactions{}

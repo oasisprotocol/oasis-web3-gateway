@@ -185,8 +185,8 @@ func (p *psqlBackend) Index(
 	p.storage.Store(blockRef)
 
 	// oasis block -> eth block    //should modify
-	ethblock, err := p.generateEthBlock(oasisBlock, txResults) ////////
-	p.storage.Store(ethblock)                                  //////////
+	ethBlock, err := p.generateEthBlock(oasisBlock, txResults) ////////
+	p.storage.Store(ethBlock)                                  //////////
 	if err != nil {
 		p.logger.Error("generateEthBlock failed", "err", err)
 		return errors.New("Convert to eth block failed")
