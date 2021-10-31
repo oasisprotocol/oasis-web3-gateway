@@ -157,14 +157,15 @@ func (api *PublicAPI) GetBlockByNumber(blockNum ethrpc.BlockNumber, _ bool) (map
 		api.Logger.Error("GetBlock failed", "number", blockNum, "error", err.Error())
 		return nil, err
 	}
-	resBlock, err := api.client.GetBlock(api.ctx, round)
+
+	blk, err := api.backend.GetBlockByNumber(round)
 	if err != nil {
 		api.Logger.Error("GetBlock failed", "number", blockNum, "error", err.Error())
 		// Block doesn't exist, by web3 spec an empty response should be returned, not an error.
 		return nil, ErrInternalQuery
 	}
 
-	return api.getRPCBlock(resBlock)
+	return blk, nil
 }
 
 // GetBlockTransactionCountByNumber returns the number of transactions in the block.

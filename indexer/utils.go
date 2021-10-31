@@ -2,17 +2,19 @@ package indexer
 
 import (
 	"encoding/hex"
-	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
 	"math/big"
 
+	"github.com/fxamacker/cbor/v2"
+
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
 
-	"github.com/fxamacker/cbor/v2"
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
+	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
 )
 
 var (
@@ -205,4 +207,37 @@ func (p *psqlBackend) generateEthBlock(oasisBlock *block.Block, txResults []*cli
 		return nil, err
 	}
 	return res, nil
+}
+
+func ConvertToOutBlock(block *model.Block) map[string]interface{} {
+	v1 := big.NewInt(0)
+	diff, _ := v1.SetString(block.Header.Difficulty, 10)
+	v2 := big.NewInt(0)
+	gasUsed := v2.SetUint64(block.Header.GasUsed)
+
+	res := map[string]interface{}{
+		"number":           hexutil.Uint64(block.Round),
+		"hash":             hexutil.Bytes(block.Hash),
+		"parentHash":       common.HexToHash(block.Header.ParentHash),
+		"nonce":            block.Header.Nonce,
+		"sha3Uncles":       block.Header.UncleHash,
+		"logsBloom":        block.Header.Bloom,
+		"stateRoot":        hexutil.Bytes(block.Header.Root),
+		"miner":            block.Header.Coinbase,
+		"mixHash":          block.Header.MixDigest,
+		"difficulty":       (*hexutil.Big)(diff),
+		"extraData":        block.Header.Extra,
+		"size":             hexutil.Uint64(defaultSize), ////
+		"gasLimit":         hexutil.Uint64(block.Header.GasLimit),
+		"gasUsed":          gasUsed,
+		"timestamp":        hexutil.Uint64(block.Header.Time),
+		"transactionsRoot": block.Header.TxHash,
+		"receiptsRoot":     block.Header.ReceiptHash,
+
+		"uncles":          block.Uncles,
+		"transactions":    block.Transactions,
+		"totalDifficulty": (*hexutil.Big)(big.NewInt(0)),
+	}
+
+	return res
 }

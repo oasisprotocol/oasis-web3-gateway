@@ -59,13 +59,13 @@ type QueryableBackend interface {
 }
 
 type GetEthInfoBackend interface {
-	GetBlockByNumber(number uint64) (*model.Block, error)
+	GetBlockByNumber(number uint64) (map[string]interface{}, error)
 	GetBlockByHash(blockHash ethcommon.Hash) (*model.Block, error)
 	GetBlockTransactionCountByNumber(number uint64) (int, error)
 	GetBlockTransactionCountByHash(blockHash ethcommon.Hash) (int, error)
 	GetTransactionByBlockHashAndIndex(blockHash ethcommon.Hash, txIndex int) (*model.Transaction, error)
-	GetTransactionReceipt(txHash ethcommon.Hash) (map[string]interface{}, error)
-	BlockNumber() (uint64, error)
+	// GetTransactionReceipt(txHash ethcommon.Hash) (map[string]interface{}, error)
+	BlockNumber(blockHash ethcommon.Hash) (uint64, error)
 }
 
 // Backend is the indexer backend interface.
@@ -304,8 +304,13 @@ func (p *psqlBackend) QueryTransactionRef(hash string) (*model.TransactionRef, e
 	return p.storage.GetTransactionRef(hash)
 }
 
-func (p *psqlBackend) GetBlockByNumber(number uint64) (*model.Block, error) {
-	return p.storage.GetBlockByNumber(number)
+func (p *psqlBackend) GetBlockByNumber(number uint64) (map[string]interface{}, error) {
+	blk, err := p.storage.GetBlockByNumber(number)
+	if err != nil {
+		return nil, err
+	}
+
+	return ConvertToOutBlock(blk), nil
 }
 
 func (p *psqlBackend) GetBlockByHash(blockHash ethcommon.Hash) (*model.Block, error) {
@@ -328,8 +333,9 @@ func (p *psqlBackend) GetTransactionReceipt(txHash ethcommon.Hash) (map[string]i
 	return p.storage.GetTransactionReceipt(txHash.String())
 }
 
-func (p *psqlBackend) BlockNumber() (uint64, error) {
-	return p.storage.GetBlockNumber()
+func (p *psqlBackend) BlockNumber(blockHash ethcommon.Hash) (uint64, error) {
+	////
+	return p.storage.GetBlockNumber(blockHash.String())
 }
 
 func (p *psqlBackend) Close() {
