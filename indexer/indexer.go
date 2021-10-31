@@ -68,60 +68,76 @@ func (s *Service) getRoundLatest() (uint64, error) {
 }
 
 func (s *Service) puring() {
+	s.Logger.Debug("start purning!")
 	for {
-		if s.stopFlag {
-			break
+		select {
+		case <-s.ctx.Done():
+			return
+		case <-time.After(CheckPruningTimeInterval):
+			indexed := s.backend.QueryIndexedRound()
+			if indexed > s.pruningStep {
+				pruningCheckPoint := indexed - s.pruningStep
+				s.backend.Pruning(pruningCheckPoint)
+			}
 		}
-
-		indexed := s.backend.QueryIndexedRound()
-		if indexed <= s.pruningStep {
-			time.Sleep(CheckPruningTimeInterval)
-			continue
-		}
-
-		pruningPoint := indexed - s.pruningStep
-		s.backend.Pruning(pruningPoint)
-		time.Sleep(CheckPruningTimeInterval)
 	}
 }
 
 func (s *Service) periodIndexWorker() {
+ContinusFor:
 	for {
-		if s.stopFlag {
-			break
-		}
-
-		latest, err := s.getRoundLatest()
-		if err != nil {
-			time.Sleep(storageRequestTimeout)
-			s.Logger.Info("Can't get round latest, continue!")
-			continue
-		}
-
-		indexed := s.backend.QueryIndexedRound()
-		if latest < indexed {
-			panic("This is a new chain, please clear the db first!")
-		}
-
-		if latest == indexed {
-			time.Sleep(storageRetryTimeout)
-			continue
-		}
-
-		for {
-			if s.stopFlag || latest == indexed {
-				break
-			}
-
-			indexed++
-			err := s.indexBlock(indexed)
+		select {
+		case <-s.ctx.Done():
+			return
+		case <-time.After(storageRequestTimeout):
+			latest, err := s.getRoundLatest()
 			if err != nil {
-				indexed--
-				time.Sleep(storageRequestTimeout)
-				s.Logger.Info("IndexedBlock failed, continue!")
+				s.Logger.Info("Can't get round latest, continue!")
 				continue
 			}
 
+			indexed := s.backend.QueryIndexedRound()
+			if latest < indexed {
+				panic("This is a new chain, please clear the db first!")
+			}
+			if latest == indexed {
+				continue
+			}
+			continueIndex := make(chan int, 1)
+			continueIndex <- 1
+			s.Logger.Info("Start index!")
+
+		IndexFor:
+			for {
+				select {
+				case <-s.ctx.Done():
+					return
+				case <-continueIndex:
+					indexed++
+					err := s.indexBlock(indexed)
+					if err != nil {
+						indexed--
+						s.Logger.Info("IndexedBlock failed, continue!")
+						goto IndexFor
+					}
+					if latest == indexed {
+						goto ContinusFor
+					}
+					continueIndex <- 1
+				case <-time.After(storageRetryTimeout):
+					indexed++
+					err := s.indexBlock(indexed)
+					if err != nil {
+						indexed--
+						s.Logger.Info("IndexedBlock failed, continue!")
+						goto IndexFor
+					}
+					if latest == indexed {
+						goto ContinusFor
+					}
+					continueIndex <- 1
+				}
+			}
 		}
 	}
 }
