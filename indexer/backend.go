@@ -64,8 +64,6 @@ type Backend interface {
 
 	Index(
 		oasisBlock *block.Block,
-		round uint64,
-		blockHash ethcommon.Hash,
 		txResults []*client.TransactionWithResults,
 	) error
 
@@ -173,25 +171,27 @@ func (p *psqlBackend) DecodeUtx(utx *types.UnverifiedTransaction, blockHash stri
 
 func (p *psqlBackend) Index(
 	oasisBlock *block.Block,
-	round uint64, //should remove later
-	blockHash ethcommon.Hash, //should remove later
 	txResults []*client.TransactionWithResults,
 ) error {
-	// block round <-> block hash   //should remove later
+	round := oasisBlock.Header.Round
+	blockHash := ethcommon.HexToHash(oasisBlock.Header.EncodedHash().Hex())
+
+	// oasis block round <-> oasis block hash, maybe remove later
 	blockRef := &model.BlockRef{
-		Round: round,
+		Round: oasisBlock.Header.Round,
 		Hash:  blockHash.String(),
 	}
 	p.storage.Store(blockRef)
 
-	// oasis block -> eth block    //should modify
-	ethBlock, err := p.generateEthBlock(oasisBlock, txResults) ////////
-	p.storage.Store(ethBlock)                                  //////////
+	// oasis block -> eth block, store eth block
+	ethBlock, err := p.generateEthBlock(oasisBlock, txResults)
+	p.storage.Store(ethBlock)
 	if err != nil {
 		p.logger.Error("generateEthBlock failed", "err", err)
 		return errors.New("Convert to eth block failed")
 	}
 
+	// store eth transactions, maybe should restructure
 	for idx, item := range txResults {
 		utx := item.Tx
 		if len(utx.AuthProofs) != 1 || utx.AuthProofs[0].Module != "evm.ethereum.v0" {
@@ -216,6 +216,7 @@ func (p *psqlBackend) Index(
 
 	return nil
 }
+
 func (p *psqlBackend) Pruning(step uint64) error {
 	if err := p.storage.Delete(new(model.BlockRef), step); err != nil {
 		p.logger.Error("Pruning failed with these error ", "err", err)
