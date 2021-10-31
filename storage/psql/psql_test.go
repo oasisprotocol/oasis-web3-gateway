@@ -18,7 +18,7 @@ func TestInitPostDb(t *testing.T) {
 	if err != nil {
 		log.Fatal("initialize config error:", err)
 	}
-	db, err := InitDb(cfg)
+	db, err := InitDb(cfg.PostDb)
 	if err != nil {
 		log.Fatal("initialize postdb error:", err)
 	}
@@ -136,7 +136,7 @@ func TestUpdate(t *testing.T) {
 
 	cfg, err := conf.InitConfig("../../conf/server.yml")
 	require.NoError(err, "initialize config")
-	db, err := InitDb(cfg)
+	db, err := InitDb(cfg.PostDb)
 	require.NoError(err, "initialize postdb")
 
 	ir1 := &model.ContinuesIndexedRound{
@@ -173,7 +173,7 @@ func TestDelete(t *testing.T) {
 
 	cfg, err := conf.InitConfig("../../conf/server.yml")
 	require.NoError(err, "initialize config")
-	db, err := InitDb(cfg)
+	db, err := InitDb(cfg.PostDb)
 	require.NoError(err, "initialize postdb")
 
 	require.NoError(db.Delete(new(model.BlockRef), 10), "delete")
@@ -184,7 +184,7 @@ func TestGetBlockHash(t *testing.T) {
 
 	cfg, err := conf.InitConfig("../../conf/server.yml")
 	require.NoError(err, "initialize config")
-	_, err = InitDb(cfg)
+	_, err = InitDb(cfg.PostDb)
 	require.NoError(err, "initialize postdb")
 
 	// TODO: this fails as expected as the db doesn't contain the block.
@@ -199,7 +199,7 @@ func TestGetTransactionRef(t *testing.T) {
 
 	cfg, err := conf.InitConfig("../../conf/server.yml")
 	require.NoError(err, "initialize config")
-	_, err = InitDb(cfg)
+	_, err = InitDb(cfg.PostDb)
 	require.NoError(err, "initialize postdb")
 
 	// TODO: this fails as expected as the db doesn't contain the transaction.
