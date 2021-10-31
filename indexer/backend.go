@@ -60,7 +60,7 @@ type QueryableBackend interface {
 
 type GetEthInfoBackend interface {
 	GetBlockByNumber(number uint64) (map[string]interface{}, error)
-	GetBlockByHash(blockHash ethcommon.Hash) (*model.Block, error)
+	GetBlockByHash(blockHash ethcommon.Hash) (map[string]interface{}, error)
 	GetBlockTransactionCountByNumber(number uint64) (int, error)
 	GetBlockTransactionCountByHash(blockHash ethcommon.Hash) (int, error)
 	GetTransactionByBlockHashAndIndex(blockHash ethcommon.Hash, txIndex int) (*model.Transaction, error)
@@ -313,8 +313,13 @@ func (p *psqlBackend) GetBlockByNumber(number uint64) (map[string]interface{}, e
 	return ConvertToOutBlock(blk), nil
 }
 
-func (p *psqlBackend) GetBlockByHash(blockHash ethcommon.Hash) (*model.Block, error) {
-	return p.storage.GetBlockByHash(blockHash.String())
+func (p *psqlBackend) GetBlockByHash(blockHash ethcommon.Hash) (map[string]interface{}, error) {
+	blk, err := p.storage.GetBlockByHash(blockHash.String())
+	if err != nil {
+		return nil, err
+	}
+
+	return ConvertToOutBlock(blk), nil
 }
 
 func (p *psqlBackend) GetBlockTransactionCountByNumber(number uint64) (int, error) {

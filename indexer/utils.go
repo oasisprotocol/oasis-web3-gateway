@@ -212,30 +212,30 @@ func (p *psqlBackend) generateEthBlock(oasisBlock *block.Block, txResults []*cli
 func ConvertToOutBlock(block *model.Block) map[string]interface{} {
 	v1 := big.NewInt(0)
 	diff, _ := v1.SetString(block.Header.Difficulty, 10)
-	v2 := big.NewInt(0)
-	gasUsed := v2.SetUint64(block.Header.GasUsed)
 
 	res := map[string]interface{}{
-		"number":           hexutil.Uint64(block.Round),
-		"hash":             hexutil.Bytes(block.Hash),
 		"parentHash":       common.HexToHash(block.Header.ParentHash),
-		"nonce":            block.Header.Nonce,
-		"sha3Uncles":       block.Header.UncleHash,
-		"logsBloom":        block.Header.Bloom,
-		"stateRoot":        hexutil.Bytes(block.Header.Root),
+		"sha3Uncles":       common.HexToHash(block.Header.UncleHash),
 		"miner":            block.Header.Coinbase,
-		"mixHash":          block.Header.MixDigest,
+		"stateRoot":        common.HexToHash(block.Header.Root),
+		"transactionsRoot": common.HexToHash(block.Header.TxHash),
+		"receiptsRoot":     common.HexToHash(block.Header.ReceiptHash),
+		"logsBloom":        block.Header.Bloom,
 		"difficulty":       (*hexutil.Big)(diff),
-		"extraData":        block.Header.Extra,
-		"size":             hexutil.Uint64(defaultSize), ////
+		"number":           hexutil.Uint64(block.Round),
 		"gasLimit":         hexutil.Uint64(block.Header.GasLimit),
-		"gasUsed":          gasUsed,
+		"gasUsed":          hexutil.Uint64(block.Header.GasUsed),
 		"timestamp":        hexutil.Uint64(block.Header.Time),
-		"transactionsRoot": block.Header.TxHash,
-		"receiptsRoot":     block.Header.ReceiptHash,
+		"extraData":        block.Header.Extra,
+		"mixHash":          common.HexToHash(block.Header.MixDigest),
+		"nonce":            ethtypes.EncodeNonce(block.Header.Nonce),
 
-		"uncles":          block.Uncles,
-		"transactions":    block.Transactions,
+		"uncles":       block.Uncles,
+		"transactions": block.Transactions,
+
+		"hash": common.HexToHash(block.Hash),
+		"size": hexutil.Uint64(defaultSize),
+
 		"totalDifficulty": (*hexutil.Big)(big.NewInt(0)),
 	}
 

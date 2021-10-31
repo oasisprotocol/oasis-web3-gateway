@@ -450,20 +450,14 @@ func (api *PublicAPI) EstimateGas(args utils.TransactionArgs, blockNum *ethrpc.B
 // GetBlockByHash returns the block identified by hash.
 func (api *PublicAPI) GetBlockByHash(blockHash common.Hash, fullTx bool) (map[string]interface{}, error) {
 	api.Logger.Debug("eth_getBlockByHash", "hash", blockHash.Hex(), "full", fullTx)
-	round, err := api.backend.QueryBlockRound(blockHash)
+	blk, err := api.backend.GetBlockByHash(blockHash)
 	if err != nil {
 		api.Logger.Error("Matched block error, block hash: ", blockHash)
 		// Block doesn't exist, by web3 spec an empty response should be returned, not an error.
-		return nil, nil
+		return nil, ErrInternalQuery
 	}
 
-	blk, err := api.client.GetBlock(api.ctx, round)
-	if err != nil {
-		api.Logger.Error("Matched block error, block round: ", round)
-		return nil, err
-	}
-
-	return api.getRPCBlock(blk)
+	return blk, nil
 }
 
 func (api *PublicAPI) getRPCTransaction(dbTx *model.Transaction) (*utils.RPCTransaction, error) {

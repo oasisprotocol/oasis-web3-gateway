@@ -154,7 +154,7 @@ func TestEth_GetBlockByNumberAndGetBlockByHash(t *testing.T) {
 	require.NoError(t, err)
 	_ = blk1
 
-	param := []interface{}{number.String(), false}
+	param := []interface{}{"0x1", false}
 	rpcRes := call(t, "eth_getBlockHash", param)
 	var blk_hash interface{}
 	err = json.Unmarshal(rpcRes.Result, &blk_hash)
