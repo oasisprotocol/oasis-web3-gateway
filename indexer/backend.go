@@ -334,8 +334,7 @@ func (p *psqlBackend) GetTransactionReceipt(txHash ethcommon.Hash) (map[string]i
 }
 
 func (p *psqlBackend) BlockNumber(blockHash ethcommon.Hash) (uint64, error) {
-	////
-	return p.storage.GetBlockNumber(blockHash.String())
+	return p.storage.GetBlockNumber()
 }
 
 func (p *psqlBackend) Close() {
