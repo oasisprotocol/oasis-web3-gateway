@@ -61,11 +61,11 @@ type QueryableBackend interface {
 type GetEthInfoBackend interface {
 	GetBlockByNumber(number uint64) (*model.Block, error)
 	GetBlockByHash(blockHash ethcommon.Hash) (*model.Block, error)
-	GetBlockTransactionCountByNumber(number uint64) (*model.Block, error)
-	GetBlockTransactionCountByHash(blockHash ethcommon.Hash) (*model.Block, error)
-	GetTransactionByBlockHashAndIndex(blockHash ethcommon.Hash, txIndex uint64) (*model.Transaction, error)
+	GetBlockTransactionCountByNumber(number uint64) (int, error)
+	GetBlockTransactionCountByHash(blockHash ethcommon.Hash) (int, error)
+	GetTransactionByBlockHashAndIndex(blockHash ethcommon.Hash, txIndex int) (*model.Transaction, error)
 	GetTransactionReceipt(txHash ethcommon.Hash) (map[string]interface{}, error)
-	BlockNumber() (uint64, error)
+	BlockNumber(blockHash ethcommon.Hash) (uint64, error)
 }
 
 // Backend is the indexer backend interface.
@@ -169,6 +169,9 @@ func (p *psqlBackend) DecodeUtx(utx *types.UnverifiedTransaction, blockHash stri
 	if err != nil {
 		return nil, nil, err
 	}
+	ethTx.Index = idx
+	ethTx.Round = round
+	ethTx.BlockHash = blockHash
 
 	txRef := &model.TransactionRef{
 		EthTxHash: ethTx.Hash,
@@ -302,32 +305,31 @@ func (p *psqlBackend) QueryTransactionRef(hash string) (*model.TransactionRef, e
 }
 
 func (p *psqlBackend) GetBlockByNumber(number uint64) (*model.Block, error) {
-	// Call function from storage
-	return nil, nil
+	return p.storage.GetBlockByNumber(number)
 }
+
 func (p *psqlBackend) GetBlockByHash(blockHash ethcommon.Hash) (*model.Block, error) {
-	// Call function from storage
-	return nil, nil
+	return p.storage.GetBlockByHash(blockHash.String())
 }
-func (p *psqlBackend) GetBlockTransactionCountByNumber(number uint64) (*model.Block, error) {
-	// Call function from storage
-	return nil, nil
+
+func (p *psqlBackend) GetBlockTransactionCountByNumber(number uint64) (int, error) {
+	return p.storage.GetBlockTransactionCountByNumber(number)
 }
-func (p *psqlBackend) GetBlockTransactionCountByHash(blockHash ethcommon.Hash) (*model.Block, error) {
-	// Call function from storage
-	return nil, nil
+
+func (p *psqlBackend) GetBlockTransactionCountByHash(blockHash ethcommon.Hash) (int, error) {
+	return p.storage.GetBlockTransactionCountByHash(blockHash.String())
 }
-func (p *psqlBackend) GetTransactionByBlockHashAndIndex(blockHash ethcommon.Hash, txIndex uint64) (*model.Transaction, error) {
-	// Call function from storage
-	return nil, nil
+
+func (p *psqlBackend) GetTransactionByBlockHashAndIndex(blockHash ethcommon.Hash, txIndex int) (*model.Transaction, error) {
+	return p.storage.GetBlockTransaction(blockHash.String(), txIndex)
 }
+
 func (p *psqlBackend) GetTransactionReceipt(txHash ethcommon.Hash) (map[string]interface{}, error) {
-	// Call function from storage
-	return nil, nil
+	return p.storage.GetTransactionReceipt(txHash.String())
 }
-func (p *psqlBackend) BlockNumber() (uint64, error) {
-	// Call function from storage
-	return 0, nil
+
+func (p *psqlBackend) BlockNumber(blockHash ethcommon.Hash) (uint64, error) {
+	return p.storage.GetBlockNumber(blockHash.String())
 }
 
 func (p *psqlBackend) Close() {

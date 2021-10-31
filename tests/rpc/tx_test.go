@@ -134,7 +134,7 @@ func TestEth_EstimateGas(t *testing.T) {
 	msg := ethereum.CallMsg{
 		From:  common.HexToAddress(daveEVMAddr),
 		Value: big.NewInt(0),
-		Data: code,
+		Data:  code,
 	}
 	gas, err := ec.EstimateGas(context.Background(), msg)
 	require.Nil(t, err, "gas estimation")

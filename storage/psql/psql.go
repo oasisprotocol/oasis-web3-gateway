@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"time"
 
 	"github.com/go-pg/pg/v10"
@@ -56,7 +57,7 @@ func (db *PostDb) GetTransactionRef(txHash string) (*model.TransactionRef, error
 	return tx, nil
 }
 
-// GetTransaction queries ethereum transaction by hash.
+// GetTransaction returns ethereum transaction by hash.
 func (db *PostDb) GetTransaction(hash string) (*model.Transaction, error) {
 	tx := new(model.Transaction)
 	err := db.Db.Model(tx).
@@ -94,7 +95,7 @@ func (db *PostDb) Delete(table interface{}, round uint64) error {
 	return err
 }
 
-// GetBlockRound queries block round by block hash.
+// GetBlockRound returns block round by block hash.
 func (db *PostDb) GetBlockRound(hash string) (uint64, error) {
 	block := new(model.BlockRef)
 	err := db.Db.Model(block).
@@ -107,7 +108,7 @@ func (db *PostDb) GetBlockRound(hash string) (uint64, error) {
 	return block.Round, nil
 }
 
-// GetBlockHash queries block hash by block round.
+// GetBlockHash returns block hash by block round.
 func (db *PostDb) GetBlockHash(round uint64) (string, error) {
 	blk := new(model.BlockRef)
 	err := db.Db.Model(blk).
@@ -120,7 +121,7 @@ func (db *PostDb) GetBlockHash(round uint64) (string, error) {
 	return blk.Hash, nil
 }
 
-// GetLatestBlockHash queries for the block hash of the latest round.
+// GetLatestBlockHash returns for the block hash of the latest round.
 func (db *PostDb) GetLatestBlockHash() (string, error) {
 	blk := new(model.BlockRef)
 	err := db.Db.Model(blk).Order("round DESC").Limit(1).Select()
@@ -131,7 +132,7 @@ func (db *PostDb) GetLatestBlockHash() (string, error) {
 	return blk.Hash, nil
 }
 
-// GetContinuesIndexedRound queries latest continues indexed block round.
+// GetContinuesIndexedRound returns latest continues indexed block round.
 func (db *PostDb) GetContinuesIndexedRound() (uint64, error) {
 	indexedRound := new(model.ContinuesIndexedRound)
 	err := db.Db.Model(indexedRound).
@@ -144,12 +145,101 @@ func (db *PostDb) GetContinuesIndexedRound() (uint64, error) {
 	return indexedRound.Round, nil
 }
 
-// GetBlock queries the block for the given hash.
-func (db *PostDb) GetBlock(hash string) (*model.Block, error) {
+func (db *PostDb) GetBlockNumber(blockHash string) (uint64, error) {
 	blk := new(model.Block)
-	err := db.Db.Model(blk).Where("hash=?", hash).Select()
+	err := db.Db.Model(blk).Where("hash=?", blockHash).Select()
+	if err != nil {
+		return 0, err
+	}
+
+	return blk.Round, nil
+}
+
+// GetBlockByHash returns the block for the given hash.
+func (db *PostDb) GetBlockByHash(blockHash string) (*model.Block, error) {
+	blk := new(model.Block)
+	err := db.Db.Model(blk).Where("hash=?", blockHash).Select()
 	if err != nil {
 		return nil, err
 	}
+
 	return blk, nil
+}
+
+// GetBlockByNumber returns the block for the given round.
+func (db *PostDb) GetBlockByNumber(round uint64) (*model.Block, error) {
+	blk := new(model.Block)
+	err := db.Db.Model(blk).Where("round=?", round).Select()
+	if err != nil {
+		return nil, err
+	}
+
+	return blk, nil
+}
+
+func (db *PostDb) GetBlockTransactionCountByNumber(round uint64) (int, error) {
+	blk := new(model.Block)
+	err := db.Db.Model(blk).Where("round=?", round).Select()
+	if err != nil {
+		return 0, err
+	}
+
+	return len(blk.Transactions), nil
+}
+
+func (db *PostDb) GetBlockTransactionCountByHash(blockHash string) (int, error) {
+	blk := new(model.Block)
+	err := db.Db.Model(blk).Where("hash=?", blockHash).Select()
+	if err != nil {
+		return 0, err
+	}
+
+	return len(blk.Transactions), nil
+}
+
+func (db *PostDb) GetBlockTransaction(blockHash string, txIndex int) (*model.Transaction, error) {
+	blk := new(model.Block)
+	err := db.Db.Model(blk).Where("hash=?", blockHash).Select()
+	if err != nil {
+		return nil, err
+	}
+	if len(blk.Transactions) == 0 {
+		return nil, errors.New("the block doesn't has any transactions")
+	}
+	if len(blk.Transactions)-1 < txIndex {
+		return nil, errors.New("out of index")
+	}
+
+	return blk.Transactions[txIndex], nil
+}
+
+func (db *PostDb) GetTransactionReceipt(txHash string) (map[string]interface{}, error) {
+	tx := new(model.Transaction)
+	if err := db.Db.Model(tx).Where("hash=?", txHash).Select(); err != nil {
+		return nil, err
+	}
+	block := new(model.Block)
+	if err := db.Db.Model(block).Where("hash=?", tx.BlockHash).Select(); err != nil {
+		return nil, err
+	}
+	cumulativeGasUsed := uint64(0)
+	for _, tx := range block.Transactions {
+		cumulativeGasUsed += tx.Gas
+	}
+	receipt := map[string]interface{}{
+		"status":            hexutil.Uint(0),
+		"cumulativeGasUsed": hexutil.Uint64(cumulativeGasUsed),
+		"logsBloom":         "",
+		"logs":              "",
+		"transactionHash":   tx.Hash,
+		"gasUsed":           hexutil.Uint64(tx.Gas),
+		"type":              hexutil.Uint64(tx.Type),
+		"blockHash":         tx.BlockHash,
+		"blockNumber":       hexutil.Uint64(tx.Round),
+		"transactionIndex":  hexutil.Uint64(tx.Index),
+		"from":              tx.FromAddr,
+		"to":                tx.ToAddr,
+	}
+
+	return receipt, nil
 }

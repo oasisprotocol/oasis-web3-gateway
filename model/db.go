@@ -35,6 +35,9 @@ type Transaction struct {
 	Hash       string `pg:",pk"`
 	Type       uint8  `pg:",use_zero"`
 	ChainID    string
+	BlockHash  string
+	Round      uint64 `pg:",use_zero"`
+	Index      uint32 `pg:",use_zero"`
 	Gas        uint64 `pg:",use_zero"`
 	GasPrice   string
 	GasTipCap  string
@@ -46,6 +49,10 @@ type Transaction struct {
 	Data       string
 	AccessList AccessList
 	V, R, S    string
+}
+
+func (tx *Transaction) GasUsed() uint64 {
+	return 0
 }
 
 // Block represents ethereum block.
