@@ -58,9 +58,20 @@ type QueryableBackend interface {
 	Decode(utx *types.UnverifiedTransaction) (*model.Transaction, error)
 }
 
+type GetEthInfoBackend interface {
+	GetBlockByNumber(number uint64) (*model.Block, error)
+	GetBlockByHash(blockHash ethcommon.Hash) (*model.Block, error)
+	GetBlockTransactionCountByNumber(number uint64) (*model.Block, error)
+	GetBlockTransactionCountByHash(blockHash ethcommon.Hash) (*model.Block, error)
+	GetTransactionByBlockHashAndIndex(blockHash ethcommon.Hash, txIndex uint64) (*model.Transaction, error)
+	GetTransactionReceipt(txHash ethcommon.Hash) (map[string]interface{}, error)
+	BlockNumber() (uint64, error)
+}
+
 // Backend is the indexer backend interface.
 type Backend interface {
 	QueryableBackend
+	GetEthInfoBackend
 
 	Index(
 		oasisBlock *block.Block,
@@ -288,6 +299,35 @@ func (p *psqlBackend) QueryTransaction(ethTxHash ethcommon.Hash) (*model.Transac
 
 func (p *psqlBackend) QueryTransactionRef(hash string) (*model.TransactionRef, error) {
 	return p.storage.GetTransactionRef(hash)
+}
+
+func (p *psqlBackend) GetBlockByNumber(number uint64) (*model.Block, error) {
+	// Call function from storage
+	return nil, nil
+}
+func (p *psqlBackend) GetBlockByHash(blockHash ethcommon.Hash) (*model.Block, error) {
+	// Call function from storage
+	return nil, nil
+}
+func (p *psqlBackend) GetBlockTransactionCountByNumber(number uint64) (*model.Block, error) {
+	// Call function from storage
+	return nil, nil
+}
+func (p *psqlBackend) GetBlockTransactionCountByHash(blockHash ethcommon.Hash) (*model.Block, error) {
+	// Call function from storage
+	return nil, nil
+}
+func (p *psqlBackend) GetTransactionByBlockHashAndIndex(blockHash ethcommon.Hash, txIndex uint64) (*model.Transaction, error) {
+	// Call function from storage
+	return nil, nil
+}
+func (p *psqlBackend) GetTransactionReceipt(txHash ethcommon.Hash) (map[string]interface{}, error) {
+	// Call function from storage
+	return nil, nil
+}
+func (p *psqlBackend) BlockNumber() (uint64, error) {
+	// Call function from storage
+	return 0, nil
 }
 
 func (p *psqlBackend) Close() {
