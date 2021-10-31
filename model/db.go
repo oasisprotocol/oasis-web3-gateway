@@ -51,10 +51,6 @@ type Transaction struct {
 	V, R, S    string
 }
 
-func (tx *Transaction) GasUsed() uint64 {
-	return 0
-}
-
 // Block represents ethereum block.
 type Block struct {
 	Hash         string `pg:",pk"`
