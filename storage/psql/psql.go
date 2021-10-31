@@ -123,7 +123,7 @@ func (db *PostDb) GetBlockHash(round uint64) (string, error) {
 
 // GetLatestBlockHash returns for the block hash of the latest round.
 func (db *PostDb) GetLatestBlockHash() (string, error) {
-	blk := new(model.BlockRef)
+	blk := new(model.Block)
 	err := db.Db.Model(blk).Order("round DESC").Limit(1).Select()
 	if err != nil {
 		return "", err
@@ -145,9 +145,9 @@ func (db *PostDb) GetContinuesIndexedRound() (uint64, error) {
 	return indexedRound.Round, nil
 }
 
-func (db *PostDb) GetBlockNumber(blockHash string) (uint64, error) {
+func (db *PostDb) GetBlockNumber() (uint64, error) {
 	blk := new(model.Block)
-	err := db.Db.Model(blk).Where("hash=?", blockHash).Select()
+	err := db.Db.Model(blk).Order("round DESC").Limit(1).Select()
 	if err != nil {
 		return 0, err
 	}

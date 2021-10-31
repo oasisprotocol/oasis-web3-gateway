@@ -32,8 +32,8 @@ type Storage interface {
 	// GetTransaction queries ethereum transaction by hash.
 	GetTransaction(hash string) (*model.Transaction, error)
 
-	// GetBlockNumber returns block round for the given block hash.
-	GetBlockNumber(blockHash string) (uint64, error)
+	// GetBlockNumber returns the latest block round.
+	GetBlockNumber() (uint64, error)
 
 	// GetBlockByHash returns the block for the given hash.
 	GetBlockByHash(hash string) (*model.Block, error)
