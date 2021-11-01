@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/eth/filters"
 	"github.com/ethereum/go-ethereum/rlp"
 	ethrpc "github.com/ethereum/go-ethereum/rpc"
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
@@ -645,7 +645,9 @@ func (api *PublicAPI) GetTransactionReceipt(txHash common.Hash) (map[string]inte
 	return receipt, nil
 }
 
-func (api *PublicAPI) GetLogs(filter ethereum.FilterQuery) ([]*ethtypes.Log, error) {
+func (api *PublicAPI) GetLogs(filter filters.FilterCriteria) ([]*ethtypes.Log, error) {
+	api.Logger.Debug("eth_getLogs", "filter", filter)
+
 	startRoundInclusive := client.RoundLatest
 	endRoundInclusive := client.RoundLatest
 	if filter.BlockHash != nil {
@@ -674,7 +676,7 @@ func (api *PublicAPI) GetLogs(filter ethereum.FilterQuery) ([]*ethtypes.Log, err
 
 	// Warning: this is unboundedly expensive
 	var ethLogs []*ethtypes.Log
-	for round := startRoundInclusive; /* see explicit break */; round++ {
+	for round := startRoundInclusive; ; /* see explicit break */ round++ {
 		block, err := api.client.GetBlock(api.ctx, round)
 		if err != nil {
 			if errors.Is(err, roothash.ErrNotFound) && round != client.RoundLatest && endRoundInclusive == client.RoundLatest {
@@ -696,6 +698,8 @@ func (api *PublicAPI) GetLogs(filter ethereum.FilterQuery) ([]*ethtypes.Log, err
 			break
 		}
 	}
+
+	api.Logger.Debug("eth_getLogs response", "resp", ethLogs)
 
 	return ethLogs, nil
 }
