@@ -59,13 +59,13 @@ type QueryableBackend interface {
 }
 
 type GetEthInfoBackend interface {
-	GetBlockByNumber(number uint64) (map[string]interface{}, error)
-	GetBlockByHash(blockHash ethcommon.Hash) (map[string]interface{}, error)
+	GetBlockByNumber(number uint64) (*model.Block, error)
+	GetBlockByHash(blockHash ethcommon.Hash) (*model.Block, error)
 	GetBlockTransactionCountByNumber(number uint64) (int, error)
 	GetBlockTransactionCountByHash(blockHash ethcommon.Hash) (int, error)
 	GetTransactionByBlockHashAndIndex(blockHash ethcommon.Hash, txIndex int) (*model.Transaction, error)
 	// GetTransactionReceipt(txHash ethcommon.Hash) (map[string]interface{}, error)
-	BlockNumber(blockHash ethcommon.Hash) (uint64, error)
+	BlockNumber() (uint64, error)
 }
 
 // Backend is the indexer backend interface.
@@ -304,22 +304,22 @@ func (p *psqlBackend) QueryTransactionRef(hash string) (*model.TransactionRef, e
 	return p.storage.GetTransactionRef(hash)
 }
 
-func (p *psqlBackend) GetBlockByNumber(number uint64) (map[string]interface{}, error) {
+func (p *psqlBackend) GetBlockByNumber(number uint64) (*model.Block, error) {
 	blk, err := p.storage.GetBlockByNumber(number)
 	if err != nil {
 		return nil, err
 	}
 
-	return ConvertToOutBlock(blk), nil
+	return blk, nil
 }
 
-func (p *psqlBackend) GetBlockByHash(blockHash ethcommon.Hash) (map[string]interface{}, error) {
+func (p *psqlBackend) GetBlockByHash(blockHash ethcommon.Hash) (*model.Block, error) {
 	blk, err := p.storage.GetBlockByHash(blockHash.String())
 	if err != nil {
 		return nil, err
 	}
 
-	return ConvertToOutBlock(blk), nil
+	return blk, nil
 }
 
 func (p *psqlBackend) GetBlockTransactionCountByNumber(number uint64) (int, error) {
@@ -338,7 +338,7 @@ func (p *psqlBackend) GetTransactionReceipt(txHash ethcommon.Hash) (map[string]i
 	return p.storage.GetTransactionReceipt(txHash.String())
 }
 
-func (p *psqlBackend) BlockNumber(blockHash ethcommon.Hash) (uint64, error) {
+func (p *psqlBackend) BlockNumber() (uint64, error) {
 	return p.storage.GetBlockNumber()
 }
 

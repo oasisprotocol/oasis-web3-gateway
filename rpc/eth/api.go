@@ -37,6 +37,7 @@ var (
 	ErrBlockNotFound              = errors.New("block not found")
 	ErrTransactionNotFound        = errors.New("transaction not found")
 	ErrTransactionReceiptNotFound = errors.New("transaction receipt not found")
+	ErrOutOfIndex                 = errors.New("out of index")
 )
 
 // Log is the Oasis Log.
@@ -165,7 +166,7 @@ func (api *PublicAPI) GetBlockByNumber(blockNum ethrpc.BlockNumber, _ bool) (map
 		return nil, ErrInternalQuery
 	}
 
-	return blk, nil
+	return utils.ConvertToOutBlock(blk), nil
 }
 
 // GetBlockTransactionCountByNumber returns the number of transactions in the block.
@@ -272,10 +273,10 @@ func (api *PublicAPI) GetBlockTransactionCountByHash(blockHash common.Hash) *hex
 }
 
 // GetTransactionCount returns the number of transactions the given address has sent for the given block number.
-func (api *PublicAPI) GetTransactionCount(ethaddr common.Address, blockNum ethrpc.BlockNumber) (*hexutil.Uint64, error) {
-	api.Logger.Debug("eth_getTransactionCount", "address", ethaddr.Hex(), "blockNumber", blockNum)
+func (api *PublicAPI) GetTransactionCount(ethAddr common.Address, blockNum ethrpc.BlockNumber) (*hexutil.Uint64, error) {
+	api.Logger.Debug("eth_getTransactionCount", "address", ethAddr.Hex(), "blockNumber", blockNum)
 	accountsMod := accounts.NewV1(api.client)
-	accountsAddr := types.NewAddressRaw(types.AddressV0Secp256k1EthContext, ethaddr[:])
+	accountsAddr := types.NewAddressRaw(types.AddressV0Secp256k1EthContext, ethAddr[:])
 
 	round, err := api.roundParamFromBlockNum(blockNum)
 	if err != nil {
@@ -457,7 +458,7 @@ func (api *PublicAPI) GetBlockByHash(blockHash common.Hash, fullTx bool) (map[st
 		return nil, ErrInternalQuery
 	}
 
-	return blk, nil
+	return utils.ConvertToOutBlock(blk), nil
 }
 
 func (api *PublicAPI) getRPCTransaction(dbTx *model.Transaction) (*utils.RPCTransaction, error) {
@@ -494,36 +495,19 @@ func (api *PublicAPI) GetTransactionByHash(hash common.Hash) (*utils.RPCTransact
 func (api *PublicAPI) GetTransactionByBlockHashAndIndex(blockHash common.Hash, index uint32) (*utils.RPCTransaction, error) {
 	api.Logger.Debug("eth_getTransactionByBlockHashAndIndex", "hash", blockHash.Hex(), "index", index)
 
-	round, err := api.backend.QueryBlockRound(blockHash)
+	dbBlock, err := api.backend.GetBlockByHash(blockHash)
 	if err != nil {
 		api.Logger.Error("Matched block error, block hash: ", blockHash)
 		// Block doesn't exist, by web3 spec an empty response should be returned, not an error.
 		return nil, nil
 	}
-
-	blk, err := api.client.GetBlock(api.ctx, round)
-	if err != nil {
-		api.Logger.Error("Matched block error, block round: ", round)
-		return nil, err
+	l := len(dbBlock.Transactions)
+	if uint32(l) <= index {
+		api.Logger.Error("out of index", "tx len:", l, "index:", index)
+		return nil, ErrOutOfIndex
 	}
 
-	txs, err := api.client.GetTransactions(api.ctx, blk.Header.Round)
-	if err != nil {
-		api.Logger.Error("Call GetTransactions error")
-		return nil, err
-	}
-
-	if index >= uint32(len(txs)) {
-		return nil, errors.New("out of tx index")
-	}
-
-	dbTx, err := api.backend.Decode(txs[index])
-	if err != nil {
-		api.Logger.Error("Call Decode error")
-		return nil, err
-	}
-
-	return api.getRPCTransaction(dbTx)
+	return api.getRPCTransaction(dbBlock.Transactions[index])
 }
 
 // GetTransactionByBlockNumberAndIndex returns the transaction identified by number and index.
@@ -660,14 +644,14 @@ func (api *PublicAPI) GetBlockHash(blockNum ethrpc.BlockNumber, _ bool) (common.
 
 func (api *PublicAPI) BlockNumber() (hexutil.Uint64, error) {
 	api.Logger.Debug("eth_getBlockNumber start")
-	blk, err := api.client.GetBlock(api.ctx, client.RoundLatest)
+	blockNumber, err := api.backend.BlockNumber()
 	if err != nil {
-		api.Logger.Error("eth_getBlockNumber get the latest number", "error", err.Error())
+		api.Logger.Error("failed to get the latest block number", "err:", err)
 		return 0, err
 	}
+	api.Logger.Debug("eth_getBlockNumber get the current number", "blockNumber:", blockNumber)
 
-	api.Logger.Debug("eth_getBlockNumber get the current number", "blockNumber", blk.Header.Round)
-	return hexutil.Uint64(blk.Header.Round), nil
+	return hexutil.Uint64(blockNumber), nil
 }
 
 // Accounts returns the list of accounts available to this node.

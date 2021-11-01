@@ -7,7 +7,6 @@ import (
 	"github.com/fxamacker/cbor/v2"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
@@ -207,37 +206,4 @@ func (p *psqlBackend) generateEthBlock(oasisBlock *block.Block, txResults []*cli
 		return nil, err
 	}
 	return res, nil
-}
-
-func ConvertToOutBlock(block *model.Block) map[string]interface{} {
-	v1 := big.NewInt(0)
-	diff, _ := v1.SetString(block.Header.Difficulty, 10)
-
-	res := map[string]interface{}{
-		"parentHash":       common.HexToHash(block.Header.ParentHash),
-		"sha3Uncles":       common.HexToHash(block.Header.UncleHash),
-		"miner":            block.Header.Coinbase,
-		"stateRoot":        common.HexToHash(block.Header.Root),
-		"transactionsRoot": common.HexToHash(block.Header.TxHash),
-		"receiptsRoot":     common.HexToHash(block.Header.ReceiptHash),
-		"logsBloom":        block.Header.Bloom,
-		"difficulty":       (*hexutil.Big)(diff),
-		"number":           hexutil.Uint64(block.Round),
-		"gasLimit":         hexutil.Uint64(block.Header.GasLimit),
-		"gasUsed":          hexutil.Uint64(block.Header.GasUsed),
-		"timestamp":        hexutil.Uint64(block.Header.Time),
-		"extraData":        block.Header.Extra,
-		"mixHash":          common.HexToHash(block.Header.MixDigest),
-		"nonce":            ethtypes.EncodeNonce(block.Header.Nonce),
-
-		"uncles":       block.Uncles,
-		"transactions": block.Transactions,
-
-		"hash": common.HexToHash(block.Hash),
-		"size": hexutil.Uint64(defaultSize),
-
-		"totalDifficulty": (*hexutil.Big)(big.NewInt(0)),
-	}
-
-	return res
 }
