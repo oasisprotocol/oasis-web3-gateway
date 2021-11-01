@@ -170,22 +170,22 @@ func (api *PublicAPI) GetBlockByNumber(blockNum ethrpc.BlockNumber, _ bool) (map
 }
 
 // GetBlockTransactionCountByNumber returns the number of transactions in the block.
-func (api *PublicAPI) GetBlockTransactionCountByNumber(blockNum ethrpc.BlockNumber) *hexutil.Uint {
+func (api *PublicAPI) GetBlockTransactionCountByNumber(blockNum ethrpc.BlockNumber) (hexutil.Uint, error) {
+	api.Logger.Debug("eth_getBlockTransactionCountByNumber", "number", blockNum.Int64())
+
 	round, err := api.roundParamFromBlockNum(blockNum)
 	if err != nil {
 		err = fmt.Errorf("convert block number to round: %w", err)
-		api.Logger.Error("Get Transactions failed", "number", blockNum, "error", err.Error())
-		var dunno hexutil.Uint
-		return &dunno
+		api.Logger.Error("GetBlock failed", "number", blockNum, "error", err.Error())
+		return 0, err
 	}
-	resTxs, err := api.client.GetTransactions(api.ctx, round)
+	n, err := api.backend.GetBlockTransactionCountByNumber(round)
 	if err != nil {
-		api.Logger.Error("Get Transactions failed", "number", blockNum, "error", err.Error())
+		api.Logger.Error("Query failed", "number", blockNum, "error", err.Error())
+		return 0, ErrInternalQuery
 	}
 
-	// TODO: only filter the eth transactions ?
-	n := hexutil.Uint(len(resTxs))
-	return &n
+	return hexutil.Uint(n), nil
 }
 
 func (api *PublicAPI) GetStorageAt(address common.Address, position hexutil.Big, blockNum ethrpc.BlockNumber) (hexutil.Big, error) {
@@ -249,27 +249,16 @@ func (api *PublicAPI) GasPrice() (*hexutil.Big, error) {
 }
 
 // GetBlockTransactionCountByHash returns the number of transactions in the block identified by hash.
-func (api *PublicAPI) GetBlockTransactionCountByHash(blockHash common.Hash) *hexutil.Uint {
+func (api *PublicAPI) GetBlockTransactionCountByHash(blockHash common.Hash) (hexutil.Uint, error) {
 	api.Logger.Debug("eth_getBlockTransactionCountByHash", "hash", blockHash.Hex())
 
-	round, err := api.backend.QueryBlockRound(blockHash)
+	n, err := api.backend.GetBlockTransactionCountByHash(blockHash)
 	if err != nil {
-		api.Logger.Error("Matched block error, block hash: ", blockHash)
+		api.Logger.Error("Query failed", "hash", blockHash, "error", err.Error())
+		return 0, ErrInternalQuery
 	}
 
-	blk, err := api.client.GetBlock(api.ctx, round)
-	if err != nil {
-		api.Logger.Error("Matched block error, block round: ", round)
-	}
-
-	resTxs, err := api.client.GetTransactions(api.ctx, blk.Header.Round)
-	if err != nil {
-		api.Logger.Error("Call GetTransactions error")
-	}
-
-	// TODO: only filter the eth transactions ?
-	n := hexutil.Uint(len(resTxs))
-	return &n
+	return hexutil.Uint(n), nil
 }
 
 // GetTransactionCount returns the number of transactions the given address has sent for the given block number.
