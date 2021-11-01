@@ -4,8 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"time"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/go-pg/pg/v10"
 
@@ -110,7 +111,7 @@ func (db *PostDb) GetBlockRound(hash string) (uint64, error) {
 
 // GetBlockHash returns block hash by block round.
 func (db *PostDb) GetBlockHash(round uint64) (string, error) {
-	blk := new(model.BlockRef)
+	blk := new(model.Block)
 	err := db.Db.Model(blk).
 		Where("round=?", round).
 		Select()
