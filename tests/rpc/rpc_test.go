@@ -26,13 +26,10 @@ const (
 	zeroString = "0x0"
 )
 
-var (
-	// The dave private key derive from the seed "oasis-runtime-sdk/test-keys: dave"
-	daveKey, _ = crypto.HexToECDSA("c0e43d8755f201b715fd5a9ce0034c568442543ae0a0ee1aec2985ffe40edb99")
-)
+// The dave private key derive from the seed "oasis-runtime-sdk/test-keys: dave"
+var daveKey, _ = crypto.HexToECDSA("c0e43d8755f201b715fd5a9ce0034c568442543ae0a0ee1aec2985ffe40edb99")
 
 func TestMain(m *testing.M) {
-
 	HOST = "http://localhost:8545"
 
 	// Start all tests
@@ -70,7 +67,6 @@ func call(t *testing.T, method string, params interface{}) *Response {
 }
 
 func TestEth_GetBalance(t *testing.T) {
-
 	rpcRes := call(t, "eth_getBalance", []string{daveEVMAddr, zeroString})
 
 	var res hexutil.Big

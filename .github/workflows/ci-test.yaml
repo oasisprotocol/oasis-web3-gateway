@@ -1,0 +1,38 @@
+# NOTE: This name appears in GitHub's Checks API and in workflow's status badge.
+name: ci-test
+
+# Trigger the workflow when:
+on:
+  # A push occurs to one of the matched branches.
+  push:
+    branches:
+      - main
+      - stable/*
+  # Or when a pull request event occurs for a pull request against one of the
+  # matched branches.
+  pull_request:
+    branches:
+      - main
+      - stable/*
+
+jobs:
+
+
+  test-go:
+    # NOTE: This name appears in GitHub's Checks API.
+    name: test-go
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Go 1.16
+        uses: actions/setup-go@v2.1.4
+        with:
+          go-version: "1.16.x"
+
+      - name: Unit tests with coverage
+        run: go test -race -coverprofile=coverage.txt -covermode=atomic -v ./...
+
+      - name: Upload to codecov.io
+        uses: codecov/codecov-action@v2.1.0

@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gorilla/mux"
-	"github.com/rs/cors"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/gorilla/mux"
+	"github.com/rs/cors"
 )
 
 // httpConfig is the JSON-RPC/HTTP configuration.
@@ -34,15 +34,15 @@ type httpServer struct {
 	log      log.Logger
 	timeouts rpc.HTTPTimeouts
 
-	server   *http.Server
+	server *http.Server
 
 	// rpcHandler holds the whole http handler
 	rpcHandler http.Handler
 	// rpcServer handle json rpc requests
 	rpcServer *rpc.Server
 
-	httpConfig  httpConfig
-	wsConfig  wsConfig
+	httpConfig httpConfig
+	wsConfig   wsConfig
 
 	// These are set by setListenAddr.
 	endpoint string
@@ -65,7 +65,7 @@ func (h *httpServer) setListenAddr(host string, port int) error {
 
 // start starts the HTTP server if it is enabled and not already running.
 func (h *httpServer) start() error {
-	if h.endpoint == ""{
+	if h.endpoint == "" {
 		h.log.Info("RPC endpoint not specified")
 		return nil
 	}
