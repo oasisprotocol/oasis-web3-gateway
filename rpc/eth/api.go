@@ -9,11 +9,13 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/eth/filters"
 	"github.com/ethereum/go-ethereum/rlp"
 	ethrpc "github.com/ethereum/go-ethereum/rpc"
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
+	roothash "github.com/oasisprotocol/oasis-core/go/roothash/api"
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/accounts"
@@ -92,7 +94,7 @@ func (api *PublicAPI) roundParamFromBlockNum(blockNum ethrpc.BlockNumber) (uint6
 	}
 }
 
-func (api *PublicAPI) getRPCBlock(oasisBlock *block.Block) (map[string]interface{}, error) {
+func (api *PublicAPI) getRPCBlockData(oasisBlock *block.Block) (uint64, ethtypes.Transactions, uint64, []*ethtypes.Log, error) {
 	bhash, _ := oasisBlock.Header.IORoot.MarshalBinary()
 	blockNum := oasisBlock.Header.Round
 	ethTxs := ethtypes.Transactions{}
@@ -101,7 +103,7 @@ func (api *PublicAPI) getRPCBlock(oasisBlock *block.Block) (map[string]interface
 	txResults, err := api.client.GetTransactionsWithResults(api.ctx, blockNum)
 	if err != nil {
 		api.Logger.Error("Failed to get transaction results", "number", blockNum, "error", err.Error())
-		return nil, err
+		return 0, nil, 0, nil, err
 	}
 
 	for txIndex, item := range txResults {
@@ -138,6 +140,14 @@ func (api *PublicAPI) getRPCBlock(oasisBlock *block.Block) (map[string]interface
 		}
 
 		logs = logs2EthLogs(oasisLogs, oasisBlock.Header.Round, common.BytesToHash(bhash), ethTx.Hash(), uint32(txIndex))
+	}
+	return blockNum, ethTxs, gasUsed, logs, nil
+}
+
+func (api *PublicAPI) getRPCBlock(oasisBlock *block.Block) (map[string]interface{}, error) {
+	blockNum, ethTxs, gasUsed, logs, err := api.getRPCBlockData(oasisBlock)
+	if err != nil {
+		return nil, err
 	}
 
 	res, err := utils.ConvertToEthBlock(oasisBlock, ethTxs, logs, gasUsed)
@@ -601,6 +611,65 @@ func (api *PublicAPI) GetTransactionReceipt(txHash common.Hash) (map[string]inte
 	}
 	api.Logger.Debug("eth_getTransactionReceipt end")
 	return receipt, nil
+}
+
+func (api *PublicAPI) GetLogs(filter filters.FilterCriteria) ([]*ethtypes.Log, error) {
+	api.Logger.Debug("eth_getLogs", "filter", filter)
+
+	startRoundInclusive := client.RoundLatest
+	endRoundInclusive := client.RoundLatest
+	if filter.BlockHash != nil {
+		round, err := api.backend.QueryBlockRound(*filter.BlockHash)
+		if err != nil {
+			return nil, fmt.Errorf("query block round: %w", err)
+		}
+		startRoundInclusive = round
+		endRoundInclusive = round
+	} else {
+		if filter.FromBlock != nil {
+			round, err := api.roundParamFromBlockNum(ethrpc.BlockNumber(filter.FromBlock.Int64()))
+			if err != nil {
+				return nil, fmt.Errorf("convert from block number to round: %w", err)
+			}
+			startRoundInclusive = round
+		}
+		if filter.ToBlock != nil {
+			round, err := api.roundParamFromBlockNum(ethrpc.BlockNumber(filter.ToBlock.Int64()))
+			if err != nil {
+				return nil, fmt.Errorf("convert to block number to round: %w", err)
+			}
+			endRoundInclusive = round
+		}
+	}
+
+	// Warning: this is unboundedly expensive
+	var ethLogs []*ethtypes.Log
+	for round := startRoundInclusive; ; /* see explicit break */ round++ {
+		block, err := api.client.GetBlock(api.ctx, round)
+		if err != nil {
+			if errors.Is(err, roothash.ErrNotFound) && round != client.RoundLatest && endRoundInclusive == client.RoundLatest {
+				// We've walked up to the latest round
+				break
+			}
+			return nil, fmt.Errorf("get block %d: %w", round, err)
+		}
+		_, _, _, blockLogs, err := api.getRPCBlockData(block)
+		if err != nil {
+			return nil, fmt.Errorf("convert block %d to rpc block: %w", block.Header.Round, err)
+		}
+
+		// TODO: filter addresses and topics
+
+		ethLogs = append(ethLogs, blockLogs...)
+
+		if round == endRoundInclusive {
+			break
+		}
+	}
+
+	api.Logger.Debug("eth_getLogs response", "resp", ethLogs)
+
+	return ethLogs, nil
 }
 
 // logs2EthLogs casts the Oasis Logs to a slice of Ethereum Logs.
