@@ -33,7 +33,6 @@ type Service struct {
 	client        client.RuntimeClient
 	ctx           context.Context
 	cancelCtx     context.CancelFunc
-	stopFlag      bool
 	enablePruning bool
 	pruningStep   uint64
 }
@@ -152,7 +151,6 @@ func (s *Service) Start() {
 
 func (s *Service) Stop() {
 	s.cancelCtx()
-	s.stopFlag = true
 }
 
 // New creates a new indexer service.
@@ -177,7 +175,6 @@ func New(backendFactory BackendFactory,
 		client:                client,
 		ctx:                   ctx,
 		cancelCtx:             cancelCtx,
-		stopFlag:              false,
 		enablePruning:         enablePruning,
 		pruningStep:           pruningStep,
 	}

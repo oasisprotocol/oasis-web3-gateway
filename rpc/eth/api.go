@@ -144,20 +144,6 @@ func (api *PublicAPI) getRPCBlockData(oasisBlock *block.Block) (uint64, ethtypes
 	return blockNum, ethTxs, gasUsed, logs, nil
 }
 
-func (api *PublicAPI) getRPCBlock(oasisBlock *block.Block) (map[string]interface{}, error) {
-	blockNum, ethTxs, gasUsed, logs, err := api.getRPCBlockData(oasisBlock)
-	if err != nil {
-		return nil, err
-	}
-
-	res, err := utils.ConvertToEthBlock(oasisBlock, ethTxs, logs, gasUsed)
-	if err != nil {
-		api.Logger.Debug("Failed to ConvertToEthBlock", "height", blockNum, "error", err.Error())
-		return nil, err
-	}
-	return res, nil
-}
-
 // GetBlockByNumber returns the block identified by number.
 func (api *PublicAPI) GetBlockByNumber(blockNum ethrpc.BlockNumber, _ bool) (map[string]interface{}, error) {
 	api.Logger.Debug("eth_getBlockByNumber", "number", blockNum)
