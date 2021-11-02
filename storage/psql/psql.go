@@ -98,7 +98,7 @@ func (db *PostDb) Delete(table interface{}, round uint64) error {
 
 // GetBlockRound returns block round by block hash.
 func (db *PostDb) GetBlockRound(hash string) (uint64, error) {
-	block := new(model.BlockRef)
+	block := new(model.Block)
 	err := db.Db.Model(block).
 		Where("hash=?", hash).
 		Select()
