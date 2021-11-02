@@ -39,6 +39,7 @@ var (
 	ErrBlockNotFound              = errors.New("block not found")
 	ErrTransactionNotFound        = errors.New("transaction not found")
 	ErrTransactionReceiptNotFound = errors.New("transaction receipt not found")
+	ErrMalformedTransaction       = errors.New("malformed transaction")
 )
 
 // Log is the Oasis Log.
@@ -371,6 +372,13 @@ func (api *PublicAPI) Call(args utils.TransactionArgs, blockNum ethrpc.BlockNumb
 func (api *PublicAPI) SendRawTransaction(data hexutil.Bytes) (common.Hash, error) {
 	api.Logger.Debug("eth_sendRawTransaction", "length", len(data))
 
+	// Decode the Ethereum transaction.
+	ethTx := &ethtypes.Transaction{}
+	if err := rlp.DecodeBytes(data, ethTx); err != nil {
+		api.Logger.Error("failed to decode raw transaction data", "err", err.Error())
+		return common.Hash{}, ErrMalformedTransaction
+	}
+
 	// Generate an Ethereum transaction that is handled by the EVM module.
 	utx := types.UnverifiedTransaction{
 		Body: data,
@@ -381,14 +389,8 @@ func (api *PublicAPI) SendRawTransaction(data hexutil.Bytes) (common.Hash, error
 
 	err := api.client.SubmitTxNoWait(api.ctx, &utx)
 	if err != nil {
-		api.Logger.Error("Failed to SubmitTx", "error", err.Error())
-	}
-
-	// Decode the Ethereum transaction.
-	ethTx := &ethtypes.Transaction{}
-	err = rlp.DecodeBytes(data, ethTx)
-	if err != nil {
-		api.Logger.Error("Failed to decode rawtx data", "error", err.Error())
+		api.Logger.Warn("failed to submit transaction", "err", err.Error())
+		return ethTx.Hash(), err
 	}
 
 	return ethTx.Hash(), nil
