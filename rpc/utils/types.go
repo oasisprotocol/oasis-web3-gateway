@@ -48,7 +48,7 @@ type TransactionArgs struct {
 
 	// Introduced by AccessListTxType transaction.
 	AccessList *ethtypes.AccessList `json:"accessList,omitempty"`
-	ChainID    *hexutil.Big      `json:"chainId,omitempty"`
+	ChainID    *hexutil.Big         `json:"chainId,omitempty"`
 }
 
 // StateOverride is the collection of overridden accounts.
