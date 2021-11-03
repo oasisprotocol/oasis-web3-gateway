@@ -7,66 +7,10 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/trie"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
-
-	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 )
 
-var (
-	defaultValidatorAddr = "0x0000000000000000000000000000000088888888"
-	defaultSize          = 100
-	defaultGasLimit      = 21000 * 1000
-	EmptyRootHash        = common.HexToHash("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
-)
-
-// ConvertToEthBlock returns a JSON-RPC compatible Ethereum block from a given Oasis block and its block result.
-func ConvertToEthBlock(
-	block *block.Block,
-	transactions ethtypes.Transactions,
-	logs []*ethtypes.Log,
-	gas uint64,
-) (map[string]interface{}, error) {
-	// TODO tx releated
-	bhash, _ := block.Header.IORoot.MarshalBinary()
-	bprehash, _ := block.Header.PreviousHash.MarshalBinary()
-	bshash, _ := block.Header.StateRoot.MarshalBinary()
-	bloom := ethtypes.BytesToBloom(ethtypes.LogsBloom(logs))
-	gasUsed := big.NewInt(0).SetUint64(gas)
-
-	var btxhash common.Hash
-	if len(transactions) == 0 {
-		btxhash = EmptyRootHash
-	} else {
-		btxhash = ethtypes.DeriveSha(transactions, trie.NewStackTrie(nil))
-	}
-
-	res := map[string]interface{}{
-		"number":           hexutil.Uint64(block.Header.Round),
-		"hash":             hexutil.Bytes(bhash),
-		"parentHash":       common.BytesToHash(bprehash),
-		"nonce":            ethtypes.BlockNonce{},
-		"sha3Uncles":       ethtypes.EmptyUncleHash,
-		"logsBloom":        bloom,
-		"stateRoot":        hexutil.Bytes(bshash),
-		"miner":            defaultValidatorAddr,
-		"mixHash":          common.Hash{},
-		"difficulty":       (*hexutil.Big)(big.NewInt(0)),
-		"extraData":        "0x",
-		"size":             hexutil.Uint64(defaultSize),
-		"gasLimit":         hexutil.Uint64(defaultGasLimit),
-		"gasUsed":          (*hexutil.Big)(gasUsed),
-		"timestamp":        hexutil.Uint64(block.Header.Timestamp),
-		"transactionsRoot": btxhash,
-		"receiptsRoot":     ethtypes.EmptyRootHash,
-
-		"uncles":          []common.Hash{},
-		"transactions":    transactions,
-		"totalDifficulty": (*hexutil.Big)(big.NewInt(0)),
-	}
-
-	return res, nil
-}
+var defaultSize = 100
 
 // ConstructRPCTransaction returns a transaction that will serialize to the RPC representation.
 func ConstructRPCTransaction(
@@ -175,7 +119,7 @@ func NewRPCTransaction(
 	return resTx, nil
 }
 
-func ConvertToOutBlock(block *model.Block) map[string]interface{} {
+func ConvertToEthBlock(block *model.Block) map[string]interface{} {
 	v1 := big.NewInt(0)
 	diff, _ := v1.SetString(block.Header.Difficulty, 10)
 

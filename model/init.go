@@ -14,6 +14,7 @@ func addModel() {
 	Models = append(Models, new(Transaction))
 	Models = append(Models, new(ContinuesIndexedRound))
 	Models = append(Models, new(Block))
+	Models = append(Models, new(Log))
 }
 
 // InitModel initializes models

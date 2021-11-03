@@ -114,19 +114,19 @@ func (s *Service) indexingWorker() {
 			panic("This is a new chain, please clear the db first!")
 		}
 
-		// Adjust the last indexed round such that it is at least equal to or greater than the last
-		// retained round reported by the node as there is no way to request earlier rounds.
-		lastRetainedBlock, err := s.client.GetLastRetainedBlock(s.ctx)
-		if err != nil {
-			time.Sleep(storageRequestTimeout)
-			s.Logger.Error("failed to retrieve last retained round",
-				"err", err,
-			)
-			continue
-		}
-		if lastIndexed < lastRetainedBlock.Header.Round {
-			lastIndexed = lastRetainedBlock.Header.Round - 1
-		}
+		// // Adjust the last indexed round such that it is at least equal to or greater than the last
+		// // retained round reported by the node as there is no way to request earlier rounds.
+		// lastRetainedBlock, err := s.client.GetLastRetainedBlock(s.ctx)
+		// if err != nil {
+		// 	time.Sleep(storageRequestTimeout)
+		// 	s.Logger.Error("failed to retrieve last retained round",
+		// 		"err", err,
+		// 	)
+		// 	continue
+		// }
+		// if lastIndexed < lastRetainedBlock.Header.Round {
+		// 	lastIndexed = lastRetainedBlock.Header.Round - 1
+		// }
 
 		if latest == lastIndexed {
 			time.Sleep(storageRetryTimeout)
