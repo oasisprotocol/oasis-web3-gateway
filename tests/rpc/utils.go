@@ -5,17 +5,36 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"math/big"
 	"net/http"
-	"os"
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
+	cmnEth "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/pkg/errors"
+	"github.com/oasisprotocol/oasis-core/go/common"
+	cmnGrpc "github.com/oasisprotocol/oasis-core/go/common/grpc"
+	"github.com/oasisprotocol/oasis-core/go/common/logging"
+	"github.com/oasisprotocol/oasis-core/go/common/quantity"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/ed25519"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/accounts"
+	consAccClient "github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/consensusaccounts"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
+	oasisTesting "github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc"
+
+	"github.com/starfishlabs/oasis-evm-web3-gateway/indexer"
+	"github.com/starfishlabs/oasis-evm-web3-gateway/log"
+	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
+	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc"
+	"github.com/starfishlabs/oasis-evm-web3-gateway/server"
+	"github.com/starfishlabs/oasis-evm-web3-gateway/storage/psql"
+	"github.com/starfishlabs/oasis-evm-web3-gateway/tests"
 )
 
 type Request struct {
@@ -37,7 +56,192 @@ type Response struct {
 	Result json.RawMessage `json:"result,omitempty"`
 }
 
-var HOST = os.Getenv("HOST")
+const OasisBlockTimeout = 35 * time.Second
+
+var (
+	db *psql.PostDB
+	w3 *server.Web3Gateway
+)
+
+// Setup spins up web3 gateway.
+func Setup() error {
+	tests.MustInitConfig()
+
+	if err := log.InitLogging(tests.TestsConfig); err != nil {
+		return fmt.Errorf("setup: initialize logging: %w", err)
+	}
+
+	// Establish a gRPC connection with the client node.
+	conn, err := cmnGrpc.Dial(tests.TestsConfig.NodeAddress, grpc.WithInsecure())
+	if err != nil {
+		return fmt.Errorf("setup: failed to establish gRPC connection with oasis-node: %w", err)
+	}
+
+	// Decode hex runtime ID into something we can use.
+	var runtimeID common.Namespace
+	if err = runtimeID.UnmarshalHex(tests.TestsConfig.RuntimeID); err != nil {
+		return fmt.Errorf("malformed runtime ID: %w", err)
+	}
+
+	// Create the Oasis runtime client.
+	rc := client.New(conn, runtimeID)
+	_, err = rc.GetInfo(context.Background())
+	if err != nil {
+		logging.GetLogger("main").Error("It seems oasis-node is not running. To spin up oasis-node locally you can run tests/tools/spinup-oasis-stack.sh")
+		return fmt.Errorf("failed connecting to oasis-node: %w", err)
+	}
+
+	if err = InitialDeposit(rc, 1000000000000); err != nil {
+		return fmt.Errorf("initial deposit failed: %w", err)
+	}
+
+	// Initialize db.
+	db, err = psql.InitDB(tests.TestsConfig.Database)
+	if err != nil {
+		return fmt.Errorf("failed to initialize DB: %w", err)
+	}
+
+	// Create Indexer.
+	f := indexer.NewPsqlBackend()
+	indx, backend, err := indexer.New(f, rc, runtimeID, db, tests.TestsConfig.EnablePruning, tests.TestsConfig.PruningStep)
+	if err != nil {
+		return fmt.Errorf("failed to create indexer: %w", err)
+	}
+	indx.Start()
+
+	// Create Web3 Gateway.
+	w3, err = server.New(tests.TestsConfig.Gateway)
+	if err != nil {
+		return fmt.Errorf("setup: failed creating server: %w", err)
+	}
+
+	w3.RegisterAPIs(rpc.GetRPCAPIs(context.Background(), rc, backend, tests.TestsConfig.Gateway))
+
+	if err = w3.Start(); err != nil {
+		w3.Close()
+		return fmt.Errorf("setup: failed to start server: %w", err)
+	}
+	return nil
+}
+
+func waitForDepositEvent(ch <-chan *client.BlockEvents, from types.Address, nonce uint64, to types.Address, amount types.BaseUnits) error {
+	for {
+		select {
+		case bev := <-ch:
+			for _, ev := range bev.Events {
+				ae, ok := ev.(*consAccClient.Event)
+				if !ok {
+					continue
+				}
+				if ae.Deposit == nil {
+					continue
+				}
+				if !ae.Deposit.From.Equal(from) {
+					continue
+				}
+				if ae.Deposit.Nonce != nonce {
+					continue
+				}
+				if !ae.Deposit.To.Equal(to) {
+					continue
+				}
+				if ae.Deposit.Amount.Amount.Cmp(&amount.Amount) != 0 {
+					continue
+				}
+				if ae.Deposit.Amount.Denomination != amount.Denomination {
+					continue
+				}
+				return nil
+			}
+
+		case <-time.After(OasisBlockTimeout):
+			return fmt.Errorf("timeout waiting for event")
+		}
+	}
+}
+
+func InitialDeposit(rc client.RuntimeClient, amount uint64) error {
+	if amount == 0 {
+		return fmt.Errorf("no deposit amount provided")
+	}
+	if rc == nil {
+		return fmt.Errorf("no runtime client provided")
+	}
+
+	signer := oasisTesting.Alice.Signer
+	// Corresponds to Dave's address 0x90adE3B7065fa715c7a150313877dF1d33e777D5.
+	to := oasisTesting.Dave.Address
+	extraGas := uint64(0)
+	flag.Parse()
+
+	consAcc := consAccClient.NewV1(rc)
+
+	ctx, cancelFn := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancelFn()
+
+	ba := types.NewBaseUnits(*quantity.NewFromUint64(amount), types.NativeDenomination)
+	txb := consAcc.Deposit(&to, ba).SetFeeConsensusMessages(1)
+	tx := *txb.GetTransaction()
+
+	// Get chain context.
+	chainInfo, err := rc.GetInfo(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Get current nonce for the signer's account.
+	ac := accounts.NewV1(rc)
+	nonce, err := ac.Nonce(ctx, client.RoundLatest, types.NewAddress(types.NewSignatureAddressSpecEd25519(signer.Public().(ed25519.PublicKey))))
+	if err != nil {
+		return err
+	}
+	tx.AppendAuthSignature(types.NewSignatureAddressSpecEd25519(signer.Public().(ed25519.PublicKey)), nonce)
+
+	// Estimate gas.
+	// Set the starting gas to something high, so we don't run out.
+	tx.AuthInfo.Fee.Gas = 1000000
+	// Estimate gas usage.
+	gas, err := core.NewV1(rc).EstimateGas(ctx, client.RoundLatest, &tx)
+	if err != nil {
+		return fmt.Errorf("unable to estimate gas: %w", err)
+	}
+	// Specify only as much gas as was estimated.
+	tx.AuthInfo.Fee.Gas = gas + extraGas
+
+	// Sign the transaction.
+	stx := tx.PrepareForSigning()
+	if err = stx.AppendSign(chainInfo.ChainContext, signer); err != nil {
+		return err
+	}
+
+	consAccounts := consAccClient.NewV1(rc)
+	acCh, err := rc.WatchEvents(context.Background(), []client.EventDecoder{consAccounts}, false)
+	if err != nil {
+		return err
+	}
+
+	// Submit the signed transaction.
+	if _, err = rc.SubmitTx(ctx, stx.UnverifiedTransaction()); err != nil {
+		return err
+	}
+
+	if err = waitForDepositEvent(acCh, oasisTesting.Alice.Address, nonce, oasisTesting.Dave.Address, ba); err != nil {
+		return fmt.Errorf("ensuring alice deposit runtime event: %w", err)
+	}
+
+	fmt.Printf("Successfully deposited %d tokens from %s to %s (eth address %x)\n", amount, oasisTesting.Alice.Address, to, oasisTesting.Dave.EthAddress)
+
+	return nil
+}
+
+// Shutdown stops web3 gateway.
+func Shutdown() error {
+	if err := model.TruncateModel(db.DB); err != nil {
+		return fmt.Errorf("db cleanup failed: %w", err)
+	}
+
+	return w3.Close()
+}
 
 func GetAddress() ([]byte, error) {
 	rpcRes, err := CallWithError("eth_accounts", []string{})
@@ -70,7 +274,9 @@ func Call(t *testing.T, method string, params interface{}) *Response {
 	var rpcRes *Response
 	time.Sleep(1 * time.Second)
 
-	httpReq, err := http.NewRequestWithContext(context.Background(), "POST", HOST, bytes.NewBuffer(req))
+	url, err := w3.GetHTTPEndpoint()
+	require.NoError(t, err)
+	httpReq, err := http.NewRequestWithContext(context.Background(), "POST", url, bytes.NewBuffer(req))
 	if err != nil {
 		require.NoError(t, err)
 	}
@@ -79,7 +285,7 @@ func Call(t *testing.T, method string, params interface{}) *Response {
 	client := &http.Client{}
 	res, err := client.Do(httpReq)
 	if err != nil {
-		require.NoError(t, errors.Wrap(err, "Could not perform request"))
+		require.NoError(t, fmt.Errorf("could not perform request: %w", err))
 	}
 
 	decoder := json.NewDecoder(res.Body)
@@ -103,7 +309,11 @@ func CallWithError(method string, params interface{}) (*Response, error) {
 	var rpcRes *Response
 	time.Sleep(1 * time.Second)
 
-	httpReq, err := http.NewRequestWithContext(context.Background(), "POST", HOST, bytes.NewBuffer(req))
+	url, err := w3.GetHTTPEndpoint()
+	if err != nil {
+		return nil, err
+	}
+	httpReq, err := http.NewRequestWithContext(context.Background(), "POST", url, bytes.NewBuffer(req))
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +322,7 @@ func CallWithError(method string, params interface{}) (*Response, error) {
 	client := &http.Client{}
 	res, err := client.Do(httpReq)
 	if err != nil {
-		return nil, errors.Wrap(err, "Could not perform request")
+		return nil, fmt.Errorf("could not perform request: %w", err)
 	}
 
 	decoder := json.NewDecoder(res.Body)
@@ -134,7 +344,7 @@ func CallWithError(method string, params interface{}) (*Response, error) {
 	return rpcRes, nil
 }
 
-// turns a 0x prefixed hex string to a big.Int
+// HexToBigInt turns a 0x prefixed hex string to a big.Int.
 func HexToBigInt(t *testing.T, in string) *big.Int {
 	s := in[2:]
 	b, err := hex.DecodeString(s)
@@ -142,7 +352,7 @@ func HexToBigInt(t *testing.T, in string) *big.Int {
 	return big.NewInt(0).SetBytes(b)
 }
 
-// sendTestTransaction sends a dummy transaction
+// sendTestTransaction sends a dummy transaction.
 func SendTestTransaction(t *testing.T, addr []byte) hexutil.Bytes {
 	param := make([]map[string]string, 1)
 	param[0] = make(map[string]string)
@@ -162,7 +372,7 @@ func SendTestTransaction(t *testing.T, addr []byte) hexutil.Bytes {
 	return hash
 }
 
-// deployTestContract deploys a contract that emits an event in the constructor
+// deployTestContract deploys a contract that emits an event in the constructor.
 func DeployTestContract(t *testing.T, addr []byte) (hexutil.Bytes, map[string]interface{}) {
 	param := make([]map[string]string, 1)
 	param[0] = make(map[string]string)
@@ -268,7 +478,7 @@ func GetNonce(t *testing.T, block string) hexutil.Uint64 {
 }
 
 func UnlockAllAccounts(t *testing.T) {
-	var accts []common.Address
+	var accts []cmnEth.Address
 	rpcRes := Call(t, "eth_accounts", []map[string]string{})
 	err := json.Unmarshal(rpcRes.Result, &accts)
 	require.NoError(t, err)

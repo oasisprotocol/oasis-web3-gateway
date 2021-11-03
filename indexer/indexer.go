@@ -8,6 +8,7 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common"
 	"github.com/oasisprotocol/oasis-core/go/common/service"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
+
 	"github.com/starfishlabs/oasis-evm-web3-gateway/storage"
 )
 
@@ -40,7 +41,7 @@ type Service struct {
 	cancelCtx context.CancelFunc
 }
 
-// indexBlock
+// indexBlock indexes given block number.
 func (s *Service) indexBlock(round uint64) error {
 	blk, err := s.client.GetBlock(s.ctx, round)
 	if err != nil {

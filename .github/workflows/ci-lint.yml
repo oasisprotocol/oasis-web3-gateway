@@ -16,16 +16,13 @@ on:
       - stable/*
 
 jobs:
-
   lint-go:
     name: lint-go
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-
       - name: Lint Go
         uses: golangci/golangci-lint-action@v2
         with:
-          # NOTE: The version must be specified without the patch version.
-          version: v1.40
+          version: v1.43

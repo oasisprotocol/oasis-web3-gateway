@@ -5,9 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"math/big"
 	"net/http"
-	"os"
 	"testing"
 	"time"
 
@@ -16,26 +16,12 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	oasisTesting "github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing"
 	"github.com/stretchr/testify/require"
 )
 
-const (
-	// dave address generated from github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing
-	daveEVMAddr = "0xdce075e1c39b1ae0b75d554558b6451a226ffe00"
-	// Zero hex bytes used in jsonrpc
-	zeroString = "0x0"
-)
-
-// The dave private key derive from the seed "oasis-runtime-sdk/test-keys: dave"
+// Dave's private key for signing Ethereum transactions derived from the seed "oasis-runtime-sdk/test-keys: dave".
 var daveKey, _ = crypto.HexToECDSA("c0e43d8755f201b715fd5a9ce0034c568442543ae0a0ee1aec2985ffe40edb99")
-
-func TestMain(m *testing.M) {
-	HOST = "http://localhost:8545"
-
-	// Start all tests
-	code := m.Run()
-	os.Exit(code)
-}
 
 func createRequest(method string, params interface{}) Request {
 	return Request{
@@ -47,11 +33,20 @@ func createRequest(method string, params interface{}) Request {
 }
 
 func call(t *testing.T, method string, params interface{}) *Response {
-	req, err := json.Marshal(createRequest(method, params))
+	rawReq, err := json.Marshal(createRequest(method, params))
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Second)
-	res, err := http.Post(HOST, "application/json", bytes.NewBuffer(req))
+	endpoint, err := w3.GetHTTPEndpoint()
+	if err != nil {
+		log.Fatalf("failed to obtain HTTP endpoint: %v", err)
+	}
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, endpoint, bytes.NewBuffer(rawReq))
+	req.Header.Set("Content-Type", "application/json")
+	require.NoError(t, err)
+
+	client := http.Client{}
+	res, err := client.Do(req)
 	require.NoError(t, err)
 
 	decoder := json.NewDecoder(res.Body)
@@ -67,17 +62,13 @@ func call(t *testing.T, method string, params interface{}) *Response {
 }
 
 func TestEth_GetBalance(t *testing.T) {
-	rpcRes := call(t, "eth_getBalance", []string{daveEVMAddr, zeroString})
-
-	var res hexutil.Big
-	err := res.UnmarshalJSON(rpcRes.Result)
+	ec := localClient()
+	res, err := ec.BalanceAt(context.Background(), oasisTesting.Dave.EthAddress, nil)
 	require.NoError(t, err)
 
-	t.Logf("Got balance %s for %s\n", res.String(), daveEVMAddr)
+	t.Logf("Got balance %s for %x\n", res.String(), oasisTesting.Dave.EthAddress)
 
-	if res.ToInt().Cmp(big.NewInt(0)) == 0 {
-		t.Errorf("expected balance: %d, got: %s", 0, res.String())
-	}
+	require.Greater(t, res.Uint64(), big.NewInt(0).Uint64())
 }
 
 func getNonce(t *testing.T, from string) hexutil.Uint64 {
@@ -91,12 +82,16 @@ func getNonce(t *testing.T, from string) hexutil.Uint64 {
 }
 
 func TestEth_GetTransactionCount(t *testing.T) {
-	getNonce(t, daveEVMAddr)
+	getNonce(t, fmt.Sprintf("0x%x", oasisTesting.Dave.EthAddress))
 }
 
 func localClient() *ethclient.Client {
-	HOST = "http://localhost:8545"
-	c, _ := ethclient.Dial(HOST)
+	url, err := w3.GetHTTPEndpoint()
+	if err != nil {
+		return nil
+	}
+
+	c, _ := ethclient.Dial(url)
 	return c
 }
 
@@ -107,7 +102,7 @@ func TestEth_ChainID(t *testing.T) {
 	require.Nil(t, err, "get chainid")
 
 	t.Logf("chain id: %v", id)
-	require.Equal(t, big.NewInt(42261), id)
+	require.Equal(t, big.NewInt(42262), id)
 }
 
 func TestEth_GasPrice(t *testing.T) {
@@ -119,51 +114,59 @@ func TestEth_GasPrice(t *testing.T) {
 	t.Logf("gas price: %v", price)
 }
 
-// TestEth_SendRawTransaction post eth raw transaction with ethclient from go-ethereum
+// TestEth_SendRawTransaction post eth raw transaction with ethclient from go-ethereum.
 func TestEth_SendRawTransaction(t *testing.T) {
 	ec := localClient()
+	ctx := context.Background()
 
 	chainID, err := ec.ChainID(context.Background())
-	require.Nil(t, err, "get chainid")
+	require.NoError(t, err)
 
-	nonce, err := ec.NonceAt(context.Background(), common.HexToAddress(daveEVMAddr), nil)
-	require.Nil(t, err, "get nonce failed")
+	nonce, err := ec.NonceAt(context.Background(), oasisTesting.Dave.EthAddress, nil)
+	require.NoError(t, err)
 
 	// Create transaction
 	tx := types.NewTransaction(nonce, common.Address{1}, big.NewInt(1), 22000, big.NewInt(2), nil)
 	signer := types.LatestSignerForChainID(chainID)
 	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), daveKey)
-	require.Nil(t, err, "sign tx")
+	require.NoError(t, err)
 
 	signedTx, err := tx.WithSignature(signer, signature)
-	require.Nil(t, err, "pack tx")
+	require.NoError(t, err)
 
-	ec.SendTransaction(context.Background(), signedTx)
+	err = ec.SendTransaction(context.Background(), signedTx)
+	require.NoError(t, err)
+
+	_, err = waitTransaction(ctx, ec, signedTx.Hash())
+	require.NoError(t, err)
 }
 
 func TestEth_GetBlockByNumberAndGetBlockByHash(t *testing.T) {
-	param1 := []interface{}{"0x1", false}
-	rpcRes1 := call(t, "eth_getBlockByNumber", param1)
+	ec := localClient()
+	ctx := context.Background()
 
-	blk1 := make(map[string]interface{})
-	err := json.Unmarshal(rpcRes1.Result, &blk1)
+	number := big.NewInt(1)
+	blk1, err := ec.BlockByNumber(ctx, number)
 	require.NoError(t, err)
+	require.Equal(t, number, blk1.Number())
 
-	param := []interface{}{"0x1", false}
-	rpcRes := call(t, "eth_getBlockHash", param)
-	var blk_hash interface{}
-	err = json.Unmarshal(rpcRes.Result, &blk_hash)
-	require.NoError(t, err)
-	require.Equal(t, blk_hash, blk1["hash"])
-
-	blkhash := blk_hash.(string)
-	hash := common.HexToHash(blkhash)
-	param = []interface{}{hash, false}
-	rpcRes = call(t, "eth_getBlockByHash", param)
+	// go-ethereum's Block struct always computes block hash on-the-fly
+	// instead of simply returning the hash from BlockBy* API responses.
+	// Computing it this way will not work in Oasis because of other non-ethereum
+	// transactions in the block which need to be considered, but are not
+	// accessible by go-ethereum. To overcome this, we perform getBlockByNumber
+	// query with raw HTTP client and use the block's hash from that response.
+	// For details, see https://github.com/starfishlabs/oasis-evm-web3-gateway/issues/72
+	param := []interface{}{fmt.Sprintf("0x%x", number), false}
+	rpcRes := call(t, "eth_getBlockByNumber", param)
 	blk2 := make(map[string]interface{})
 	err = json.Unmarshal(rpcRes.Result, &blk2)
 	require.NoError(t, err)
-	require.Equal(t, blk1, blk2)
+	require.Equal(t, fmt.Sprintf("0x%x", number), blk2["number"])
+
+	blk3, err := ec.BlockByHash(ctx, common.HexToHash(blk2["hash"].(string)))
+	require.NoError(t, err)
+	require.Equal(t, number, blk3.Number())
 }
 
 func TestEth_BlockNumber(t *testing.T) {
@@ -172,16 +175,16 @@ func TestEth_BlockNumber(t *testing.T) {
 
 	ret, err := ec.BlockNumber(ctx)
 	require.NoError(t, err)
-	fmt.Println("The current block number is ", ret)
+	t.Logf("The current block number is %v", ret)
 }
 
 func TestEth_GetTransactionByHash(t *testing.T) {
 	ec := localClient()
 
-	chainID := big.NewInt(42261)
+	chainID := big.NewInt(42262)
 	data := common.FromHex("0x7f7465737432000000000000000000000000000000000000000000000000000000600057")
 	to := common.BytesToAddress(common.FromHex("0x1122334455667788990011223344556677889900"))
-	nonce, err := ec.NonceAt(context.Background(), common.HexToAddress(daveEVMAddr), nil)
+	nonce, err := ec.NonceAt(context.Background(), oasisTesting.Dave.EthAddress, nil)
 	require.Nil(t, err, "get nonce failed")
 
 	// Create transaction
@@ -200,26 +203,32 @@ func TestEth_GetTransactionByHash(t *testing.T) {
 	signedTx, err := tx.WithSignature(signer, signature)
 	require.Nil(t, err, "pack tx")
 
-	ec.SendTransaction(context.Background(), signedTx)
+	err = ec.SendTransaction(context.Background(), signedTx)
+	require.Nil(t, err, "send transaction failed")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
 	defer cancel()
 
 	receipt, err := waitTransaction(ctx, ec, signedTx.Hash())
-	if err != nil {
-		t.Errorf("get receipt failed: %s", err)
-		return
-	}
+	require.NoError(t, err)
 
-	require.Equal(t, receipt.Status, uint64(1))
-	require.NotNil(t, receipt, "transaction failed")
-	txHash := []string{receipt.TxHash.Hex()}
+	require.Equal(t, uint64(1), receipt.Status)
+	require.NotNil(t, receipt)
 
-	rpcRes := call(t, "eth_getTransactionByHash", txHash)
+	// go-ethereum's Transaction struct always computes transaction hash on-the-fly
+	// instead of simply returning the hash from TransactionBy* API responses.
+	// To overcome this, we perform getTransactionByHash query with raw HTTP
+	// client and use the tx's hash from that response.
+	// For details, see https://github.com/starfishlabs/oasis-evm-web3-gateway/issues/72
+	rpcRes := call(t, "eth_getTransactionByHash", []string{receipt.TxHash.Hex()})
 
-	rpcTx := make(map[string]interface{})
-	rpcErr := json.Unmarshal(rpcRes.Result, &rpcTx)
+	tx2 := make(map[string]interface{})
+	rpcErr := json.Unmarshal(rpcRes.Result, &tx2)
 	require.NoError(t, rpcErr)
-	require.NotNil(t, rpcTx)
-	require.Equal(t, txHash[0], rpcTx["hash"].(string))
+	require.NotNil(t, tx2)
+	require.Equal(t, signedTx.Hash(), common.HexToHash(tx2["hash"].(string)))
+
+	tx3, _, err := ec.TransactionByHash(ctx, receipt.TxHash)
+	require.NoError(t, err)
+	require.NotNil(t, tx3)
 }

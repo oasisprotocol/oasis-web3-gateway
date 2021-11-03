@@ -10,7 +10,6 @@ import (
 	"github.com/knadh/koanf/providers/env"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
-	"github.com/spf13/cobra"
 )
 
 // Config contains the CLI configuration.
@@ -74,7 +73,7 @@ func (cfg *LogConfig) Validate() error {
 type DatabaseConfig struct {
 	Host     string `koanf:"host"`
 	Port     int    `koanf:"port"`
-	Db       string `koanf:"db"`
+	DB       string `koanf:"db"`
 	User     string `koanf:"user"`
 	Password string `koanf:"password"`
 	Timeout  int    `koanf:"timeout"`
@@ -91,14 +90,14 @@ func (cfg *DatabaseConfig) Validate() error {
 
 // GatewayConfig is the gateway server configuration.
 type GatewayConfig struct {
-	// Http is the gateway http endpoint config.
-	Http *GatewayHTTPConfig `koanf:"http"`
+	// HTTP is the gateway http endpoint config.
+	HTTP *GatewayHTTPConfig `koanf:"http"`
 
 	// WS is the gateway websocket endpoint config.
 	WS *GatewayWSConfig `koanf:"ws"`
 
-	// ChainId defines the Ethereum netwrok chain id.
-	ChainId uint32 `koanf:"chain_id"`
+	// ChainID defines the Ethereum network chain id.
+	ChainID uint32 `koanf:"chain_id"`
 }
 
 // Validate validates the gateway configuration.
@@ -125,7 +124,7 @@ type GatewayHTTPConfig struct {
 
 	// Timeouts allows for customization of the timeout values used by the HTTP RPC
 	// interface.
-	Timeouts *HTTPTimeouts `mapsstructure:"timeouts"`
+	Timeouts *HTTPTimeouts `koanf:"timeouts"`
 }
 
 type HTTPTimeouts struct {
@@ -153,28 +152,32 @@ type GatewayWSConfig struct {
 }
 
 // InitConfig initializes configuration from file.
-func InitConfig(f string) *Config {
+func InitConfig(f string) (*Config, error) {
 	var config Config
 	k := koanf.New(".")
 
 	// Load configuration from the yaml config.
-	err := k.Load(file.Provider(f), yaml.Parser())
-	cobra.CheckErr(err)
+	if err := k.Load(file.Provider(f), yaml.Parser()); err != nil {
+		return nil, err
+	}
 
 	// Load environment variables and merge into the loaded config.
-	err = k.Load(env.Provider("", ".", func(s string) string {
+	if err := k.Load(env.Provider("", ".", func(s string) string {
 		// `__` is used as a hierarchy delimiter.
-		return strings.Replace(strings.ToLower(s), "__", ".", -1)
-	}), nil)
-	cobra.CheckErr(err)
+		return strings.ReplaceAll(strings.ToLower(s), "__", ".")
+	}), nil); err != nil {
+		return nil, err
+	}
 
 	// Unmarshal into config.
-	err = k.Unmarshal("", &config)
-	cobra.CheckErr(err)
+	if err := k.Unmarshal("", &config); err != nil {
+		return nil, err
+	}
 
 	// Validate config.
-	err = config.Validate()
-	cobra.CheckErr(err)
+	if err := config.Validate(); err != nil {
+		return nil, err
+	}
 
-	return &config
+	return &config, nil
 }

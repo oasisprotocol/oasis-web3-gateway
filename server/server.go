@@ -15,7 +15,7 @@ import (
 type Server struct {
 	Config *conf.Config
 	Web3   *Web3Gateway
-	Db     storage.Storage
+	DB     storage.Storage
 }
 
 func (s *Server) Start() error {
@@ -85,7 +85,7 @@ func New(conf *conf.GatewayConfig) (*Web3Gateway, error) {
 	}
 
 	// Check HTTP/WS prefixes are valid.
-	if err := validatePrefix("HTTP", conf.Http.PathPrefix); err != nil {
+	if err := validatePrefix("HTTP", conf.HTTP.PathPrefix); err != nil {
 		return nil, err
 	}
 	if err := validatePrefix("WebSocket", conf.WS.PathPrefix); err != nil {
@@ -93,8 +93,8 @@ func New(conf *conf.GatewayConfig) (*Web3Gateway, error) {
 	}
 
 	// Configure RPC servers.
-	if conf.Http != nil {
-		server.http = newHTTPServer(server.logger.With("server", "http"), timeoutsFromCfg(conf.Http.Timeouts))
+	if conf.HTTP != nil {
+		server.http = newHTTPServer(server.logger.With("server", "http"), timeoutsFromCfg(conf.HTTP.Timeouts))
 	}
 	if conf.WS != nil {
 		server.ws = newHTTPServer(server.logger.With("server", "ws"), timeoutsFromCfg(conf.WS.Timeouts))
@@ -176,14 +176,14 @@ func (srv *Web3Gateway) doClose(errs []error) error {
 // startRPC is a helper method to configure all the various RPC endpoints during server startup.
 func (srv *Web3Gateway) startRPC() error {
 	// Configure HTTP.
-	if srv.config.Http != nil {
+	if srv.config.HTTP != nil {
 		config := httpConfig{
 			Modules:            []string{"net", "web3", "eth"},
-			CorsAllowedOrigins: srv.config.Http.Cors,
-			Vhosts:             srv.config.Http.VirtualHosts,
-			prefix:             srv.config.Http.PathPrefix,
+			CorsAllowedOrigins: srv.config.HTTP.Cors,
+			Vhosts:             srv.config.HTTP.VirtualHosts,
+			prefix:             srv.config.HTTP.PathPrefix,
 		}
-		if err := srv.http.setListenAddr(srv.config.Http.Host, srv.config.Http.Port); err != nil {
+		if err := srv.http.setListenAddr(srv.config.HTTP.Host, srv.config.HTTP.Port); err != nil {
 			return err
 		}
 		if err := srv.http.enableRPC(srv.rpcAPIs, config); err != nil {
@@ -231,4 +231,20 @@ func (srv *Web3Gateway) RegisterAPIs(apis []rpc.API) {
 		panic("can't register APIs on running/stopped server")
 	}
 	srv.rpcAPIs = append(srv.rpcAPIs, apis...)
+}
+
+// GetHTTPEndpoint returns the address of HTTP endpoint.
+func (srv *Web3Gateway) GetHTTPEndpoint() (string, error) {
+	if srv.http == nil {
+		return "", fmt.Errorf("failed to obtain http endpoint")
+	}
+	return fmt.Sprintf("http://%s", srv.http.endpoint), nil
+}
+
+// GetWSEndpoint returns the address of Websocket endpoint.
+func (srv *Web3Gateway) GetWSEndpoint() (string, error) {
+	if srv.ws == nil {
+		return "", fmt.Errorf("failed to obtain websocket endpoint")
+	}
+	return fmt.Sprintf("ws://%s", srv.ws.endpoint), nil
 }
