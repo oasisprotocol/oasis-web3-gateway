@@ -193,8 +193,7 @@ func TestEth_GetCode(t *testing.T) {
 }
 
 func TestEth_Call(t *testing.T) {
-
-	var abidata = `
+	abidata := `
 		[
 			{
 				"inputs": [],
@@ -316,7 +315,7 @@ func TestERC20(t *testing.T) {
 		return
 	}
 	require.Equal(t, uint64(1), receipt.Status)
-	var tokenAddr = receipt.ContractAddress
+	tokenAddr := receipt.ContractAddress
 	t.Logf("ERC20 address: %s", tokenAddr.Hex())
 
 	// Make transfer token transaction

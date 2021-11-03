@@ -48,8 +48,8 @@ type QueryableBackend interface {
 	// QueryTransactionRef returns block hash, round and index of the transaction.
 	QueryTransactionRef(ethTxHash string) (*model.TransactionRef, error)
 
-	// QueryIndexedRound query continues indexed block round.
-	QueryIndexedRound() uint64
+	// QueryLastIndexedRound query continues indexed block round.
+	QueryLastIndexedRound() uint64
 
 	// QueryTransaction queries ethereum transaction by hash.
 	QueryTransaction(ethTxHash ethcommon.Hash) (*model.Transaction, error)
@@ -74,13 +74,20 @@ type Backend interface {
 	QueryableBackend
 	GetEthInfoBackend
 
+	// Index indexes a block.
 	Index(
 		oasisBlock *block.Block,
 		txResults []*client.TransactionWithResults,
 	) error
 
-	Pruning(step uint64) error
+	// Prune removes indexed data for rounds equal to or earlier than the passed round.
+	Prune(round uint64) error
 
+	// UpdateLastIndexedRound updates the last indexed round metadata.
+	UpdateLastIndexedRound(round uint64) error
+
+	// Close performs backend-specific cleanup. The backend should not be used anymore after calling
+	// this method.
 	Close()
 }
 
@@ -215,30 +222,43 @@ func (p *psqlBackend) Index(
 		}
 		txRef, ethTx, err := p.DecodeUtx(&utx, blockHash.String(), round, uint32(idx))
 		if err != nil {
-			p.logger.Error("decode transaction", "err", err)
+			p.logger.Error("failed to decode transaction",
+				"err", err,
+				"round", round,
+				"index", idx,
+			)
 			continue
 		}
 		p.storage.Store(txRef)
 		p.storage.Store(ethTx)
 	}
 
-	if p.QueryIndexedRound() == (round - 1) {
-		p.storeIndexedRound(round)
-		p.logger.Info("store Indexed block: ", "round", round)
-	}
-
-	p.logger.Info("Indexed block: ", "round", round)
+	p.logger.Info("indexed block", "round", round)
 
 	return nil
 }
 
-func (p *psqlBackend) Pruning(step uint64) error {
-	if err := p.storage.Delete(new(model.BlockRef), step); err != nil {
-		p.logger.Error("Pruning failed with these error ", "err", err)
+func (p *psqlBackend) UpdateLastIndexedRound(round uint64) error {
+	p.storeIndexedRound(round)
+	return nil
+}
+
+func (p *psqlBackend) Prune(round uint64) error {
+	if err := p.storage.Delete(new(model.BlockRef), round); err != nil {
 		return err
 	}
 
-	//TO DO: Will remove ethblock, logs, transactions latter
+	if err := p.storage.Delete(new(model.Block), round); err != nil {
+		return err
+	}
+
+	if err := p.storage.Delete(new(model.Log), round); err != nil {
+		return err
+	}
+
+	if err := p.storage.Delete(new(model.Transaction), round); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -281,7 +301,7 @@ func (p *psqlBackend) storeIndexedRound(round uint64) {
 	p.indexedRoundMutex.Unlock()
 }
 
-func (p *psqlBackend) QueryIndexedRound() uint64 {
+func (p *psqlBackend) QueryLastIndexedRound() uint64 {
 	p.indexedRoundMutex.Lock()
 	indexedRound, err := p.storage.GetContinuesIndexedRound()
 	if err != nil {
