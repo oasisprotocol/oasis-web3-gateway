@@ -79,3 +79,16 @@ type Header struct {
 	Nonce       uint64 `pg:",use_zero"`
 	BaseFee     string
 }
+
+// Log represents ethereum log in db.
+type Log struct {
+	Address   string
+	Topics    []string
+	Data      string
+	Round     uint64 `pg:",use_zero"` // BlockNumber
+	BlockHash string
+	TxHash    string `pg:",pk"`
+	TxIndex   uint   `pg:",use_zero"`
+	Index     uint   `pg:",use_zero"`
+	Removed   bool
+}

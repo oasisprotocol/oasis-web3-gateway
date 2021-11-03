@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"encoding/hex"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -202,6 +203,34 @@ func ConvertToOutBlock(block *model.Block) map[string]interface{} {
 		"size": hexutil.Uint64(defaultSize),
 
 		"totalDifficulty": (*hexutil.Big)(big.NewInt(0)),
+	}
+
+	return res
+}
+
+func DbLogs2EthLogs(dbLogs []*model.Log) []*ethtypes.Log {
+	res := []*ethtypes.Log{}
+
+	for _, log := range dbLogs {
+		data, _ := hex.DecodeString(log.Data)
+		topics := []common.Hash{}
+		for _, tp := range log.Topics {
+			topics = append(topics, common.HexToHash(tp))
+		}
+
+		ethLog := &ethtypes.Log{
+			Address:     common.HexToAddress(log.Address),
+			Topics:      topics,
+			Data:        data,
+			BlockNumber: log.Round,
+			TxHash:      common.HexToHash(log.TxHash),
+			TxIndex:     log.TxIndex,
+			BlockHash:   common.HexToHash(log.BlockHash),
+			Index:       log.Index,
+			Removed:     log.Removed,
+		}
+
+		res = append(res, ethLog)
 	}
 
 	return res

@@ -15,7 +15,6 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
-	roothash "github.com/oasisprotocol/oasis-core/go/roothash/api"
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/accounts"
@@ -631,21 +630,25 @@ func (api *PublicAPI) GetLogs(filter filters.FilterCriteria) ([]*ethtypes.Log, e
 	// Warning: this is unboundedly expensive
 	var ethLogs []*ethtypes.Log
 	for round := startRoundInclusive; ; /* see explicit break */ round++ {
-		block, err := api.client.GetBlock(api.ctx, round)
+		//block, err := api.client.GetBlock(api.ctx, round)
+		//if err != nil {
+		//	if errors.Is(err, roothash.ErrNotFound) && round != client.RoundLatest && endRoundInclusive == client.RoundLatest {
+		//		// We've walked up to the latest round
+		//		break
+		//	}
+		//	return nil, fmt.Errorf("get block %d: %w", round, err)
+		//}
+		//_, _, _, blockLogs, err := api.getRPCBlockData(block)
+		//if err != nil {
+		//	return nil, fmt.Errorf("convert block %d to rpc block: %w", block.Header.Round, err)
+		//}
+		dbLogs, err := api.backend.GetLogs(*filter.BlockHash)
 		if err != nil {
-			if errors.Is(err, roothash.ErrNotFound) && round != client.RoundLatest && endRoundInclusive == client.RoundLatest {
-				// We've walked up to the latest round
-				break
-			}
-			return nil, fmt.Errorf("get block %d: %w", round, err)
+			api.Logger.Error("get logs, err:", err)
+			continue
 		}
-		_, _, _, blockLogs, err := api.getRPCBlockData(block)
-		if err != nil {
-			return nil, fmt.Errorf("convert block %d to rpc block: %w", block.Header.Round, err)
-		}
-
 		// TODO: filter addresses and topics
-
+		blockLogs := utils.DbLogs2EthLogs(dbLogs)
 		ethLogs = append(ethLogs, blockLogs...)
 
 		if round == endRoundInclusive {

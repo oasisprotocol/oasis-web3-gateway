@@ -181,7 +181,7 @@ func (p *psqlBackend) generateEthBlock(oasisBlock *block.Block, txResults []*cli
 			continue
 		}
 
-		gasUsed += uint64(ethTx.Gas())
+		gasUsed += ethTx.Gas()
 		ethTxs = append(ethTxs, ethTx)
 
 		var oasisLogs []*Log
@@ -198,6 +198,9 @@ func (p *psqlBackend) generateEthBlock(oasisBlock *block.Block, txResults []*cli
 		}
 
 		logs = logs2EthLogs(oasisLogs, oasisBlock.Header.Round, common.BytesToHash(bhash), ethTx.Hash(), uint32(txIndex))
+		// store logs
+		dbLogs := ethLogs2DbLogs(logs)
+		p.storage.Store(dbLogs)
 	}
 
 	res, err := convertToEthBlock(oasisBlock, ethTxs, logs, gasUsed)
@@ -206,4 +209,31 @@ func (p *psqlBackend) generateEthBlock(oasisBlock *block.Block, txResults []*cli
 		return nil, err
 	}
 	return res, nil
+}
+
+func ethLogs2DbLogs(ethLogs []*ethtypes.Log) []*model.Log {
+	res := []*model.Log{}
+
+	for _, log := range ethLogs {
+		topics := []string{}
+		for _, tp := range log.Topics {
+			topics = append(topics, tp.Hex())
+		}
+
+		dbLog := &model.Log{
+			Address:   log.Address.Hex(),
+			Topics:    topics,
+			Data:      hex.EncodeToString(log.Data),
+			Round:     log.BlockNumber,
+			BlockHash: log.BlockHash.Hex(),
+			TxHash:    log.TxHash.Hex(),
+			TxIndex:   log.TxIndex,
+			Index:     log.Index,
+			Removed:   log.Removed,
+		}
+
+		res = append(res, dbLog)
+	}
+
+	return res
 }

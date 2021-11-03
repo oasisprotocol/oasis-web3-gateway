@@ -244,3 +244,13 @@ func (db *PostDb) GetTransactionReceipt(txHash string) (map[string]interface{}, 
 
 	return receipt, nil
 }
+
+func (db *PostDb) GetLogs(blockHash string) ([]*model.Log, error) {
+	logs := []*model.Log{}
+	err := db.Db.Model(&logs).Where("block_hash=?", blockHash).Select()
+	if err != nil {
+		return nil, err
+	}
+
+	return logs, nil
+}
