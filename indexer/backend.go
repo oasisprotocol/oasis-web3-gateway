@@ -191,10 +191,7 @@ func (p *psqlBackend) DecodeUtx(utx *types.UnverifiedTransaction, blockHash stri
 	return txRef, ethTx, nil
 }
 
-func (p *psqlBackend) Index(
-	oasisBlock *block.Block,
-	txResults []*client.TransactionWithResults,
-) error {
+func (p *psqlBackend) Index(oasisBlock *block.Block, txResults []*client.TransactionWithResults) error {
 	round := oasisBlock.Header.Round
 	blockHash := ethcommon.HexToHash(oasisBlock.Header.EncodedHash().Hex())
 
@@ -207,10 +204,13 @@ func (p *psqlBackend) Index(
 
 	// oasis block -> eth block, store eth block
 	ethBlock, err := p.generateEthBlock(oasisBlock, txResults)
-	p.storage.Store(ethBlock)
 	if err != nil {
 		p.logger.Error("generateEthBlock failed", "err", err)
-		return errors.New("Convert to eth block failed")
+		return err
+	}
+	err = p.storage.Store(ethBlock)
+	if err != nil {
+		return err
 	}
 
 	// store eth transactions, maybe should restructure
@@ -227,10 +227,13 @@ func (p *psqlBackend) Index(
 				"round", round,
 				"index", idx,
 			)
-			continue
+			return err
 		}
-		p.storage.Store(txRef)
-		p.storage.Store(ethTx)
+		p.storage.Store(txRef) // remove later
+		err = p.storage.Store(ethTx)
+		if err != nil {
+			return err
+		}
 	}
 
 	p.logger.Info("indexed block", "round", round)
