@@ -136,13 +136,18 @@ func convertToEthBlock(
 			GasFeeCap:  ethTx.GasFeeCap().String(),
 			Nonce:      ethTx.Nonce(),
 			FromAddr:   from.Hex(),
-			ToAddr:     ethTx.To().Hex(),
 			Value:      ethTx.Value().String(),
 			Data:       hex.EncodeToString(ethTx.Data()),
 			AccessList: accList,
 			V:          v.String(),
 			R:          r.String(),
 			S:          s.String(),
+		}
+		to := ethTx.To()
+		if to == nil {
+			tx.ToAddr = ""
+		} else {
+			tx.ToAddr = to.Hex()
 		}
 		innerTxs = append(innerTxs, tx)
 	}
@@ -161,7 +166,7 @@ func (p *psqlBackend) generateEthBlock(oasisBlock *block.Block, txResults []*cli
 	blockNum := oasisBlock.Header.Round
 	ethTxs := ethtypes.Transactions{}
 	var gasUsed uint64
-	var logs []*ethtypes.Log
+	logs := []*ethtypes.Log{}
 
 	for txIndex, item := range txResults {
 		oasisTx := item.Tx

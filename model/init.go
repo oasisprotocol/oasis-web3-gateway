@@ -8,6 +8,7 @@ import (
 // InitModel initializes db models.
 func InitModel(db *pg.DB) error {
 	models := []interface{}{
+		new(Block),
 		new(BlockRef),
 		new(TransactionRef),
 		new(Transaction),
