@@ -2,6 +2,7 @@ package eth
 
 import (
 	"context"
+	"crypto/sha512"
 	"errors"
 	"fmt"
 	"math/big"
@@ -14,10 +15,10 @@ import (
 	ethrpc "github.com/ethereum/go-ethereum/rpc"
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
-	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 	roothash "github.com/oasisprotocol/oasis-core/go/roothash/api"
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/secp256k1"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/accounts"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/evm"
@@ -28,11 +29,11 @@ import (
 	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/utils"
 )
 
-const (
-	// Callable methods.
-	methodCreate = "evm.Create"
-	methodCall   = "evm.Call"
-)
+func estimateGasDummySigSpec() types.SignatureAddressSpec {
+	pk := sha512.Sum512_256([]byte("estimateGas: dummy sigspec"))
+	signer := secp256k1.NewSigner(pk[:])
+	return types.NewSignatureAddressSpecSecp256k1Eth(signer.Public().(secp256k1.PublicKey))
+}
 
 var (
 	ErrInternalQuery              = errors.New("internal query error")
@@ -40,6 +41,10 @@ var (
 	ErrTransactionNotFound        = errors.New("transaction not found")
 	ErrTransactionReceiptNotFound = errors.New("transaction receipt not found")
 	ErrMalformedTransaction       = errors.New("malformed transaction")
+
+	// estimateGasSigSpec is a dummy signature spec used by the estimate gas method, as
+	// otherwise transactions without signature would be underestimated.
+	estimateGasSigSpec = estimateGasDummySigSpec()
 )
 
 // Log is the Oasis Log.
@@ -404,14 +409,6 @@ func (api *PublicAPI) EstimateGas(args utils.TransactionArgs, blockNum *ethrpc.B
 		// This may make sense if from not specified
 		args.From = &common.Address{}
 	}
-	if args.Gas == nil {
-		// The gas cap is enough for current ethereum transaction
-		gasCap := hexutil.Uint64(30_000_000)
-		args.Gas = &gasCap
-	}
-	if args.GasPrice == nil {
-		args.GasPrice = (*hexutil.Big)(big.NewInt(1))
-	}
 	if args.Value == nil {
 		args.Value = (*hexutil.Big)(big.NewInt(0))
 	}
@@ -419,18 +416,11 @@ func (api *PublicAPI) EstimateGas(args utils.TransactionArgs, blockNum *ethrpc.B
 		args.Data = (*hexutil.Bytes)(&[]byte{})
 	}
 
-	var q quantity.Quantity
-	totalFee := new(big.Int).Mul(args.GasPrice.ToInt(), new(big.Int).SetUint64(uint64(*args.Gas)))
-	q.FromBigInt(totalFee)
-	amount := types.NewBaseUnits(q, types.NativeDenomination)
-
 	ethTxValue := args.Value.ToInt().Bytes()
 	ethTxData := args.Data
 
 	var tx *types.Transaction
-	caller := types.NewAddressRaw(types.AddressV0Secp256k1EthContext, args.From[:])
 	round := client.RoundLatest
-
 	if blockNum != nil {
 		var err error
 		round, err = api.roundParamFromBlockNum(*blockNum)
@@ -442,13 +432,15 @@ func (api *PublicAPI) EstimateGas(args utils.TransactionArgs, blockNum *ethrpc.B
 	}
 	if args.To == nil {
 		// evm.create
-		tx = evm.NewV1(api.client).Create(ethTxValue, *ethTxData).SetFeeAmount(amount).SetFeeGas(uint64(*args.Gas)).GetTransaction()
+		tx = evm.NewV1(api.client).Create(ethTxValue, *ethTxData).AppendAuthSignature(estimateGasSigSpec, 0).GetTransaction()
 	} else {
 		// evm.call
-		tx = evm.NewV1(api.client).Call(args.To.Bytes(), ethTxValue, *ethTxData).SetFeeAmount(amount).SetFeeGas(uint64(*args.Gas)).GetTransaction()
+		tx = evm.NewV1(api.client).Call(args.To.Bytes(), ethTxValue, *ethTxData).AppendAuthSignature(estimateGasSigSpec, 0).GetTransaction()
 	}
 
-	gas, err := core.NewV1(api.client).EstimateGasForCaller(api.ctx, round, caller, tx)
+	var ethAddress [20]byte
+	copy(ethAddress[:], args.From[:])
+	gas, err := core.NewV1(api.client).EstimateGasForCaller(api.ctx, round, types.CallerAddress{EthAddress: &ethAddress}, tx)
 	if err != nil {
 		api.Logger.Error("Failed to EstimateGas", "error", err.Error())
 		return 0, ErrInternalQuery
