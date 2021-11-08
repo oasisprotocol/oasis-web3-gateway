@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
-
 	"github.com/go-pg/pg/v10"
 
 	"github.com/starfishlabs/oasis-evm-web3-gateway/conf"
@@ -214,36 +212,36 @@ func (db *PostDb) GetBlockTransaction(blockHash string, txIndex int) (*model.Tra
 	return blk.Transactions[txIndex], nil
 }
 
-func (db *PostDb) GetTransactionReceipt(txHash string) (map[string]interface{}, error) {
-	tx := new(model.Transaction)
-	if err := db.Db.Model(tx).Where("hash=?", txHash).Select(); err != nil {
-		return nil, err
-	}
-	block := new(model.Block)
-	if err := db.Db.Model(block).Where("hash=?", tx.BlockHash).Select(); err != nil {
-		return nil, err
-	}
-	cumulativeGasUsed := uint64(0)
-	for _, tx := range block.Transactions {
-		cumulativeGasUsed += tx.Gas
-	}
-	receipt := map[string]interface{}{
-		"status":            hexutil.Uint(0),
-		"cumulativeGasUsed": hexutil.Uint64(cumulativeGasUsed),
-		"logsBloom":         "",
-		"logs":              "",
-		"transactionHash":   tx.Hash,
-		"gasUsed":           hexutil.Uint64(tx.Gas),
-		"type":              hexutil.Uint64(tx.Type),
-		"blockHash":         tx.BlockHash,
-		"blockNumber":       hexutil.Uint64(tx.Round),
-		"transactionIndex":  hexutil.Uint64(tx.Index),
-		"from":              tx.FromAddr,
-		"to":                tx.ToAddr,
-	}
-
-	return receipt, nil
-}
+//func (db *PostDb) GetTransactionReceipt(txHash string) (map[string]interface{}, error) {
+//	tx := new(model.Transaction)
+//	if err := db.Db.Model(tx).Where("hash=?", txHash).Select(); err != nil {
+//		return nil, err
+//	}
+//	block := new(model.Block)
+//	if err := db.Db.Model(block).Where("hash=?", tx.BlockHash).Select(); err != nil {
+//		return nil, err
+//	}
+//	cumulativeGasUsed := uint64(0)
+//	for _, tx := range block.Transactions {
+//		cumulativeGasUsed += tx.Gas
+//	}
+//	receipt := map[string]interface{}{
+//		"status":            hexutil.Uint(0),
+//		"cumulativeGasUsed": hexutil.Uint64(cumulativeGasUsed),
+//		"logsBloom":         "",
+//		"logs":              "",
+//		"transactionHash":   tx.Hash,
+//		"gasUsed":           hexutil.Uint64(tx.Gas),
+//		"type":              hexutil.Uint64(tx.Type),
+//		"blockHash":         tx.BlockHash,
+//		"blockNumber":       hexutil.Uint64(tx.Round),
+//		"transactionIndex":  hexutil.Uint64(tx.Index),
+//		"from":              tx.FromAddr,
+//		"to":                tx.ToAddr,
+//	}
+//
+//	return receipt, nil
+//}
 
 func (db *PostDb) GetLogs(blockHash string) ([]*model.Log, error) {
 	logs := []*model.Log{}
