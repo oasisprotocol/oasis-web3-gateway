@@ -462,22 +462,33 @@ func (api *PublicAPI) GetTransactionByBlockNumberAndIndex(blockNum ethrpc.BlockN
 // GetTransactionReceipt returns the transaction receipt by hash.
 func (api *PublicAPI) GetTransactionReceipt(txHash common.Hash) (map[string]interface{}, error) {
 	api.Logger.Debug("eth_getTransactionReceipt", "hash", txHash.Hex())
-	txRef, err := api.backend.QueryTransactionRef(txHash.String())
+	dbTx, err := api.backend.QueryTransaction(txHash)
 	if err != nil {
 		api.Logger.Error("failed query transaction round and index", "hash", txHash.Hex(), "error", err.Error())
 		// Transaction doesn't exist, don't return an error, but empty response.
 		return nil, nil
 	}
-	txResults, err := api.client.GetTransactionsWithResults(api.ctx, txRef.Round)
+	// all tx results in block.
+	txResults, err := api.client.GetTransactionsWithResults(api.ctx, dbTx.Round)
 	if err != nil {
-		api.Logger.Error("failed to get transaction results", "round", txRef.Round, "error", err.Error())
+		api.Logger.Error("failed to get transaction results", "round", dbTx.Round, "error", err.Error())
 		return nil, err
 	}
-	if len(txResults) == 0 || len(txResults)-1 < int(txRef.Index) {
+
+	// filter out all eth tx results.
+	ethTxResults := []*client.TransactionWithResults{}
+	for _, res := range txResults {
+		utx := res.Tx
+		if len(utx.AuthProofs) != 1 || utx.AuthProofs[0].Module != "evm.ethereum.v0" {
+			continue
+		}
+		ethTxResults = append(ethTxResults, res)
+	}
+	if len(ethTxResults) == 0 || len(ethTxResults)-1 < int(dbTx.Index) {
 		return nil, errors.New("out of index")
 	}
 
-	utx := txResults[txRef.Index].Tx
+	utx := txResults[dbTx.Index].Tx
 	ethTx, err := api.backend.Decode(&utx)
 	if err != nil {
 		api.Logger.Error("decode utx error", err.Error())
@@ -486,7 +497,7 @@ func (api *PublicAPI) GetTransactionReceipt(txHash common.Hash) (map[string]inte
 
 	// cumulativeGasUsed
 	cumulativeGasUsed := uint64(0)
-	for i := 0; i <= int(txRef.Index) && i < len(txResults); i++ {
+	for i := 0; i <= int(dbTx.Index) && i < len(ethTxResults); i++ {
 		tx, err := api.backend.Decode(&txResults[i].Tx)
 		if err != nil {
 			api.Logger.Error("decode utx error", err.Error())
@@ -497,7 +508,7 @@ func (api *PublicAPI) GetTransactionReceipt(txHash common.Hash) (map[string]inte
 
 	// status
 	status := uint8(0)
-	if txResults[txRef.Index].Result.IsSuccess() {
+	if txResults[dbTx.Index].Result.IsSuccess() {
 		status = uint8(ethtypes.ReceiptStatusSuccessful)
 	} else {
 		status = uint8(ethtypes.ReceiptStatusFailed)
@@ -505,7 +516,7 @@ func (api *PublicAPI) GetTransactionReceipt(txHash common.Hash) (map[string]inte
 
 	// logs
 	oasisLogs := []*Log{}
-	for i, ev := range txResults[txRef.Index].Events {
+	for i, ev := range txResults[dbTx.Index].Events {
 		if ev.Code == 1 {
 			log := &Log{}
 			if err := cbor.Unmarshal(ev.Value, log); err != nil {
@@ -515,7 +526,7 @@ func (api *PublicAPI) GetTransactionReceipt(txHash common.Hash) (map[string]inte
 			oasisLogs = append(oasisLogs, log)
 		}
 	}
-	logs := logs2EthLogs(oasisLogs, txRef.Round, common.HexToHash(txRef.BlockHash), txHash, txRef.Index)
+	logs := logs2EthLogs(oasisLogs, dbTx.Round, common.HexToHash(dbTx.BlockHash), txHash, dbTx.Index)
 	receipt := map[string]interface{}{
 		"status":            hexutil.Uint(status),
 		"cumulativeGasUsed": hexutil.Uint64(cumulativeGasUsed),
@@ -524,18 +535,18 @@ func (api *PublicAPI) GetTransactionReceipt(txHash common.Hash) (map[string]inte
 		"transactionHash":   txHash.Hex(),
 		"gasUsed":           hexutil.Uint64(ethTx.Gas),
 		"type":              hexutil.Uint64(ethTx.Type),
-		"blockHash":         txRef.BlockHash,
-		"blockNumber":       hexutil.Uint64(txRef.Round),
-		"transactionIndex":  hexutil.Uint64(txRef.Index),
+		"blockHash":         dbTx.BlockHash,
+		"blockNumber":       hexutil.Uint64(dbTx.Round),
+		"transactionIndex":  hexutil.Uint64(dbTx.Index),
 		"from":              ethTx.FromAddr,
 		"to":                ethTx.ToAddr,
 	}
 	if logs == nil {
 		receipt["logs"] = [][]*ethtypes.Log{}
 	}
-	if len(ethTx.ToAddr) == 0 && txResults[txRef.Index].Result.IsSuccess() {
+	if len(ethTx.ToAddr) == 0 && txResults[dbTx.Index].Result.IsSuccess() {
 		var out []byte
-		if err := cbor.Unmarshal(txResults[txRef.Index].Result.Ok, &out); err != nil {
+		if err := cbor.Unmarshal(txResults[dbTx.Index].Result.Ok, &out); err != nil {
 			return nil, err
 		}
 		receipt["contractAddress"] = common.BytesToAddress(out)
