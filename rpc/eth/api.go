@@ -6,7 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -46,6 +48,8 @@ var (
 	// otherwise transactions without signature would be underestimated.
 	estimateGasSigSpec = estimateGasDummySigSpec()
 )
+
+const revertErrorPrefix = "reverted: "
 
 // Log is the Oasis Log.
 type Log struct {
@@ -212,7 +216,6 @@ func (api *PublicAPI) GetStorageAt(address common.Address, position hexutil.Big,
 		api.Logger.Error("GetBlock failed", "number", blockNum, "error", err.Error())
 		return hexutil.Big{}, err
 	}
-
 	// EVM module takes index as H256, which needs leading zeros.
 	position256 := make([]byte, 32)
 	// Unmarshalling to hexutil.Big rejects overlong inputs. Verify in `TestRejectOverlong`.
@@ -321,9 +324,43 @@ func (api *PublicAPI) GetCode(address common.Address, blockNum ethrpc.BlockNumbe
 	return res, nil
 }
 
+type revertError struct {
+	error
+	reason string `json:"reason"`
+}
+
+// ErrorData returns the ABI encoded error reason.
+func (e *revertError) ErrorData() interface{} {
+	return e.reason
+}
+
+// NewRevertError returns an revert error with ABI encoded revert reason.
+func (api *PublicAPI) NewRevertError(revertErr error) *revertError {
+	// ABI encoded function.
+	abiReason := []byte{0x08, 0xc3, 0x79, 0xa0} // Keccak256("Error(string)")
+
+	// ABI encode the revert reason string.
+	revertReason := strings.TrimPrefix(revertErr.Error(), revertErrorPrefix)
+	typ, _ := abi.NewType("string", "", nil)
+	unpacked, err := (abi.Arguments{{Type: typ}}).Pack(revertReason)
+	if err != nil {
+		api.Logger.Error("failed to encode revert error", "revert_reason", revertReason, "err", err)
+		return &revertError{
+			error: revertErr,
+		}
+	}
+	abiReason = append(abiReason, unpacked...)
+
+	return &revertError{
+		error:  revertErr,
+		reason: hexutil.Encode(abiReason),
+	}
+}
+
 // Call executes the given transaction on the state for the given block number.
 // this function doesn't make any changes in the evm state of blockchain
 func (api *PublicAPI) Call(args utils.TransactionArgs, blockNum ethrpc.BlockNumber, _ *utils.StateOverride) (hexutil.Bytes, error) {
+	api.Logger.Info("eth_call", "args", args)
 	var (
 		amount   = []byte{0}
 		input    = []byte{}
@@ -365,11 +402,19 @@ func (api *PublicAPI) Call(args utils.TransactionArgs, blockNum ethrpc.BlockNumb
 		sender.Bytes(),
 		args.To.Bytes(),
 		amount,
-		input)
+		input,
+	)
 	if err != nil {
-		api.Logger.Error("Failed to execute SimulateCall", "error", err.Error())
+		if strings.HasPrefix(err.Error(), revertErrorPrefix) {
+			revertErr := api.NewRevertError(err)
+			api.Logger.Error("failed to execute SimulateCall, reverted", "error", err, "reason", revertErr.reason)
+			return nil, revertErr
+		}
+		api.Logger.Error("failed to execute SimulateCall", "error", err)
 		return nil, err
 	}
+
+	api.Logger.Info("eth_call response", "args", args, "resp", res)
 
 	return res, nil
 }
