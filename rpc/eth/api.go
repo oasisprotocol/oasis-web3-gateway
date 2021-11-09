@@ -583,21 +583,29 @@ func (api *PublicAPI) GetLogs(filter filters.FilterCriteria) ([]*ethtypes.Log, e
 	}
 
 	// Warning: this is unboundedly expensive
-	var ethLogs []*ethtypes.Log
-	for round := startRoundInclusive; ; /* see explicit break */ round++ {
-		dbLogs, err := api.backend.GetLogs(*filter.BlockHash)
-		if err != nil {
-			api.Logger.Error("get logs, err:", err)
-			continue
-		}
-		// TODO: filter addresses and topics
-		blockLogs := utils.DbLogs2EthLogs(dbLogs)
-		ethLogs = append(ethLogs, blockLogs...)
+	//var ethLogs []*ethtypes.Log
+	//for round := startRoundInclusive; ; /* see explicit break */ round++ {
+	//	dbLogs, err := api.backend.GetLogs(*filter.BlockHash)
+	//	if err != nil {
+	//		api.Logger.Error("get logs, err:", err)
+	//		continue
+	//	}
+	//	// TODO: filter addresses and topics
+	//	blockLogs := utils.DbLogs2EthLogs(dbLogs)
+	//	ethLogs = append(ethLogs, blockLogs...)
+	//
+	//	if round == endRoundInclusive {
+	//		break
+	//	}
+	//}
 
-		if round == endRoundInclusive {
-			break
-		}
+	ethLogs := []*ethtypes.Log{}
+	dbLogs, err := api.backend.GetLogs(*filter.BlockHash, startRoundInclusive, endRoundInclusive)
+	if err != nil {
+		return ethLogs, nil
 	}
+	blockLogs := utils.DbLogs2EthLogs(dbLogs)
+	ethLogs = append(ethLogs, blockLogs...)
 
 	api.Logger.Debug("eth_getLogs response", "resp", ethLogs)
 
