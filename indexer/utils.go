@@ -203,7 +203,7 @@ func (p *psqlBackend) generateEthBlock(oasisBlock *block.Block, txResults []*cli
 
 		logs = Logs2EthLogs(oasisLogs, oasisBlock.Header.Round, common.BytesToHash(bhash), ethTx.Hash(), uint32(txIndex))
 		// store logs
-		dbLogs := ethLogs2DbLogs(logs)
+		dbLogs := eth2DbLogs(logs)
 		p.storage.Store(dbLogs)
 	}
 
@@ -215,7 +215,7 @@ func (p *psqlBackend) generateEthBlock(oasisBlock *block.Block, txResults []*cli
 	return res, nil
 }
 
-func ethLogs2DbLogs(ethLogs []*ethtypes.Log) []*model.Log {
+func eth2DbLogs(ethLogs []*ethtypes.Log) []*model.Log {
 	res := []*model.Log{}
 
 	for _, log := range ethLogs {

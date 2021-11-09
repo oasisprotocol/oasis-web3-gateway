@@ -604,7 +604,7 @@ func (api *PublicAPI) GetLogs(filter filters.FilterCriteria) ([]*ethtypes.Log, e
 	if err != nil {
 		return ethLogs, nil
 	}
-	ethLogs = utils.DbLogs2EthLogs(dbLogs)
+	ethLogs = utils.Db2EthLogs(dbLogs)
 
 	api.Logger.Debug("eth_getLogs response", "resp", ethLogs)
 

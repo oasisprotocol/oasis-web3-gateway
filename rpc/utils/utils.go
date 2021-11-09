@@ -152,7 +152,7 @@ func ConvertToEthBlock(block *model.Block) map[string]interface{} {
 	return res
 }
 
-func DbLogs2EthLogs(dbLogs []*model.Log) []*ethtypes.Log {
+func Db2EthLogs(dbLogs []*model.Log) []*ethtypes.Log {
 	res := []*ethtypes.Log{}
 
 	for _, log := range dbLogs {
