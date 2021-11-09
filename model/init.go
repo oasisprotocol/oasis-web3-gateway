@@ -12,7 +12,9 @@ func InitModel(db *pg.DB) error {
 		new(BlockRef),
 		new(TransactionRef),
 		new(Transaction),
-		new(ContinuesIndexedRound)}
+		new(ContinuesIndexedRound),
+		new(Log),
+	}
 
 	for _, m := range models {
 		if err := db.Model(m).CreateTable(&orm.CreateTableOptions{IfNotExists: true}); err != nil {

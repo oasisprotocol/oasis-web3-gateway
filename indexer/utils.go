@@ -29,7 +29,7 @@ type Log struct {
 	Data    []byte
 }
 
-func logs2EthLogs(logs []*Log, round uint64, blockHash, txHash common.Hash, txIndex uint32) []*ethtypes.Log {
+func Logs2EthLogs(logs []*Log, round uint64, blockHash, txHash common.Hash, txIndex uint32) []*ethtypes.Log {
 	ethLogs := []*ethtypes.Log{}
 	for i := range logs {
 		ethLog := &ethtypes.Log{
@@ -201,7 +201,7 @@ func (p *psqlBackend) generateEthBlock(oasisBlock *block.Block, txResults []*cli
 			}
 		}
 
-		logs = logs2EthLogs(oasisLogs, oasisBlock.Header.Round, common.BytesToHash(bhash), ethTx.Hash(), uint32(txIndex))
+		logs = Logs2EthLogs(oasisLogs, oasisBlock.Header.Round, common.BytesToHash(bhash), ethTx.Hash(), uint32(txIndex))
 		// store logs
 		dbLogs := ethLogs2DbLogs(logs)
 		p.storage.Store(dbLogs)

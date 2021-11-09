@@ -51,7 +51,7 @@ type Storage interface {
 	GetBlockTransaction(blockHash string, txIndex int) (*model.Transaction, error)
 
 	// GetTransactionReceipt returns the receipt of the transaction.
-	//GetTransactionReceipt(txHash string) (map[string]interface{}, error)
+	GetTransactionReceipt(txHash string) (map[string]interface{}, error)
 
 	GetLogs(blockHash string) ([]*model.Log, error)
 }

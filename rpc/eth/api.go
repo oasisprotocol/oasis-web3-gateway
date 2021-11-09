@@ -12,7 +12,6 @@ import (
 	"github.com/ethereum/go-ethereum/eth/filters"
 	"github.com/ethereum/go-ethereum/rlp"
 	ethrpc "github.com/ethereum/go-ethereum/rpc"
-	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
@@ -34,13 +33,6 @@ var (
 	ErrOutOfIndex                 = errors.New("out of index")
 	ErrMalformedTransaction       = errors.New("malformed transaction")
 )
-
-// Log is the Oasis Log.
-type Log struct {
-	Address common.Address
-	Topics  []common.Hash
-	Data    []byte
-}
 
 // PublicAPI is the eth_ prefixed set of APIs in the Web3 JSON-RPC spec.
 type PublicAPI struct {
@@ -462,96 +454,102 @@ func (api *PublicAPI) GetTransactionByBlockNumberAndIndex(blockNum ethrpc.BlockN
 // GetTransactionReceipt returns the transaction receipt by hash.
 func (api *PublicAPI) GetTransactionReceipt(txHash common.Hash) (map[string]interface{}, error) {
 	api.Logger.Debug("eth_getTransactionReceipt", "hash", txHash.Hex())
-	dbTx, err := api.backend.QueryTransaction(txHash)
+	//dbTx, err := api.backend.QueryTransaction(txHash)
+	//if err != nil {
+	//	api.Logger.Error("failed query transaction round and index", "hash", txHash.Hex(), "error", err.Error())
+	//	// Transaction doesn't exist, don't return an error, but empty response.
+	//	return nil, nil
+	//}
+	//// all tx results in block.
+	//txResults, err := api.client.GetTransactionsWithResults(api.ctx, dbTx.Round)
+	//if err != nil {
+	//	api.Logger.Error("failed to get transaction results", "round", dbTx.Round, "error", err.Error())
+	//	return nil, err
+	//}
+	//
+	//// filter out all eth tx results.
+	//ethTxResults := []*client.TransactionWithResults{}
+	//for _, res := range txResults {
+	//	utx := res.Tx
+	//	if len(utx.AuthProofs) != 1 || utx.AuthProofs[0].Module != "evm.ethereum.v0" {
+	//		continue
+	//	}
+	//	ethTxResults = append(ethTxResults, res)
+	//}
+	//if len(ethTxResults) == 0 || len(ethTxResults)-1 < int(dbTx.Index) {
+	//	return nil, errors.New("out of index")
+	//}
+	//
+	//utx := txResults[dbTx.Index].Tx
+	//ethTx, err := api.backend.Decode(&utx)
+	//if err != nil {
+	//	api.Logger.Error("decode utx error", err.Error())
+	//	return nil, err
+	//}
+	//
+	//// cumulativeGasUsed
+	//cumulativeGasUsed := uint64(0)
+	//for i := 0; i <= int(dbTx.Index) && i < len(ethTxResults); i++ {
+	//	tx, err := api.backend.Decode(&txResults[i].Tx)
+	//	if err != nil {
+	//		api.Logger.Error("decode utx error", err.Error())
+	//		return nil, err
+	//	}
+	//	cumulativeGasUsed += tx.Gas
+	//}
+	//
+	//// status
+	//status := uint8(0)
+	//if txResults[dbTx.Index].Result.IsSuccess() {
+	//	status = uint8(ethtypes.ReceiptStatusSuccessful)
+	//} else {
+	//	status = uint8(ethtypes.ReceiptStatusFailed)
+	//}
+	//
+	//// logs
+	//oasisLogs := []*indexer.Log{}
+	//for i, ev := range txResults[dbTx.Index].Events {
+	//	if ev.Code == 1 {
+	//		log := &indexer.Log{}
+	//		if err := cbor.Unmarshal(ev.Value, log); err != nil {
+	//			api.Logger.Error("failed unmarshal event value", "index", i)
+	//			continue
+	//		}
+	//		oasisLogs = append(oasisLogs, log)
+	//	}
+	//}
+	//logs := indexer.Logs2EthLogs(oasisLogs, dbTx.Round, common.HexToHash(dbTx.BlockHash), txHash, dbTx.Index)
+	//receipt := map[string]interface{}{
+	//	"status":            hexutil.Uint(status),
+	//	"cumulativeGasUsed": hexutil.Uint64(cumulativeGasUsed),
+	//	"logsBloom":         ethtypes.BytesToBloom(ethtypes.LogsBloom(logs)),
+	//	"logs":              logs,
+	//	"transactionHash":   txHash.Hex(),
+	//	"gasUsed":           hexutil.Uint64(ethTx.Gas),
+	//	"type":              hexutil.Uint64(ethTx.Type),
+	//	"blockHash":         dbTx.BlockHash,
+	//	"blockNumber":       hexutil.Uint64(dbTx.Round),
+	//	"transactionIndex":  hexutil.Uint64(dbTx.Index),
+	//	"from":              ethTx.FromAddr,
+	//	"to":                ethTx.ToAddr,
+	//}
+	//if logs == nil {
+	//	receipt["logs"] = []*ethtypes.Log{}
+	//}
+	//if len(ethTx.ToAddr) == 0 && txResults[dbTx.Index].Result.IsSuccess() {
+	//	var out []byte
+	//	if err := cbor.Unmarshal(txResults[dbTx.Index].Result.Ok, &out); err != nil {
+	//		return nil, err
+	//	}
+	//	receipt["contractAddress"] = common.BytesToAddress(out)
+	//}
+
+	receipt, err := api.backend.GetTransactionReceipt(txHash)
 	if err != nil {
-		api.Logger.Error("failed query transaction round and index", "hash", txHash.Hex(), "error", err.Error())
-		// Transaction doesn't exist, don't return an error, but empty response.
+		api.Logger.Error("failed to get transaction receipt, err:", err)
 		return nil, nil
 	}
-	// all tx results in block.
-	txResults, err := api.client.GetTransactionsWithResults(api.ctx, dbTx.Round)
-	if err != nil {
-		api.Logger.Error("failed to get transaction results", "round", dbTx.Round, "error", err.Error())
-		return nil, err
-	}
 
-	// filter out all eth tx results.
-	ethTxResults := []*client.TransactionWithResults{}
-	for _, res := range txResults {
-		utx := res.Tx
-		if len(utx.AuthProofs) != 1 || utx.AuthProofs[0].Module != "evm.ethereum.v0" {
-			continue
-		}
-		ethTxResults = append(ethTxResults, res)
-	}
-	if len(ethTxResults) == 0 || len(ethTxResults)-1 < int(dbTx.Index) {
-		return nil, errors.New("out of index")
-	}
-
-	utx := txResults[dbTx.Index].Tx
-	ethTx, err := api.backend.Decode(&utx)
-	if err != nil {
-		api.Logger.Error("decode utx error", err.Error())
-		return nil, err
-	}
-
-	// cumulativeGasUsed
-	cumulativeGasUsed := uint64(0)
-	for i := 0; i <= int(dbTx.Index) && i < len(ethTxResults); i++ {
-		tx, err := api.backend.Decode(&txResults[i].Tx)
-		if err != nil {
-			api.Logger.Error("decode utx error", err.Error())
-			return nil, err
-		}
-		cumulativeGasUsed += tx.Gas
-	}
-
-	// status
-	status := uint8(0)
-	if txResults[dbTx.Index].Result.IsSuccess() {
-		status = uint8(ethtypes.ReceiptStatusSuccessful)
-	} else {
-		status = uint8(ethtypes.ReceiptStatusFailed)
-	}
-
-	// logs
-	oasisLogs := []*Log{}
-	for i, ev := range txResults[dbTx.Index].Events {
-		if ev.Code == 1 {
-			log := &Log{}
-			if err := cbor.Unmarshal(ev.Value, log); err != nil {
-				api.Logger.Error("failed unmarshal event value", "index", i)
-				continue
-			}
-			oasisLogs = append(oasisLogs, log)
-		}
-	}
-	logs := logs2EthLogs(oasisLogs, dbTx.Round, common.HexToHash(dbTx.BlockHash), txHash, dbTx.Index)
-	receipt := map[string]interface{}{
-		"status":            hexutil.Uint(status),
-		"cumulativeGasUsed": hexutil.Uint64(cumulativeGasUsed),
-		"logsBloom":         ethtypes.BytesToBloom(ethtypes.LogsBloom(logs)),
-		"logs":              logs,
-		"transactionHash":   txHash.Hex(),
-		"gasUsed":           hexutil.Uint64(ethTx.Gas),
-		"type":              hexutil.Uint64(ethTx.Type),
-		"blockHash":         dbTx.BlockHash,
-		"blockNumber":       hexutil.Uint64(dbTx.Round),
-		"transactionIndex":  hexutil.Uint64(dbTx.Index),
-		"from":              ethTx.FromAddr,
-		"to":                ethTx.ToAddr,
-	}
-	if logs == nil {
-		receipt["logs"] = [][]*ethtypes.Log{}
-	}
-	if len(ethTx.ToAddr) == 0 && txResults[dbTx.Index].Result.IsSuccess() {
-		var out []byte
-		if err := cbor.Unmarshal(txResults[dbTx.Index].Result.Ok, &out); err != nil {
-			return nil, err
-		}
-		receipt["contractAddress"] = common.BytesToAddress(out)
-	}
-	api.Logger.Debug("eth_getTransactionReceipt end")
 	return receipt, nil
 }
 
@@ -604,26 +602,6 @@ func (api *PublicAPI) GetLogs(filter filters.FilterCriteria) ([]*ethtypes.Log, e
 	api.Logger.Debug("eth_getLogs response", "resp", ethLogs)
 
 	return ethLogs, nil
-}
-
-// logs2EthLogs casts the Oasis Logs to a slice of Ethereum Logs.
-func logs2EthLogs(logs []*Log, round uint64, blockHash, txHash common.Hash, txIndex uint32) []*ethtypes.Log {
-	ethLogs := []*ethtypes.Log{}
-	for i := range logs {
-		ethLog := &ethtypes.Log{
-			Address:     logs[i].Address,
-			Topics:      logs[i].Topics,
-			Data:        logs[i].Data,
-			BlockNumber: round,
-			TxHash:      txHash,
-			TxIndex:     uint(txIndex),
-			BlockHash:   blockHash,
-			Index:       uint(i),
-			Removed:     false,
-		}
-		ethLogs = append(ethLogs, ethLog)
-	}
-	return ethLogs
 }
 
 func (api *PublicAPI) GetBlockHash(blockNum ethrpc.BlockNumber, _ bool) (common.Hash, error) {

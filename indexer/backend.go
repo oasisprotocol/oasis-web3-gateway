@@ -64,7 +64,7 @@ type GetEthInfoBackend interface {
 	GetBlockTransactionCountByNumber(number uint64) (int, error)
 	GetBlockTransactionCountByHash(blockHash ethcommon.Hash) (int, error)
 	GetTransactionByBlockHashAndIndex(blockHash ethcommon.Hash, txIndex int) (*model.Transaction, error)
-	// GetTransactionReceipt(txHash ethcommon.Hash) (map[string]interface{}, error)
+	GetTransactionReceipt(txHash ethcommon.Hash) (map[string]interface{}, error)
 	BlockNumber() (uint64, error)
 	GetLogs(blockHash ethcommon.Hash) ([]*model.Log, error)
 }
@@ -226,6 +226,12 @@ func (p *psqlBackend) Index(oasisBlock *block.Block, txResults []*client.Transac
 			p.logger.Error("failed to decode transaction", "err", err, "round", round, "index", txIndex)
 			return err
 		}
+		// tx status/receipt status
+		if item.Result.IsSuccess() {
+			ethTx.Status = 1
+		} else {
+			ethTx.Status = 0
+		}
 		if err := p.storage.Store(ethTx); err != nil {
 			return err
 		}
@@ -359,9 +365,9 @@ func (p *psqlBackend) GetTransactionByBlockHashAndIndex(blockHash ethcommon.Hash
 	return p.storage.GetBlockTransaction(blockHash.String(), txIndex)
 }
 
-//func (p *psqlBackend) GetTransactionReceipt(txHash ethcommon.Hash) (map[string]interface{}, error) {
-//	return p.storage.GetTransactionReceipt(txHash.String())
-//}
+func (p *psqlBackend) GetTransactionReceipt(txHash ethcommon.Hash) (map[string]interface{}, error) {
+	return p.storage.GetTransactionReceipt(txHash.String())
+}
 
 func (p *psqlBackend) BlockNumber() (uint64, error) {
 	return p.storage.GetBlockNumber()

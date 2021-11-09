@@ -34,6 +34,7 @@ type AccessList []AccessTuple
 type Transaction struct {
 	Hash       string `pg:",pk"`
 	Type       uint8  `pg:",use_zero"`
+	Status     uint   `pg:",use_zero"` // tx/receipt status
 	ChainID    string
 	BlockHash  string
 	Round      uint64 `pg:",use_zero"`
@@ -57,7 +58,7 @@ type Block struct {
 	Round        uint64 `pg:",use_zero"`
 	Header       *Header
 	Uncles       []*Header
-	Transactions []*Transaction
+	Transactions []*Transaction `pg:"rel:has-many"`
 }
 
 // Header represents ethereum block header.
@@ -87,8 +88,8 @@ type Log struct {
 	Data      string
 	Round     uint64 `pg:",use_zero"` // BlockNumber
 	BlockHash string
-	TxHash    string `pg:",pk"`
+	TxHash    string `pg:",use_zero,unique:tx_hash_log_index"`
 	TxIndex   uint   `pg:",use_zero"`
-	Index     uint   `pg:",use_zero"`
+	Index     uint   `pg:",use_zero,unique:tx_hash_log_index"`
 	Removed   bool
 }
