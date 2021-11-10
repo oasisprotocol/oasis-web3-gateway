@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
+	"os"
 	"time"
 
 	"github.com/go-pg/pg/v10"
@@ -24,12 +25,23 @@ func InitDb(cfg *conf.PostDbConfig) (*PostDb, error) {
 	if cfg == nil {
 		return nil, errors.New("nil configuration")
 	}
+
+	// parse env var
+	dbUser := os.Getenv("DB_USER")
+	if dbUser == "" {
+		return nil, errors.New("failed to parse 'DB_USER' env var")
+	}
+	dbPwd := os.Getenv("DB_PWD")
+	if dbPwd == "" {
+		return nil, errors.New("failed to parse 'DB_PWD' env var")
+	}
+
 	// Connect db
 	db := pg.Connect(&pg.Options{
 		Addr:        fmt.Sprintf("%v:%v", cfg.Host, cfg.Port),
 		Database:    cfg.Db,
-		User:        cfg.User,
-		Password:    cfg.Password,
+		User:        dbUser,
+		Password:    dbPwd,
 		DialTimeout: time.Duration(cfg.Timeout) * time.Second,
 	})
 	// Ping
