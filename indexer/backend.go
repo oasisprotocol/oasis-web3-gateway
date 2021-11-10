@@ -293,7 +293,7 @@ func (p *psqlBackend) Close() {
 func newPsqlBackend(runtimeID common.Namespace, storage storage.Storage) (Backend, error) {
 	b := &psqlBackend{
 		runtimeID:         runtimeID,
-		logger:            logging.GetLogger("gateway/indexer/backend"),
+		logger:            logging.GetLogger("indexer"),
 		storage:           storage,
 		indexedRoundMutex: new(sync.Mutex),
 	}

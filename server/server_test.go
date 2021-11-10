@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/gorilla/websocket"
-	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/starfishlabs/oasis-evm-web3-gateway/conf"
@@ -26,7 +25,7 @@ func createServer(t *testing.T, httpPort, wsPort int) *Web3Gateway {
 			Port: wsPort,
 		},
 	}
-	server, err := New(conf, logging.GetLogger("test"))
+	server, err := New(conf)
 	if err != nil {
 		t.Fatalf("could not create a new node: %v", err)
 	}
@@ -221,7 +220,7 @@ func TestServerRPCPrefix(t *testing.T) {
 					PathPrefix: test.wsPrefix,
 				},
 			}
-			server, err := New(cfg, logging.GetLogger("test"))
+			server, err := New(cfg)
 			if err != nil {
 				t.Fatal("can't create server:", err)
 			}

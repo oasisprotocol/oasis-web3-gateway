@@ -33,9 +33,6 @@ var (
 	}
 )
 
-// The global logger.
-var logger = logging.GetLogger("evm-gateway")
-
 func init() {
 	rootCmd.Flags().StringVar(&configFile, "config", "./conf/server.yml", "path to the config.yml file")
 }
@@ -70,6 +67,8 @@ func runRoot(cmd *cobra.Command, args []string) {
 	// Initialize logging.
 	err := initLogging(cfg.Log)
 	cobra.CheckErr(err)
+
+	logger := logging.GetLogger("main")
 
 	// Decode hex runtime ID into something we can use.
 	var runtimeID common.Namespace
@@ -112,7 +111,7 @@ func runRoot(cmd *cobra.Command, args []string) {
 		logger.Error("failed to create web3", err)
 		os.Exit(1)
 	}
-	w3.RegisterAPIs(rpc.GetRPCAPIs(context.Background(), rc, logger, backend, cfg.Gateway))
+	w3.RegisterAPIs(rpc.GetRPCAPIs(context.Background(), rc, backend, cfg.Gateway))
 
 	svr := server.Server{
 		Config: cfg,

@@ -18,7 +18,6 @@ import (
 func GetRPCAPIs(
 	ctx context.Context,
 	client client.RuntimeClient,
-	logger *logging.Logger,
 	backend indexer.Backend,
 	config *conf.GatewayConfig,
 ) []ethRpc.API {
@@ -40,7 +39,7 @@ func GetRPCAPIs(
 		ethRpc.API{
 			Namespace: "eth",
 			Version:   "1.0",
-			Service:   eth.NewPublicAPI(ctx, client, logger, config.ChainId, backend),
+			Service:   eth.NewPublicAPI(ctx, client, logging.GetLogger("eth_rpc"), config.ChainId, backend),
 			Public:    true,
 		},
 	)

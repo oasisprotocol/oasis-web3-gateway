@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/gorilla/mux"
+	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/rs/cors"
 )
 
@@ -31,7 +31,7 @@ type wsConfig struct {
 
 // httpServer handle http connection and rpc requests
 type httpServer struct {
-	log      log.Logger
+	logger   *logging.Logger
 	timeouts rpc.HTTPTimeouts
 
 	server *http.Server
@@ -50,8 +50,8 @@ type httpServer struct {
 	port     int
 }
 
-func newHTTPServer(log log.Logger, timeouts rpc.HTTPTimeouts) *httpServer {
-	h := &httpServer{log: log, timeouts: timeouts}
+func newHTTPServer(logger *logging.Logger, timeouts rpc.HTTPTimeouts) *httpServer {
+	h := &httpServer{logger: logger, timeouts: timeouts}
 	return h
 }
 
@@ -66,7 +66,7 @@ func (h *httpServer) setListenAddr(host string, port int) error {
 // start starts the HTTP server if it is enabled and not already running.
 func (h *httpServer) start() error {
 	if h.endpoint == "" {
-		h.log.Info("RPC endpoint not specified")
+		h.logger.Info("RPC endpoint not specified")
 		return nil
 	}
 
@@ -82,13 +82,13 @@ func (h *httpServer) start() error {
 	// Start the server.
 	listener, err := net.Listen("tcp", h.endpoint)
 	if err != nil {
-		h.log.Error("Tcp listen failed")
+		h.logger.Error("tcp listen failed", "err", err)
 		return err
 	}
 	// h.listener = listener
 	go h.server.Serve(listener)
 
-	h.log.Info("HTTP server started",
+	h.logger.Info("HTTP server started",
 		"endpoint", listener.Addr(),
 		"prefix", h.httpConfig.prefix,
 		"cors", strings.Join(h.httpConfig.CorsAllowedOrigins, ","),
@@ -116,7 +116,7 @@ func validatePrefix(what, path string) error {
 // stop shuts down the HTTP server.
 func (h *httpServer) stop() {
 	h.server.Shutdown(context.Background())
-	h.log.Info("HTTP server stopped", "endpoint", h.endpoint)
+	h.logger.Info("HTTP server stopped", "endpoint", h.endpoint)
 }
 
 // enableRPC turns on JSON-RPC over HTTP on the server.
@@ -188,15 +188,12 @@ func RegisterApis(apis []rpc.API, modules []string, srv *rpc.Server, exposeAll b
 // CheckTimeouts ensures that timeout values are meaningful
 func CheckTimeouts(timeouts *rpc.HTTPTimeouts) {
 	if timeouts.ReadTimeout < time.Second {
-		log.Warn("Sanitizing invalid HTTP read timeout", "provided", timeouts.ReadTimeout, "updated", rpc.DefaultHTTPTimeouts.ReadTimeout)
 		timeouts.ReadTimeout = rpc.DefaultHTTPTimeouts.ReadTimeout
 	}
 	if timeouts.WriteTimeout < time.Second {
-		log.Warn("Sanitizing invalid HTTP write timeout", "provided", timeouts.WriteTimeout, "updated", rpc.DefaultHTTPTimeouts.WriteTimeout)
 		timeouts.WriteTimeout = rpc.DefaultHTTPTimeouts.WriteTimeout
 	}
 	if timeouts.IdleTimeout < time.Second {
-		log.Warn("Sanitizing invalid HTTP idle timeout", "provided", timeouts.IdleTimeout, "updated", rpc.DefaultHTTPTimeouts.IdleTimeout)
 		timeouts.IdleTimeout = rpc.DefaultHTTPTimeouts.IdleTimeout
 	}
 }

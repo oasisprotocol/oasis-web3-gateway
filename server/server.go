@@ -3,11 +3,10 @@ package server
 import (
 	"errors"
 	"fmt"
-	"os"
 	"sync"
 
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/oasisprotocol/oasis-core/go/common/logging"
 
 	"github.com/starfishlabs/oasis-evm-web3-gateway/conf"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/storage"
@@ -34,7 +33,7 @@ func (s *Server) Close() error {
 // Web3Gateway is a container on which services can be registered.
 type Web3Gateway struct {
 	config *conf.GatewayConfig
-	log    log.Logger
+	logger *logging.Logger
 
 	stop          chan struct{} // Channel to wait for termination notifications
 	startStopLock sync.Mutex    // Start/Stop are protected by an additional lock
@@ -79,12 +78,9 @@ func New(conf *conf.GatewayConfig) (*Web3Gateway, error) {
 		return nil, fmt.Errorf("missing gateway config")
 	}
 
-	logger := log.New()
-	log.Root().SetHandler(log.LvlFilterHandler(log.LvlInfo, log.StreamHandler(os.Stdout, log.LogfmtFormat())))
-
 	server := &Web3Gateway{
 		config: conf,
-		log:    logger,
+		logger: logging.GetLogger("gateway"),
 		stop:   make(chan struct{}),
 	}
 
@@ -98,10 +94,10 @@ func New(conf *conf.GatewayConfig) (*Web3Gateway, error) {
 
 	// Configure RPC servers.
 	if conf.Http != nil {
-		server.http = newHTTPServer(server.log, timeoutsFromCfg(conf.Http.Timeouts))
+		server.http = newHTTPServer(server.logger.With("server", "http"), timeoutsFromCfg(conf.Http.Timeouts))
 	}
 	if conf.WS != nil {
-		server.ws = newHTTPServer(server.log, timeoutsFromCfg(conf.WS.Timeouts))
+		server.ws = newHTTPServer(server.logger.With("server", "ws"), timeoutsFromCfg(conf.WS.Timeouts))
 	}
 
 	return server, nil
