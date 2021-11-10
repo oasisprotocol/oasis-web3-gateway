@@ -1,9 +1,13 @@
 runtime_id: "8000000000000000000000000000000000000000000000000000000000000000"
 node_address: "unix:/tmp/eth-runtime-test/net-runner/network/client-0/internal.sock"
-enable_pruing: false 
+enable_pruning: false
 pruning_step: 100000
 
-postdb:
+log:
+  level: debug
+  format: json
+
+database:
   host: "127.0.0.1"
   port: 5432
   db: "postgres"
@@ -19,7 +23,3 @@ gateway:
   ws:
     host: "localhost"
     port: 8546
-
-
-
-

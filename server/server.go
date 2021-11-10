@@ -57,7 +57,7 @@ var (
 	ErrServerRunning = errors.New("web3 gateway server already running")
 )
 
-func timeoutsFromCfg(cfg *conf.HttpTimeouts) rpc.HTTPTimeouts {
+func timeoutsFromCfg(cfg *conf.HTTPTimeouts) rpc.HTTPTimeouts {
 	timeouts := rpc.DefaultHTTPTimeouts
 	if cfg != nil {
 		if cfg.Idle != nil {

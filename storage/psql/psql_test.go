@@ -14,11 +14,8 @@ import (
 func TestInitPostDb(t *testing.T) {
 	require := require.New(t)
 
-	cfg, err := conf.InitConfig("../../conf/server.yml")
-	if err != nil {
-		log.Fatal("initialize config error:", err)
-	}
-	db, err := InitDb(cfg)
+	cfg := conf.InitConfig("../../conf/server.yml")
+	db, err := InitDb(cfg.Database)
 	if err != nil {
 		log.Fatal("initialize postdb error:", err)
 	}
@@ -134,9 +131,8 @@ func TestInitPostDb(t *testing.T) {
 func TestUpdate(t *testing.T) {
 	require := require.New(t)
 
-	cfg, err := conf.InitConfig("../../conf/server.yml")
-	require.NoError(err, "initialize config")
-	db, err := InitDb(cfg)
+	cfg := conf.InitConfig("../../conf/server.yml")
+	db, err := InitDb(cfg.Database)
 	require.NoError(err, "initialize postdb")
 
 	ir1 := &model.ContinuesIndexedRound{
@@ -171,9 +167,8 @@ func TestUpdate(t *testing.T) {
 func TestDelete(t *testing.T) {
 	require := require.New(t)
 
-	cfg, err := conf.InitConfig("../../conf/server.yml")
-	require.NoError(err, "initialize config")
-	db, err := InitDb(cfg)
+	cfg := conf.InitConfig("../../conf/server.yml")
+	db, err := InitDb(cfg.Database)
 	require.NoError(err, "initialize postdb")
 
 	require.NoError(db.Delete(new(model.BlockRef), 10), "delete")
@@ -182,9 +177,8 @@ func TestDelete(t *testing.T) {
 func TestGetBlockHash(t *testing.T) {
 	require := require.New(t)
 
-	cfg, err := conf.InitConfig("../../conf/server.yml")
-	require.NoError(err, "initialize config")
-	_, err = InitDb(cfg)
+	cfg := conf.InitConfig("../../conf/server.yml")
+	_, err := InitDb(cfg.Database)
 	require.NoError(err, "initialize postdb")
 
 	// TODO: this fails as expected as the db doesn't contain the block.
@@ -197,9 +191,8 @@ func TestGetBlockHash(t *testing.T) {
 func TestGetTransactionRef(t *testing.T) {
 	require := require.New(t)
 
-	cfg, err := conf.InitConfig("../../conf/server.yml")
-	require.NoError(err, "initialize config")
-	_, err = InitDb(cfg)
+	cfg := conf.InitConfig("../../conf/server.yml")
+	_, err := InitDb(cfg.Database)
 	require.NoError(err, "initialize postdb")
 
 	// TODO: this fails as expected as the db doesn't contain the transaction.
