@@ -668,20 +668,26 @@ func (api *PublicAPI) GetTransactionReceipt(txHash common.Hash) (map[string]inte
 		"blockHash":         txRef.BlockHash,
 		"blockNumber":       hexutil.Uint64(txRef.Round),
 		"transactionIndex":  hexutil.Uint64(txRef.Index),
-		"from":              ethTx.FromAddr,
-		"to":                ethTx.ToAddr,
+		"from":              nil,
+		"to":                nil,
+	}
+	if ethTx.FromAddr != "" {
+		receipt["from"] = ethTx.FromAddr
+	}
+	if ethTx.ToAddr != "" {
+		receipt["to"] = ethTx.ToAddr
 	}
 	if logs == nil {
 		receipt["logs"] = [][]*ethtypes.Log{}
 	}
-	if len(ethTx.ToAddr) == 0 && txResults[txRef.Index].Result.IsSuccess() {
+	if ethTx.ToAddr == "" && txResults[txRef.Index].Result.IsSuccess() {
 		var out []byte
 		if err := cbor.Unmarshal(txResults[txRef.Index].Result.Ok, &out); err != nil {
 			return nil, err
 		}
 		receipt["contractAddress"] = common.BytesToAddress(out)
 	}
-	api.Logger.Debug("eth_getTransactionReceipt end")
+	api.Logger.Debug("eth_getTransactionReceipt done", "receipt", receipt)
 	return receipt, nil
 }
 
