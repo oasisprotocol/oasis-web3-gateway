@@ -7,9 +7,9 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/trie"
-	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
-
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
+
+	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
 )
 
 var (
@@ -26,11 +26,11 @@ func ConvertToEthBlock(
 	logs []*ethtypes.Log,
 	gas uint64,
 ) (map[string]interface{}, error) {
-	// TODO tx releated
-	bhash, _ := block.Header.IORoot.MarshalBinary()
-	bprehash, _ := block.Header.PreviousHash.MarshalBinary()
-	bshash, _ := block.Header.StateRoot.MarshalBinary()
-	// btxhash, _ := block.Header.MessagesHash.MarshalBinary()
+	encoded := block.Header.EncodedHash()
+	bHash, _ := encoded.MarshalBinary()
+	bPrevHash, _ := block.Header.PreviousHash.MarshalBinary()
+	bStateHash, _ := block.Header.StateRoot.MarshalBinary()
+
 	bloom := ethtypes.BytesToBloom(ethtypes.LogsBloom(logs))
 	gasUsed := big.NewInt(0).SetUint64(gas)
 
@@ -43,12 +43,12 @@ func ConvertToEthBlock(
 
 	res := map[string]interface{}{
 		"number":           hexutil.Uint64(block.Header.Round),
-		"hash":             hexutil.Bytes(bhash),
-		"parentHash":       common.BytesToHash(bprehash),
+		"hash":             common.BytesToHash(bHash),
+		"parentHash":       common.BytesToHash(bPrevHash),
 		"nonce":            ethtypes.BlockNonce{},
 		"sha3Uncles":       ethtypes.EmptyUncleHash,
 		"logsBloom":        bloom,
-		"stateRoot":        hexutil.Bytes(bshash),
+		"stateRoot":        hexutil.Bytes(bStateHash),
 		"miner":            defaultValidatorAddr,
 		"mixHash":          common.Hash{},
 		"difficulty":       (*hexutil.Big)(big.NewInt(0)),
