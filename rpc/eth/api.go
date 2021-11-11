@@ -672,6 +672,7 @@ func (api *PublicAPI) GetTransactionReceipt(txHash common.Hash) (map[string]inte
 		"transactionIndex":  hexutil.Uint64(txRef.Index),
 		"from":              nil,
 		"to":                nil,
+		"contractAddress":   nil,
 	}
 	if ethTx.FromAddr != "" {
 		receipt["from"] = ethTx.FromAddr
