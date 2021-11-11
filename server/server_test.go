@@ -16,7 +16,7 @@ import (
 
 func createServer(t *testing.T, httpPort, wsPort int) *Web3Gateway {
 	conf := &conf.GatewayConfig{
-		Http: &conf.GatewayHttpConfig{
+		Http: &conf.GatewayHTTPConfig{
 			Host: "127.0.0.1",
 			Port: httpPort,
 		},
@@ -137,8 +137,8 @@ func (test rpcPrefixTest) check(t *testing.T, server *Web3Gateway) {
 	httpBase := "http://" + server.http.listenAddr()
 	wsBase := "ws://" + server.http.listenAddr()
 
-	if server.WSEndpoint() != wsBase+test.wsPrefix {
-		t.Errorf("Error: node has wrong WSEndpoint %q", server.WSEndpoint())
+	if server.ws.endpoint != wsBase+test.wsPrefix {
+		t.Errorf("Error: node has wrong WSEndpoint %q", server.ws.endpoint)
 	}
 
 	for _, path := range test.wantHTTP {
@@ -210,11 +210,15 @@ func TestServerRPCPrefix(t *testing.T) {
 		test := test
 		name := fmt.Sprintf("http=%s ws=%s", test.httpPrefix, test.wsPrefix)
 		t.Run(name, func(t *testing.T) {
-			cfg := &Config{
-				HTTPHost:       "127.0.0.1",
-				HTTPPathPrefix: test.httpPrefix,
-				WSHost:         "127.0.0.1",
-				WSPathPrefix:   test.wsPrefix,
+			cfg := &conf.GatewayConfig{
+				Http: &conf.GatewayHTTPConfig{
+					Host:       "127.0.0.1",
+					PathPrefix: test.httpPrefix,
+				},
+				WS: &conf.GatewayWSConfig{
+					Host:       "127.0.0.1",
+					PathPrefix: test.wsPrefix,
+				},
 			}
 			server, err := New(cfg)
 			if err != nil {

@@ -1,102 +1,167 @@
 package conf
 
 import (
-	"io/ioutil"
+	"fmt"
 	"time"
 
-	"gopkg.in/yaml.v2"
+	"github.com/oasisprotocol/oasis-core/go/common/logging"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
-// Config is gateway server configuration.
+// Config contains the CLI configuration.
 type Config struct {
-	RuntimeID     string `yaml:"runtime_id"`
-	NodeAddress   string `yaml:"node_address"`
-	EnablePruning bool   `yaml:"enable_pruing"`
-	PruningStep   uint64 `yaml:"pruning_step"`
+	RuntimeID     string `mapstructure:"runtime_id"`
+	NodeAddress   string `mapstructure:"node_address"`
+	EnablePruning bool   `mapstructure:"enable_pruning"`
+	PruningStep   uint64 `mapstructure:"pruning_step"`
 
-	PostDb  *PostDbConfig  `yaml:"postdb,omitempty"`
-	Gateway *GatewayConfig `yaml:"gateway,omitempty"`
+	Log      *LogConfig      `mapstructure:"log"`
+	Database *DatabaseConfig `mapstructure:"database"`
+	Gateway  *GatewayConfig  `mapstructure:"gateway"`
 }
 
-// PostDbConfig PostDb postgresql configuration.
-type PostDbConfig struct {
-	Host     string `yaml:"host"`
-	Port     int    `yaml:"port"`
-	Db       string `yaml:"db"`
-	User     string `yaml:"user"`
-	Password string `yaml:"password"`
-	Timeout  int    `yaml:"timeout"`
+// Validate performs config validation.
+func (cfg *Config) Validate() error {
+	if cfg.RuntimeID == "" {
+		return fmt.Errorf("malformed runtime ID '%s'", cfg.RuntimeID)
+	}
+	if cfg.NodeAddress == "" {
+		return fmt.Errorf("malformed node address '%s'", cfg.NodeAddress)
+	}
+
+	if cfg.Log != nil {
+		if err := cfg.Log.Validate(); err != nil {
+			return err
+		}
+	}
+	if cfg.Database != nil {
+		if err := cfg.Database.Validate(); err != nil {
+			return fmt.Errorf("database: %w", err)
+		}
+	}
+	if cfg.Gateway != nil {
+		if err := cfg.Gateway.Validate(); err != nil {
+			return fmt.Errorf("gateway: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// LogConfig contains the logging configuration.
+type LogConfig struct {
+	Format string `mapstructure:"format"`
+	Level  string `mapstructure:"level"`
+	File   string `mapstructure:"file"`
+}
+
+// Validate validates the logging configuration.
+func (cfg *LogConfig) Validate() error {
+	var format logging.Format
+	if err := format.Set(cfg.Format); err != nil {
+		return err
+	}
+	var level logging.Level
+	return level.Set(cfg.Level)
+}
+
+// DatabaseConfig is the postgresql database configuration.
+type DatabaseConfig struct {
+	Host     string `mapstructure:"host"`
+	Port     int    `mapstructure:"port"`
+	Db       string `mapstructure:"db"`
+	User     string `mapstructure:"user"`
+	Password string `mapstructure:"password"`
+	Timeout  int    `mapstructure:"timeout"`
+}
+
+// Validate validates the database configuration.
+func (cfg *DatabaseConfig) Validate() error {
+	// TODO:
+	return nil
 }
 
 // GatewayConfig is the gateway server configuration.
 type GatewayConfig struct {
 	// Http is the gateway http endpoint config.
-	Http *GatewayHttpConfig `yaml:"http,omitempty"`
+	Http *GatewayHTTPConfig `mapstructure:"http"`
 
 	// WS is the gateway websocket endpoint config.
-	WS *GatewayWSConfig `yaml:"ws,omitempty"`
+	WS *GatewayWSConfig `mapstructure:"ws"`
 
 	// ChainId defines the Ethereum netwrok chain id.
-	ChainId uint32 `yaml:"chain_id,omitempty"`
+	ChainId uint32 `mapstructure:"chain_id"`
 }
 
-type GatewayHttpConfig struct {
+// Validate validates the gateway configuration.
+func (cfg *GatewayConfig) Validate() error {
+	// TODO:
+	return nil
+}
+
+type GatewayHTTPConfig struct {
 	// Host is the host interface on which to start the HTTP RPC server. Defaults to localhost.
-	Host string `yaml:"host"`
+	Host string `mapstructure:"host"`
 
 	// Port is the port number on which to start the HTTP RPC server. Defaults to 8545.
-	Port int `yaml:"port"`
+	Port int `mapstructure:"port"`
 
 	// Cors are the CORS allowed urls.
-	Cors []string `yaml:"cors"`
+	Cors []string `mapstructure:"cors"`
 
 	// VirtualHosts is the list of virtual hostnames which are allowed on incoming requests.
-	VirtualHosts []string `yaml:"virtual_hosts,omitempty"`
+	VirtualHosts []string `mapstructure:"virtual_hosts"`
 
 	// PathPrefix specifies a path prefix on which http-rpc is to be served. Defaults to '/'.
-	PathPrefix string `yaml:"path_prefix"`
+	PathPrefix string `mapstructure:"path_prefix"`
 
 	// Timeouts allows for customization of the timeout values used by the HTTP RPC
 	// interface.
-	Timeouts *HttpTimeouts `yaml:"timeouts,omitempty"`
+	Timeouts *HTTPTimeouts `mapsstructure:"timeouts"`
 }
 
-type HttpTimeouts struct {
-	Read  *time.Duration `yaml:"read,omitempty"`
-	Write *time.Duration `yaml:"write,omitempty"`
-	Idle  *time.Duration `yaml:"idle,omitempty"`
+type HTTPTimeouts struct {
+	Read  *time.Duration `mapstructure:"read"`
+	Write *time.Duration `mapstructure:"write"`
+	Idle  *time.Duration `mapstructure:"idle"`
 }
 
 type GatewayWSConfig struct {
 	// Host is the host interface on which to start the HTTP RPC server. Defaults to localhost.
-	Host string `yaml:"host"`
+	Host string `mapstructure:"host"`
 
 	// Port is the port number on which to start the HTTP RPC server. Defaults to 8545.
-	Port int `yaml:"port"`
+	Port int `mapstructure:"port"`
 
 	// PathPrefix specifies a path prefix on which http-rpc is to be served. Defaults to '/'.
-	PathPrefix string `yaml:"path_prefix"`
+	PathPrefix string `mapstructure:"path_prefix"`
 
 	// Origins is the list of domain to accept websocket requests from.
-	Origins []string `yaml:"origins"`
+	Origins []string `mapstructure:"origins"`
 
 	// Timeouts allows for customization of the timeout values used by the HTTP RPC
 	// interface.
-	Timeouts *HttpTimeouts `yaml:"timeouts,omitempty"`
+	Timeouts *HTTPTimeouts `mapstructure:"timeouts"`
 }
 
-// InitConfig initializes server configuration
-func InitConfig(file string) (*Config, error) {
-	// read server.yml
-	bs, err := ioutil.ReadFile(file)
-	if err != nil {
-		return nil, err
-	}
+// InitConfig initializes configuration from file.
+func InitConfig(file string) *Config {
+	v := viper.New()
 
-	// init configuration
-	cfg := &Config{}
-	if err = yaml.Unmarshal(bs, cfg); err != nil {
-		return nil, err
-	}
-	return cfg, nil
+	// Set and load config file.
+	v.SetConfigFile(file)
+	err := v.ReadInConfig()
+	cobra.CheckErr(err)
+
+	// Unmarshal config.
+	var config Config
+	err = v.Unmarshal(&config)
+	cobra.CheckErr(err)
+
+	// Validate config.
+	err = config.Validate()
+	cobra.CheckErr(err)
+
+	return &config
 }
