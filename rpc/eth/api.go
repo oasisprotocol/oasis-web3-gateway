@@ -105,7 +105,8 @@ func (api *PublicAPI) roundParamFromBlockNum(blockNum ethrpc.BlockNumber) (uint6
 }
 
 func (api *PublicAPI) getRPCBlockData(oasisBlock *block.Block) (uint64, ethtypes.Transactions, uint64, []*ethtypes.Log, error) {
-	bhash, _ := oasisBlock.Header.IORoot.MarshalBinary()
+	encoded := oasisBlock.Header.EncodedHash()
+	bHash, _ := encoded.MarshalBinary()
 	blockNum := oasisBlock.Header.Round
 	ethTxs := ethtypes.Transactions{}
 	var gasUsed uint64
@@ -149,8 +150,9 @@ func (api *PublicAPI) getRPCBlockData(oasisBlock *block.Block) (uint64, ethtypes
 			}
 		}
 
-		logs = logs2EthLogs(oasisLogs, oasisBlock.Header.Round, common.BytesToHash(bhash), ethTx.Hash(), uint32(txIndex))
+		logs = logs2EthLogs(oasisLogs, oasisBlock.Header.Round, common.BytesToHash(bHash), ethTx.Hash(), uint32(txIndex))
 	}
+
 	return blockNum, ethTxs, gasUsed, logs, nil
 }
 
