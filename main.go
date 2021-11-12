@@ -33,9 +33,6 @@ var (
 	}
 )
 
-// The global logger.
-var logger = logging.GetLogger("evm-gateway")
-
 func init() {
 	rootCmd.Flags().StringVar(&configFile, "config", "./conf/server.yml", "path to the config.yml file")
 }
@@ -44,19 +41,34 @@ func main() {
 	rootCmd.Execute()
 }
 
-func runRoot(cmd *cobra.Command, args []string) {
-	// Initialize logging.
-	if err := logging.Initialize(os.Stdout, logging.FmtLogfmt, logging.LevelDebug, nil); err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: Unable to initialize logging: %v\n", err)
-		os.Exit(1)
+func initLogging(log *conf.LogConfig) error {
+	w := os.Stdout
+	format := logging.FmtLogfmt
+	level := logging.LevelDebug
+	if log.File != "" {
+		var err error
+		if w, err = os.OpenFile(log.File, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600); err != nil {
+			return fmt.Errorf("opening log file: %w", err)
+		}
+	}
+	if err := format.Set(log.Format); err != nil {
+		return err
+	}
+	if err := level.Set(log.Level); err != nil {
+		return err
 	}
 
+	return logging.Initialize(w, format, level, nil)
+}
+
+func runRoot(cmd *cobra.Command, args []string) {
 	// Initialize server config
-	cfg, err := conf.InitConfig(configFile)
-	if err != nil {
-		logger.Error("failed to initialize config", "err", err)
-		os.Exit(1)
-	}
+	cfg := conf.InitConfig(configFile)
+	// Initialize logging.
+	err := initLogging(cfg.Log)
+	cobra.CheckErr(err)
+
+	logger := logging.GetLogger("main")
 
 	// Decode hex runtime ID into something we can use.
 	var runtimeID common.Namespace
@@ -78,7 +90,7 @@ func runRoot(cmd *cobra.Command, args []string) {
 	rc := client.New(conn, runtimeID)
 
 	// Initialize db
-	db, err := psql.InitDb(cfg.PostDb)
+	db, err := psql.InitDb(cfg.Database)
 	if err != nil {
 		logger.Error("failed to initialize db", "err", err)
 		os.Exit(1)
@@ -99,7 +111,7 @@ func runRoot(cmd *cobra.Command, args []string) {
 		logger.Error("failed to create web3", err)
 		os.Exit(1)
 	}
-	w3.RegisterAPIs(rpc.GetRPCAPIs(context.Background(), rc, logger, backend, cfg.Gateway))
+	w3.RegisterAPIs(rpc.GetRPCAPIs(context.Background(), rc, backend, cfg.Gateway))
 
 	svr := server.Server{
 		Config: cfg,
