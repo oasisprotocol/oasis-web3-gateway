@@ -144,15 +144,17 @@ func (api *PublicAPI) getRPCBlockData(oasisBlock *block.Block, fullTx bool) (uin
 			hash := ethTx.Hash()
 			ethRPCTxs = append(ethRPCTxs, hash)
 		} else {
-			blockHash := common.HexToHash(oasisBlock.Header.EncodedHash().Hex())
-			txIndex := hexutil.Uint64(txIndex)
-			ethRPCTx, err := utils.NewRPCTransaction2(ethTx, blockHash, oasisBlock.Header.Round, txIndex)
+			dbTx, err := api.backend.QueryTransaction(ethTx.Hash())
 			if err != nil {
-				api.Logger.Error("Failed to create RPCTransaction in getRPCBlockData", "height", blockNum, "index", txIndex, "error", err.Error())
+				api.Logger.Error("Failed to QueryTransaction", "hash", ethTx.Hash(), "error", err.Error())
 				continue
 			}
-
-			ethRPCTxs = append(ethRPCTxs, ethRPCTx)
+			rpcTx, err := api.getRPCTransaction(dbTx)
+			if err != nil {
+				api.Logger.Error("Failed to getRPCTransaction", "hash", ethTx.Hash(), "error", err.Error())
+				continue
+			}
+			ethRPCTxs = append(ethRPCTxs, rpcTx)
 		}
 
 		var oasisLogs []*Log
