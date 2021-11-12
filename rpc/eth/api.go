@@ -15,9 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/eth/filters"
 	"github.com/ethereum/go-ethereum/rlp"
 	ethrpc "github.com/ethereum/go-ethereum/rpc"
-	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
-	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/secp256k1"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/accounts"
@@ -96,74 +94,8 @@ func (api *PublicAPI) roundParamFromBlockNum(blockNum ethrpc.BlockNumber) (uint6
 	}
 }
 
-func (api *PublicAPI) getRPCBlockData(oasisBlock *block.Block) (uint64, ethtypes.Transactions, uint64, []*ethtypes.Log, error) {
-	encoded := oasisBlock.Header.EncodedHash()
-	bHash, _ := encoded.MarshalBinary()
-	blockNum := oasisBlock.Header.Round
-	ethTxs := ethtypes.Transactions{}
-	var gasUsed uint64
-	var logs []*ethtypes.Log
-	txResults, err := api.client.GetTransactionsWithResults(api.ctx, blockNum)
-	if err != nil {
-		api.Logger.Error("Failed to get transaction results", "number", blockNum, "error", err.Error())
-		return 0, nil, 0, nil, err
-	}
-
-	for txIndex, item := range txResults {
-		oasisTx := item.Tx
-		if len(oasisTx.AuthProofs) != 1 || oasisTx.AuthProofs[0].Module != "evm.ethereum.v0" {
-			// Skip non-Ethereum transactions.
-			continue
-		}
-
-		// Extract raw Ethereum transaction for further processing.
-		rawEthTx := oasisTx.Body
-		// Decode the Ethereum transaction.
-		ethTx := &ethtypes.Transaction{}
-		err := rlp.DecodeBytes(rawEthTx, ethTx)
-		if err != nil {
-			api.Logger.Error("Failed to decode UnverifiedTransaction", "height", blockNum, "index", txIndex, "error", err.Error())
-			continue
-		}
-
-		gasUsed += ethTx.Gas()
-		ethTxs = append(ethTxs, ethTx)
-
-		var oasisLogs []*indexer.Log
-		resEvents := item.Events
-		for eventIndex, event := range resEvents {
-			if event.Code == 1 {
-				log := &indexer.Log{}
-				if err := cbor.Unmarshal(event.Value, log); err != nil {
-					api.Logger.Error("Failed to unmarshal event value", "index", eventIndex)
-					continue
-				}
-				oasisLogs = append(oasisLogs, log)
-			}
-		}
-
-		logs = indexer.Logs2EthLogs(oasisLogs, oasisBlock.Header.Round, common.BytesToHash(bHash), ethTx.Hash(), uint32(txIndex))
-	}
-
-	return blockNum, ethTxs, gasUsed, logs, nil
-}
-
-func (api *PublicAPI) getRPCBlock(oasisBlock *block.Block) (map[string]interface{}, error) {
-	blockNum, ethTxs, gasUsed, logs, err := api.getRPCBlockData(oasisBlock)
-	if err != nil {
-		return nil, err
-	}
-
-	res, err := utils.ConstructEthBlock(oasisBlock, ethTxs, logs, gasUsed)
-	if err != nil {
-		api.Logger.Debug("Failed to ConvertToEthBlock", "height", blockNum, "error", err.Error())
-		return nil, err
-	}
-	return res, nil
-}
-
 // GetBlockByNumber returns the block identified by number.
-func (api *PublicAPI) GetBlockByNumber(blockNum ethrpc.BlockNumber, _ bool) (map[string]interface{}, error) {
+func (api *PublicAPI) GetBlockByNumber(blockNum ethrpc.BlockNumber, fullTx bool) (map[string]interface{}, error) {
 	api.Logger.Debug("eth_getBlockByNumber", "number", blockNum)
 
 	round, err := api.roundParamFromBlockNum(blockNum)
@@ -180,7 +112,7 @@ func (api *PublicAPI) GetBlockByNumber(blockNum ethrpc.BlockNumber, _ bool) (map
 		return nil, ErrInternalQuery
 	}
 
-	return utils.ConvertToEthBlock(blk), nil
+	return utils.ConvertToEthBlock(blk, fullTx), nil
 }
 
 // GetBlockTransactionCountByNumber returns the number of transactions in the block.
@@ -490,7 +422,7 @@ func (api *PublicAPI) GetBlockByHash(blockHash common.Hash, fullTx bool) (map[st
 		return nil, ErrInternalQuery
 	}
 
-	return utils.ConvertToEthBlock(blk), nil
+	return utils.ConvertToEthBlock(blk, fullTx), nil
 }
 
 func (api *PublicAPI) getRPCTransaction(dbTx *model.Transaction) (*utils.RPCTransaction, error) {

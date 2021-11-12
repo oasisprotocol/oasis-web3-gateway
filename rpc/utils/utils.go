@@ -177,7 +177,7 @@ func NewRPCTransaction(
 	return resTx, nil
 }
 
-func ConvertToEthBlock(block *model.Block) map[string]interface{} {
+func ConvertToEthBlock(block *model.Block, fullTx bool) map[string]interface{} {
 	v1 := big.NewInt(0)
 	diff, _ := v1.SetString(block.Header.Difficulty, 10)
 
