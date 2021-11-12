@@ -109,7 +109,7 @@ func convertToEthBlock(
 	}
 
 	innerTxs := []*model.Transaction{}
-	for _, ethTx := range transactions {
+	for idx, ethTx := range transactions {
 		r, s, v := ethTx.RawSignatureValues()
 		signer := ethtypes.LatestSignerForChainID(ethTx.ChainId())
 		from, _ := signer.Sender(ethTx)
@@ -130,6 +130,9 @@ func convertToEthBlock(
 			Hash:       ethTx.Hash().Hex(),
 			Type:       ethTx.Type(),
 			ChainID:    ethTx.ChainId().String(),
+			BlockHash:  bhash.Hex(),
+			Round:      number.Uint64(),
+			Index:      uint32(idx),
 			Gas:        ethTx.Gas(),
 			GasPrice:   ethTx.GasPrice().String(),
 			GasTipCap:  ethTx.GasTipCap().String(),
