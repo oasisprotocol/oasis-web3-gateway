@@ -180,6 +180,15 @@ func NewRPCTransaction(
 func ConvertToEthBlock(block *model.Block, fullTx bool) map[string]interface{} {
 	v1 := big.NewInt(0)
 	diff, _ := v1.SetString(block.Header.Difficulty, 10)
+	transactions := []interface{}{}
+
+	if fullTx {
+		transactions = append(transactions, block.Transactions)
+	} else {
+		for _, tx := range block.Transactions {
+			transactions = append(transactions, tx.Hash)
+		}
+	}
 
 	res := map[string]interface{}{
 		"parentHash":       common.HexToHash(block.Header.ParentHash),
@@ -199,7 +208,7 @@ func ConvertToEthBlock(block *model.Block, fullTx bool) map[string]interface{} {
 		"nonce":            ethtypes.EncodeNonce(block.Header.Nonce),
 
 		"uncles":       block.Uncles,
-		"transactions": block.Transactions,
+		"transactions": transactions,
 
 		"hash": common.HexToHash(block.Hash),
 		"size": hexutil.Uint64(defaultSize),
