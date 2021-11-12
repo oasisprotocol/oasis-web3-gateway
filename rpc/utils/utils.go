@@ -6,7 +6,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/trie"
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 
 	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
@@ -19,10 +18,10 @@ var (
 	EmptyRootHash        = common.HexToHash("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
 )
 
-// ConvertToEthBlock returns a JSON-RPC compatible Ethereum block from a given Oasis block and its block result.
+// ConvertToEthBlock returns a JSON-RPC compatible Ethereum Block from a given Oasis block and its block result.
 func ConvertToEthBlock(
 	block *block.Block,
-	transactions ethtypes.Transactions,
+	transactions []interface{},
 	logs []*ethtypes.Log,
 	gas uint64,
 ) (map[string]interface{}, error) {
@@ -33,13 +32,7 @@ func ConvertToEthBlock(
 
 	bloom := ethtypes.BytesToBloom(ethtypes.LogsBloom(logs))
 	gasUsed := big.NewInt(0).SetUint64(gas)
-
-	var btxhash common.Hash
-	if len(transactions) == 0 {
-		btxhash = EmptyRootHash
-	} else {
-		btxhash = ethtypes.DeriveSha(transactions, trie.NewStackTrie(nil))
-	}
+	btxHash, _ := block.Header.IORoot.MarshalBinary()
 
 	res := map[string]interface{}{
 		"number":           hexutil.Uint64(block.Header.Round),
@@ -57,7 +50,7 @@ func ConvertToEthBlock(
 		"gasLimit":         hexutil.Uint64(defaultGasLimit),
 		"gasUsed":          (*hexutil.Big)(gasUsed),
 		"timestamp":        hexutil.Uint64(block.Header.Timestamp),
-		"transactionsRoot": btxhash,
+		"transactionsRoot": hexutil.Bytes(btxHash),
 		"receiptsRoot":     ethtypes.EmptyRootHash,
 
 		"uncles":          []common.Hash{},
@@ -66,56 +59,6 @@ func ConvertToEthBlock(
 	}
 
 	return res, nil
-}
-
-// ConstructRPCTransaction returns a transaction that will serialize to the RPC representation.
-func ConstructRPCTransaction(
-	ethTx *ethtypes.Transaction,
-	blockHash common.Hash,
-	blockNumber,
-	index uint64,
-) (*RPCTransaction, error) {
-
-	signer := ethtypes.LatestSignerForChainID(ethTx.ChainId())
-	from, _ := ethtypes.Sender(signer, ethTx)
-	v, r, s := ethTx.RawSignatureValues()
-
-	result := &RPCTransaction{
-		Type:     hexutil.Uint64(ethTx.Type()),
-		From:     from,
-		Gas:      hexutil.Uint64(ethTx.Gas()),
-		GasPrice: (*hexutil.Big)(ethTx.GasPrice()),
-		Hash:     ethTx.Hash(),
-		Input:    hexutil.Bytes(ethTx.Data()),
-		Nonce:    hexutil.Uint64(ethTx.Nonce()),
-		To:       ethTx.To(),
-		Value:    (*hexutil.Big)(ethTx.Value()),
-		V:        (*hexutil.Big)(v),
-		R:        (*hexutil.Big)(r),
-		S:        (*hexutil.Big)(s),
-	}
-
-	if blockHash != (common.Hash{}) {
-		result.BlockHash = &blockHash
-		result.BlockNumber = (*hexutil.Big)(new(big.Int).SetUint64(blockNumber))
-		result.TransactionIndex = (*hexutil.Uint64)(&index)
-	}
-
-	switch ethTx.Type() {
-	case ethtypes.AccessListTxType:
-		al := ethTx.AccessList()
-		result.Accesses = &al
-		result.ChainID = (*hexutil.Big)(ethTx.ChainId())
-	case ethtypes.DynamicFeeTxType:
-		al := ethTx.AccessList()
-		result.Accesses = &al
-		result.ChainID = (*hexutil.Big)(ethTx.ChainId())
-		result.GasFeeCap = (*hexutil.Big)(ethTx.GasFeeCap())
-		result.GasTipCap = (*hexutil.Big)(ethTx.GasTipCap())
-		result.GasPrice = (*hexutil.Big)(ethTx.GasFeeCap())
-	}
-
-	return result, nil
 }
 
 // NewRPCTransaction returns a transaction that will serialize to the RPC representation.
