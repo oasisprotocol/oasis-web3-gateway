@@ -13,16 +13,10 @@ import (
 
 func TestInitPostDb(t *testing.T) {
 	require := require.New(t)
-
-
-	cfg, err := conf.InitConfig("../../conf/server.yml")
+	cfg := conf.InitConfig("../../conf/server.yml")
+	db, err := InitDb(cfg.Database)
 	if err != nil {
-		log.Fatal("initialize config error:", err)
-	}
-	db, err := InitDb(cfg.PostDb)
-
-	if err != nil {
-		log.Fatal("initialize postdb error:", err)
+		log.Fatal("initialize db error:", err)
 	}
 	block1 := &model.BlockRef{
 		Round: 1,
@@ -135,13 +129,10 @@ func TestInitPostDb(t *testing.T) {
 
 func TestUpdate(t *testing.T) {
 	require := require.New(t)
+	cfg := conf.InitConfig("../../conf/server.yml")
+	db, err := InitDb(cfg.Database)
 
-
-	cfg, err := conf.InitConfig("../../conf/server.yml")
-	require.NoError(err, "initialize config")
-	db, err := InitDb(cfg.PostDb)
-
-	require.NoError(err, "initialize postdb")
+	require.NoError(err, "initialize db")
 
 	ir1 := &model.ContinuesIndexedRound{
 		Tip:   "tip",
@@ -174,26 +165,18 @@ func TestUpdate(t *testing.T) {
 
 func TestDelete(t *testing.T) {
 	require := require.New(t)
-
-
-	cfg, err := conf.InitConfig("../../conf/server.yml")
-	require.NoError(err, "initialize config")
-	db, err := InitDb(cfg.PostDb)
-
-	require.NoError(err, "initialize postdb")
+	cfg := conf.InitConfig("../../conf/server.yml")
+	db, err := InitDb(cfg.Database)
+	require.NoError(err, "initialize db")
 
 	require.NoError(db.Delete(new(model.BlockRef), 10), "delete")
 }
 
 func TestGetBlockHash(t *testing.T) {
 	require := require.New(t)
-
-
-	cfg, err := conf.InitConfig("../../conf/server.yml")
-	require.NoError(err, "initialize config")
-	_, err = InitDb(cfg.PostDb)
-
-	require.NoError(err, "initialize postdb")
+	cfg := conf.InitConfig("../../conf/server.yml")
+	_, err := InitDb(cfg.Database)
+	require.NoError(err, "initialize db")
 
 	// TODO: this fails as expected as the db doesn't contain the block.
 	//       Forgot to initialize the db with the block?
@@ -204,13 +187,9 @@ func TestGetBlockHash(t *testing.T) {
 
 func TestGetTransactionRef(t *testing.T) {
 	require := require.New(t)
-
-
-	cfg, err := conf.InitConfig("../../conf/server.yml")
-	require.NoError(err, "initialize config")
-	_, err = InitDb(cfg.PostDb)
-
-	require.NoError(err, "initialize postdb")
+	cfg := conf.InitConfig("../../conf/server.yml")
+	_, err := InitDb(cfg.Database)
+	require.NoError(err, "initialize db")
 
 	// TODO: this fails as expected as the db doesn't contain the transaction.
 	//       Forgot to initialize the db with the transaction?

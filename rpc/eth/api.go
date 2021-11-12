@@ -15,32 +15,25 @@ import (
 	"github.com/ethereum/go-ethereum/eth/filters"
 	"github.com/ethereum/go-ethereum/rlp"
 	ethrpc "github.com/ethereum/go-ethereum/rpc"
+	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
-
-	"github.com/oasisprotocol/oasis-core/go/common/quantity"
-
-	roothash "github.com/oasisprotocol/oasis-core/go/roothash/api"
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
-
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/secp256k1"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/accounts"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/evm"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
-
 	"github.com/starfishlabs/oasis-evm-web3-gateway/indexer"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/utils"
 )
-
 
 func estimateGasDummySigSpec() types.SignatureAddressSpec {
 	pk := sha512.Sum512_256([]byte("estimateGas: dummy sigspec"))
 	signer := secp256k1.NewSigner(pk[:])
 	return types.NewSignatureAddressSpecSecp256k1Eth(signer.Public().(secp256k1.PublicKey))
 }
-
 
 var (
 	ErrInternalQuery              = errors.New("internal query error")
@@ -55,15 +48,7 @@ var (
 	estimateGasSigSpec = estimateGasDummySigSpec()
 )
 
-
 const revertErrorPrefix = "reverted: "
-
-// Log is the Oasis Log.
-type Log struct {
-	Address common.Address
-	Topics  []common.Hash
-	Data    []byte
-}
 
 // PublicAPI is the eth_ prefixed set of APIs in the Web3 JSON-RPC spec.
 type PublicAPI struct {
@@ -111,7 +96,6 @@ func (api *PublicAPI) roundParamFromBlockNum(blockNum ethrpc.BlockNumber) (uint6
 	}
 }
 
-
 func (api *PublicAPI) getRPCBlockData(oasisBlock *block.Block) (uint64, ethtypes.Transactions, uint64, []*ethtypes.Log, error) {
 	encoded := oasisBlock.Header.EncodedHash()
 	bHash, _ := encoded.MarshalBinary()
@@ -142,14 +126,14 @@ func (api *PublicAPI) getRPCBlockData(oasisBlock *block.Block) (uint64, ethtypes
 			continue
 		}
 
-		gasUsed += uint64(ethTx.Gas())
+		gasUsed += ethTx.Gas()
 		ethTxs = append(ethTxs, ethTx)
 
-		var oasisLogs []*Log
+		var oasisLogs []*indexer.Log
 		resEvents := item.Events
 		for eventIndex, event := range resEvents {
 			if event.Code == 1 {
-				log := &Log{}
+				log := &indexer.Log{}
 				if err := cbor.Unmarshal(event.Value, log); err != nil {
 					api.Logger.Error("Failed to unmarshal event value", "index", eventIndex)
 					continue
@@ -158,7 +142,7 @@ func (api *PublicAPI) getRPCBlockData(oasisBlock *block.Block) (uint64, ethtypes
 			}
 		}
 
-		logs = logs2EthLogs(oasisLogs, oasisBlock.Header.Round, common.BytesToHash(bHash), ethTx.Hash(), uint32(txIndex))
+		logs = indexer.Logs2EthLogs(oasisLogs, oasisBlock.Header.Round, common.BytesToHash(bHash), ethTx.Hash(), uint32(txIndex))
 	}
 
 	return blockNum, ethTxs, gasUsed, logs, nil
@@ -170,7 +154,7 @@ func (api *PublicAPI) getRPCBlock(oasisBlock *block.Block) (map[string]interface
 		return nil, err
 	}
 
-	res, err := utils.ConvertToEthBlock(oasisBlock, ethTxs, logs, gasUsed)
+	res, err := utils.ConstructEthBlock(oasisBlock, ethTxs, logs, gasUsed)
 	if err != nil {
 		api.Logger.Debug("Failed to ConvertToEthBlock", "height", blockNum, "error", err.Error())
 		return nil, err
@@ -672,56 +656,11 @@ func (api *PublicAPI) GetTransactionReceipt(txHash common.Hash) (map[string]inte
 
 	receipt, err := api.backend.GetTransactionReceipt(txHash)
 	if err != nil {
+		// Transaction doesn't exist, don't return an error, but empty response.
 		api.Logger.Error("failed to get transaction receipt, err:", err)
 		return nil, nil
 	}
 
-
-	// logs
-	oasisLogs := []*Log{}
-	for i, ev := range txResults[txRef.Index].Events {
-		if ev.Code == 1 {
-			log := &Log{}
-			if err := cbor.Unmarshal(ev.Value, log); err != nil {
-				api.Logger.Error("failed unmarshal event value", "index", i)
-				continue
-			}
-			oasisLogs = append(oasisLogs, log)
-		}
-	}
-	logs := logs2EthLogs(oasisLogs, txRef.Round, common.HexToHash(txRef.BlockHash), txHash, txRef.Index)
-	receipt := map[string]interface{}{
-		"status":            hexutil.Uint(status),
-		"cumulativeGasUsed": hexutil.Uint64(cumulativeGasUsed),
-		"logsBloom":         ethtypes.BytesToBloom(ethtypes.LogsBloom(logs)),
-		"logs":              logs,
-		"transactionHash":   txHash.Hex(),
-		"gasUsed":           hexutil.Uint64(ethTx.Gas),
-		"type":              hexutil.Uint64(ethTx.Type),
-		"blockHash":         txRef.BlockHash,
-		"blockNumber":       hexutil.Uint64(txRef.Round),
-		"transactionIndex":  hexutil.Uint64(txRef.Index),
-		"from":              nil,
-		"to":                nil,
-		"contractAddress":   nil,
-	}
-	if ethTx.FromAddr != "" {
-		receipt["from"] = ethTx.FromAddr
-	}
-	if ethTx.ToAddr != "" {
-		receipt["to"] = ethTx.ToAddr
-	}
-	if logs == nil {
-		receipt["logs"] = [][]*ethtypes.Log{}
-	}
-	if ethTx.ToAddr == "" && txResults[txRef.Index].Result.IsSuccess() {
-		var out []byte
-		if err := cbor.Unmarshal(txResults[txRef.Index].Result.Ok, &out); err != nil {
-			return nil, err
-		}
-		receipt["contractAddress"] = common.BytesToAddress(out)
-	}
-	api.Logger.Debug("eth_getTransactionReceipt done", "receipt", receipt)
 	return receipt, nil
 }
 

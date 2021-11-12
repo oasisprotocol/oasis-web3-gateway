@@ -21,8 +21,8 @@ var (
 	EmptyRootHash        = common.HexToHash("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
 )
 
-// ConvertToEthBlock returns a JSON-RPC compatible Ethereum block from a given Oasis block and its block result.
-func ConvertToEthBlock(
+// ConstructEthBlock returns a JSON-RPC compatible Ethereum Block from a given Oasis block and its block result.
+func ConstructEthBlock(
 	block *block.Block,
 	transactions ethtypes.Transactions,
 	logs []*ethtypes.Log,
@@ -69,7 +69,6 @@ func ConvertToEthBlock(
 
 	return res, nil
 }
-
 
 // ConstructRPCTransaction returns a transaction that will serialize to the RPC representation.
 func ConstructRPCTransaction(
