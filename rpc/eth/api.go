@@ -104,11 +104,12 @@ func (api *PublicAPI) roundParamFromBlockNum(blockNum ethrpc.BlockNumber) (uint6
 	}
 }
 
-func (api *PublicAPI) getRPCBlockData(oasisBlock *block.Block) (uint64, ethtypes.Transactions, uint64, []*ethtypes.Log, error) {
+func (api *PublicAPI) getRPCBlockData(oasisBlock *block.Block, fullTx bool) (uint64, []interface{}, uint64, []*ethtypes.Log, error) {
 	encoded := oasisBlock.Header.EncodedHash()
 	bHash, _ := encoded.MarshalBinary()
 	blockNum := oasisBlock.Header.Round
-	ethTxs := ethtypes.Transactions{}
+	// ethTxs := ethtypes.Transactions{}
+	ethRPCTxs := []interface{}{}
 	var gasUsed uint64
 	var logs []*ethtypes.Log
 	txResults, err := api.client.GetTransactionsWithResults(api.ctx, blockNum)
@@ -135,7 +136,21 @@ func (api *PublicAPI) getRPCBlockData(oasisBlock *block.Block) (uint64, ethtypes
 		}
 
 		gasUsed += uint64(ethTx.Gas())
-		ethTxs = append(ethTxs, ethTx)
+
+		if !fullTx {
+			hash := ethTx.Hash()
+			ethRPCTxs = append(ethRPCTxs, hash)
+		} else {
+			blockHash := common.HexToHash(oasisBlock.Header.EncodedHash().Hex())
+			txIndex := hexutil.Uint64(txIndex)
+			ethRPCTx, err := utils.NewRPCTransaction2(ethTx, blockHash, oasisBlock.Header.Round, txIndex)
+			if err != nil {
+				api.Logger.Error("Failed to create RPCTransaction in getRPCBlockData", "height", blockNum, "index", txIndex, "error", err.Error())
+				continue
+			}
+
+			ethRPCTxs = append(ethRPCTxs, ethRPCTx)
+		}
 
 		var oasisLogs []*Log
 		resEvents := item.Events
@@ -153,11 +168,11 @@ func (api *PublicAPI) getRPCBlockData(oasisBlock *block.Block) (uint64, ethtypes
 		logs = logs2EthLogs(oasisLogs, oasisBlock.Header.Round, common.BytesToHash(bHash), ethTx.Hash(), uint32(txIndex))
 	}
 
-	return blockNum, ethTxs, gasUsed, logs, nil
+	return blockNum, ethRPCTxs, gasUsed, logs, nil
 }
 
-func (api *PublicAPI) getRPCBlock(oasisBlock *block.Block) (map[string]interface{}, error) {
-	blockNum, ethTxs, gasUsed, logs, err := api.getRPCBlockData(oasisBlock)
+func (api *PublicAPI) getRPCBlock(oasisBlock *block.Block, fullTx bool) (map[string]interface{}, error) {
+	blockNum, ethTxs, gasUsed, logs, err := api.getRPCBlockData(oasisBlock, fullTx)
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +186,7 @@ func (api *PublicAPI) getRPCBlock(oasisBlock *block.Block) (map[string]interface
 }
 
 // GetBlockByNumber returns the block identified by number.
-func (api *PublicAPI) GetBlockByNumber(blockNum ethrpc.BlockNumber, _ bool) (map[string]interface{}, error) {
+func (api *PublicAPI) GetBlockByNumber(blockNum ethrpc.BlockNumber, fullTx bool) (map[string]interface{}, error) {
 	api.Logger.Debug("eth_getBlockByNumber", "number", blockNum)
 
 	round, err := api.roundParamFromBlockNum(blockNum)
@@ -187,7 +202,7 @@ func (api *PublicAPI) GetBlockByNumber(blockNum ethrpc.BlockNumber, _ bool) (map
 		return nil, ErrInternalQuery
 	}
 
-	return api.getRPCBlock(resBlock)
+	return api.getRPCBlock(resBlock, fullTx)
 }
 
 // GetBlockTransactionCountByNumber returns the number of transactions in the block.
@@ -514,7 +529,7 @@ func (api *PublicAPI) GetBlockByHash(blockHash common.Hash, fullTx bool) (map[st
 		return nil, err
 	}
 
-	return api.getRPCBlock(blk)
+	return api.getRPCBlock(blk, fullTx)
 }
 
 func (api *PublicAPI) getRPCTransaction(dbTx *model.Transaction) (*utils.RPCTransaction, error) {
@@ -734,7 +749,7 @@ func (api *PublicAPI) GetLogs(filter filters.FilterCriteria) ([]*ethtypes.Log, e
 			}
 			return nil, fmt.Errorf("get block %d: %w", round, err)
 		}
-		_, _, _, blockLogs, err := api.getRPCBlockData(block)
+		_, _, _, blockLogs, err := api.getRPCBlockData(block, true)
 		if err != nil {
 			return nil, fmt.Errorf("convert block %d to rpc block: %w", block.Header.Round, err)
 		}

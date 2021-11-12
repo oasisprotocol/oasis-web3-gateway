@@ -6,7 +6,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/trie"
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 
 	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
@@ -22,7 +21,8 @@ var (
 // ConvertToEthBlock returns a JSON-RPC compatible Ethereum block from a given Oasis block and its block result.
 func ConvertToEthBlock(
 	block *block.Block,
-	transactions ethtypes.Transactions,
+	// transactions ethtypes.Transactions,
+	transactions []interface{},
 	logs []*ethtypes.Log,
 	gas uint64,
 ) (map[string]interface{}, error) {
@@ -34,12 +34,7 @@ func ConvertToEthBlock(
 	bloom := ethtypes.BytesToBloom(ethtypes.LogsBloom(logs))
 	gasUsed := big.NewInt(0).SetUint64(gas)
 
-	var btxhash common.Hash
-	if len(transactions) == 0 {
-		btxhash = EmptyRootHash
-	} else {
-		btxhash = ethtypes.DeriveSha(transactions, trie.NewStackTrie(nil))
-	}
+	btxHash, _ := block.Header.MessagesHash.MarshalBinary()
 
 	res := map[string]interface{}{
 		"number":           hexutil.Uint64(block.Header.Round),
@@ -57,7 +52,7 @@ func ConvertToEthBlock(
 		"gasLimit":         hexutil.Uint64(defaultGasLimit),
 		"gasUsed":          (*hexutil.Big)(gasUsed),
 		"timestamp":        hexutil.Uint64(block.Header.Timestamp),
-		"transactionsRoot": btxhash,
+		"transactionsRoot": hexutil.Bytes(btxHash),
 		"receiptsRoot":     ethtypes.EmptyRootHash,
 
 		"uncles":          []common.Hash{},
@@ -160,6 +155,52 @@ func NewRPCTransaction(
 		Value:     (*hexutil.Big)(value),
 		Type:      hexutil.Uint64(dbTx.Type),
 		Accesses:  &accesses,
+		ChainID:   (*hexutil.Big)(chainID),
+		V:         (*hexutil.Big)(v),
+		R:         (*hexutil.Big)(r),
+		S:         (*hexutil.Big)(s),
+	}
+
+	if blockHash != (common.Hash{}) {
+		resTx.BlockHash = &blockHash
+		resTx.BlockNumber = (*hexutil.Big)(new(big.Int).SetUint64(blockNumber))
+		resTx.TransactionIndex = &index
+	}
+
+	return resTx, nil
+}
+
+func NewRPCTransaction2(
+	tx *ethtypes.Transaction,
+	blockHash common.Hash,
+	blockNumber uint64,
+	index hexutil.Uint64,
+) (*RPCTransaction, error) {
+
+	to := *tx.To()
+	gasPrice := tx.GasPrice()
+	gasFee := tx.GasFeeCap()
+	gasTip := tx.GasTipCap()
+	value := tx.Value()
+	chainID := tx.ChainId()
+	v, r, s := tx.RawSignatureValues()
+
+	signer := ethtypes.LatestSignerForChainID(tx.ChainId())
+	from, _ := signer.Sender(tx)
+
+	resTx := &RPCTransaction{
+		From:      from,
+		Gas:       hexutil.Uint64(tx.Gas()),
+		GasPrice:  (*hexutil.Big)(gasPrice),
+		GasFeeCap: (*hexutil.Big)(gasFee),
+		GasTipCap: (*hexutil.Big)(gasTip),
+		Hash:      tx.Hash(),
+		Input:     tx.Data(),
+		Nonce:     hexutil.Uint64(tx.Nonce()),
+		To:        &to,
+		Value:     (*hexutil.Big)(value),
+		Type:      hexutil.Uint64(tx.Type()),
+		Accesses:  *tx.AccessList(),
 		ChainID:   (*hexutil.Big)(chainID),
 		V:         (*hexutil.Big)(v),
 		R:         (*hexutil.Big)(r),
