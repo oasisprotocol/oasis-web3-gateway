@@ -33,8 +33,7 @@ func ConvertToEthBlock(
 
 	bloom := ethtypes.BytesToBloom(ethtypes.LogsBloom(logs))
 	gasUsed := big.NewInt(0).SetUint64(gas)
-
-	btxHash, _ := block.Header.MessagesHash.MarshalBinary()
+	btxHash, _ := block.Header.IORoot.MarshalBinary()
 
 	res := map[string]interface{}{
 		"number":           hexutil.Uint64(block.Header.Round),

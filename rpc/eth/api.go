@@ -108,7 +108,10 @@ func (api *PublicAPI) getRPCBlockData(oasisBlock *block.Block, fullTx bool) (uin
 	encoded := oasisBlock.Header.EncodedHash()
 	bHash, _ := encoded.MarshalBinary()
 	blockNum := oasisBlock.Header.Round
-	// ethTxs := ethtypes.Transactions{}
+	// ethRPCTxs will contain either RPCTransactions or the transaction hashes,
+	// it depends on the value of fullTx:
+	//   	true  => RPCTransactions,
+	// 		false => transaction hashes
 	ethRPCTxs := []interface{}{}
 	var gasUsed uint64
 	var logs []*ethtypes.Log
