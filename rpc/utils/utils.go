@@ -188,6 +188,7 @@ func NewRPCTransaction2(
 	signer := ethtypes.LatestSignerForChainID(tx.ChainId())
 	from, _ := signer.Sender(tx)
 
+	accList := tx.AccessList()
 	resTx := &RPCTransaction{
 		From:      from,
 		Gas:       hexutil.Uint64(tx.Gas()),
@@ -200,7 +201,7 @@ func NewRPCTransaction2(
 		To:        &to,
 		Value:     (*hexutil.Big)(value),
 		Type:      hexutil.Uint64(tx.Type()),
-		Accesses:  *tx.AccessList(),
+		Accesses:  &accList,
 		ChainID:   (*hexutil.Big)(chainID),
 		V:         (*hexutil.Big)(v),
 		R:         (*hexutil.Big)(r),
