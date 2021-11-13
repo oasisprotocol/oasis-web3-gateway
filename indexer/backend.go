@@ -254,12 +254,13 @@ func (p *psqlBackend) Index(oasisBlock *block.Block, txResults []*client.Transac
 }
 
 func (p *psqlBackend) UpdateLastIndexedRound(round uint64) error {
-	p.storeIndexedRound(round)
-	return nil
+	return p.storeIndexedRound(round)
 }
 
 func (p *psqlBackend) Prune(round uint64) error {
-	p.storeLastRetainedRound(round)
+	if err := p.storeLastRetainedRound(round); err != nil {
+		return err
+	}
 
 	if err := p.storage.Delete(new(model.BlockRef), round); err != nil {
 		return err
@@ -307,15 +308,16 @@ func (p *psqlBackend) QueryBlockHash(round uint64) (ethcommon.Hash, error) {
 	return ethcommon.HexToHash(blockHash), nil
 }
 
-func (p *psqlBackend) storeIndexedRound(round uint64) {
+func (p *psqlBackend) storeIndexedRound(round uint64) error {
 	p.indexedRoundMutex.Lock()
+	defer p.indexedRoundMutex.Unlock()
+
 	r := &model.IndexedRoundWithTip{
 		Tip:   model.Continues,
 		Round: round,
 	}
 
-	p.storage.Update(r)
-	p.indexedRoundMutex.Unlock()
+	return p.storage.Update(r)
 }
 
 func (p *psqlBackend) QueryLastIndexedRound() uint64 {
@@ -330,13 +332,13 @@ func (p *psqlBackend) QueryLastIndexedRound() uint64 {
 	return indexedRound
 }
 
-func (p *psqlBackend) storeLastRetainedRound(round uint64) {
+func (p *psqlBackend) storeLastRetainedRound(round uint64) error {
 	r := &model.IndexedRoundWithTip{
 		Tip:   model.LastRetained,
 		Round: round,
 	}
 
-	p.storage.Update(r)
+	return p.storage.Update(r)
 }
 
 func (p *psqlBackend) QueryLastRetainedRound() (uint64, error) {
