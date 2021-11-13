@@ -12,7 +12,7 @@ func InitModel(db *pg.DB) error {
 		new(BlockRef),
 		new(TransactionRef),
 		new(Transaction),
-		new(ContinuesIndexedRound),
+		new(IndexedRoundWithTip),
 		new(Log),
 	}
 

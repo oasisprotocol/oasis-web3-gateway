@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"time"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
-	"os"
-	"time"
 
 	"github.com/go-pg/pg/v10"
 
@@ -148,7 +149,7 @@ func (db *PostDb) GetLatestBlockHash() (string, error) {
 
 // GetContinuesIndexedRound returns latest continues indexed block round.
 func (db *PostDb) GetContinuesIndexedRound() (uint64, error) {
-	indexedRound := new(model.ContinuesIndexedRound)
+	indexedRound := new(model.IndexedRoundWithTip)
 	err := db.Db.Model(indexedRound).
 		Where("tip=?", model.Continues).
 		Select()
@@ -157,6 +158,19 @@ func (db *PostDb) GetContinuesIndexedRound() (uint64, error) {
 	}
 
 	return indexedRound.Round, nil
+}
+
+// GetLastRetainedRound returns the minimum round not pruned.
+func (db *PostDb) GetLastRetainedRound() (uint64, error) {
+	retainedRound := new(model.IndexedRoundWithTip)
+	err := db.Db.Model(retainedRound).
+		Where("tip=?", model.LastRetained).
+		Select()
+	if err != nil {
+		return 0, err
+	}
+
+	return retainedRound.Round, nil
 }
 
 func (db *PostDb) GetBlockNumber() (uint64, error) {

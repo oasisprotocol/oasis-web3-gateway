@@ -20,6 +20,8 @@ import (
 	"github.com/starfishlabs/oasis-evm-web3-gateway/storage"
 )
 
+var GetLastRetainedError = errors.New("Get last retained round error in db.")
+
 // Result is a query result.
 type Result struct {
 	// TxHash is the hash of the matched transaction.
@@ -50,6 +52,9 @@ type QueryableBackend interface {
 
 	// QueryLastIndexedRound query continues indexed block round.
 	QueryLastIndexedRound() uint64
+
+	// QueryLastRetainedRound query the minimum round not pruned.
+	QueryLastRetainedRound() (uint64, error)
 
 	// QueryTransaction queries ethereum transaction by hash.
 	QueryTransaction(ethTxHash ethcommon.Hash) (*model.Transaction, error)
@@ -254,6 +259,8 @@ func (p *psqlBackend) UpdateLastIndexedRound(round uint64) error {
 }
 
 func (p *psqlBackend) Prune(round uint64) error {
+	p.storeLastRetainedRound(round)
+
 	if err := p.storage.Delete(new(model.BlockRef), round); err != nil {
 		return err
 	}
@@ -302,7 +309,7 @@ func (p *psqlBackend) QueryBlockHash(round uint64) (ethcommon.Hash, error) {
 
 func (p *psqlBackend) storeIndexedRound(round uint64) {
 	p.indexedRoundMutex.Lock()
-	r := &model.ContinuesIndexedRound{
+	r := &model.IndexedRoundWithTip{
 		Tip:   model.Continues,
 		Round: round,
 	}
@@ -321,6 +328,23 @@ func (p *psqlBackend) QueryLastIndexedRound() uint64 {
 	p.indexedRoundMutex.Unlock()
 
 	return indexedRound
+}
+
+func (p *psqlBackend) storeLastRetainedRound(round uint64) {
+	r := &model.IndexedRoundWithTip{
+		Tip:   model.LastRetained,
+		Round: round,
+	}
+
+	p.storage.Update(r)
+}
+
+func (p *psqlBackend) QueryLastRetainedRound() (uint64, error) {
+	lastRetainedRound, err := p.storage.GetLastRetainedRound()
+	if err != nil {
+		return 0, GetLastRetainedError
+	}
+	return lastRetainedRound, nil
 }
 
 func (p *psqlBackend) QueryTransaction(ethTxHash ethcommon.Hash) (*model.Transaction, error) {

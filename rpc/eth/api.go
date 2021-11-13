@@ -83,12 +83,21 @@ func (api *PublicAPI) roundParamFromBlockNum(blockNum ethrpc.BlockNumber) (uint6
 	case ethrpc.LatestBlockNumber:
 		return client.RoundLatest, nil
 	case ethrpc.EarliestBlockNumber:
-		lrBlk, err := api.client.GetLastRetainedBlock(api.ctx)
+		var earliest uint64 = 0
+		clrBlk, err := api.client.GetLastRetainedBlock(api.ctx)
 		if err != nil {
-			return 0, fmt.Errorf("failed to get last retained block: %w", err)
+			api.Logger.Error("failed to get last retained block from client", "error", err)
 		}
-		// TODO: Take Web3 pruning into account.
-		return lrBlk.Header.Round, nil
+		ilrRound, err := api.backend.QueryLastRetainedRound()
+		if err != nil {
+			api.Logger.Error("failed to get last retained block from indexer", "error", err)
+		}
+		if clrBlk.Header.Round < ilrRound {
+			earliest = ilrRound
+		} else {
+			earliest = clrBlk.Header.Round
+		}
+		return earliest, nil
 	default:
 		return uint64(blockNum), nil
 	}

@@ -21,9 +21,12 @@ type AccessTuple struct {
 }
 
 // Continues is the latest Indexed Block Round.
-const Continues string = "tip"
+const Continues string = "continues"
 
-type ContinuesIndexedRound struct {
+// LastRetained is the block with minimum height maintained.
+const LastRetained string = "lastRetain"
+
+type IndexedRoundWithTip struct {
 	Tip   string `pg:",pk"`
 	Round uint64
 }

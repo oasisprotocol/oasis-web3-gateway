@@ -29,6 +29,9 @@ type Storage interface {
 	// GetContinuesIndexedRound query continues indexed block round.
 	GetContinuesIndexedRound() (uint64, error)
 
+	// GetLastRetainedRound query the minimum round not pruned.
+	GetLastRetainedRound() (uint64, error)
+
 	// GetTransaction queries ethereum transaction by hash.
 	GetTransaction(hash string) (*model.Transaction, error)
 
