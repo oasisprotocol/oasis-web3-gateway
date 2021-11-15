@@ -2,23 +2,27 @@ package conf
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/knadh/koanf"
+	"github.com/knadh/koanf/parsers/yaml"
+	"github.com/knadh/koanf/providers/env"
+	"github.com/knadh/koanf/providers/file"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 // Config contains the CLI configuration.
 type Config struct {
-	RuntimeID     string `mapstructure:"runtime_id"`
-	NodeAddress   string `mapstructure:"node_address"`
-	EnablePruning bool   `mapstructure:"enable_pruning"`
-	PruningStep   uint64 `mapstructure:"pruning_step"`
+	RuntimeID     string `koanf:"runtime_id"`
+	NodeAddress   string `koanf:"node_address"`
+	EnablePruning bool   `koanf:"enable_pruning"`
+	PruningStep   uint64 `koanf:"pruning_step"`
 
-	Log      *LogConfig      `mapstructure:"log"`
-	Database *DatabaseConfig `mapstructure:"database"`
-	Gateway  *GatewayConfig  `mapstructure:"gateway"`
+	Log      *LogConfig      `koanf:"log"`
+	Database *DatabaseConfig `koanf:"database"`
+	Gateway  *GatewayConfig  `koanf:"gateway"`
 }
 
 // Validate performs config validation.
@@ -51,9 +55,9 @@ func (cfg *Config) Validate() error {
 
 // LogConfig contains the logging configuration.
 type LogConfig struct {
-	Format string `mapstructure:"format"`
-	Level  string `mapstructure:"level"`
-	File   string `mapstructure:"file"`
+	Format string `koanf:"format"`
+	Level  string `koanf:"level"`
+	File   string `koanf:"file"`
 }
 
 // Validate validates the logging configuration.
@@ -68,16 +72,19 @@ func (cfg *LogConfig) Validate() error {
 
 // DatabaseConfig is the postgresql database configuration.
 type DatabaseConfig struct {
-	Host     string `mapstructure:"host"`
-	Port     int    `mapstructure:"port"`
-	Db       string `mapstructure:"db"`
-	User     string `mapstructure:"user"`
-	Password string `mapstructure:"password"`
-	Timeout  int    `mapstructure:"timeout"`
+	Host     string `koanf:"host"`
+	Port     int    `koanf:"port"`
+	Db       string `koanf:"db"`
+	User     string `koanf:"user"`
+	Password string `koanf:"password"`
+	Timeout  int    `koanf:"timeout"`
 }
 
 // Validate validates the database configuration.
 func (cfg *DatabaseConfig) Validate() error {
+	if cfg.Host == "" {
+		return fmt.Errorf("malformed database host: ''")
+	}
 	// TODO:
 	return nil
 }
@@ -85,13 +92,13 @@ func (cfg *DatabaseConfig) Validate() error {
 // GatewayConfig is the gateway server configuration.
 type GatewayConfig struct {
 	// Http is the gateway http endpoint config.
-	Http *GatewayHTTPConfig `mapstructure:"http"`
+	Http *GatewayHTTPConfig `koanf:"http"`
 
 	// WS is the gateway websocket endpoint config.
-	WS *GatewayWSConfig `mapstructure:"ws"`
+	WS *GatewayWSConfig `koanf:"ws"`
 
 	// ChainId defines the Ethereum netwrok chain id.
-	ChainId uint32 `mapstructure:"chain_id"`
+	ChainId uint32 `koanf:"chain_id"`
 }
 
 // Validate validates the gateway configuration.
@@ -102,19 +109,19 @@ func (cfg *GatewayConfig) Validate() error {
 
 type GatewayHTTPConfig struct {
 	// Host is the host interface on which to start the HTTP RPC server. Defaults to localhost.
-	Host string `mapstructure:"host"`
+	Host string `koanf:"host"`
 
 	// Port is the port number on which to start the HTTP RPC server. Defaults to 8545.
-	Port int `mapstructure:"port"`
+	Port int `koanf:"port"`
 
 	// Cors are the CORS allowed urls.
-	Cors []string `mapstructure:"cors"`
+	Cors []string `koanf:"cors"`
 
 	// VirtualHosts is the list of virtual hostnames which are allowed on incoming requests.
-	VirtualHosts []string `mapstructure:"virtual_hosts"`
+	VirtualHosts []string `koanf:"virtual_hosts"`
 
 	// PathPrefix specifies a path prefix on which http-rpc is to be served. Defaults to '/'.
-	PathPrefix string `mapstructure:"path_prefix"`
+	PathPrefix string `koanf:"path_prefix"`
 
 	// Timeouts allows for customization of the timeout values used by the HTTP RPC
 	// interface.
@@ -122,41 +129,47 @@ type GatewayHTTPConfig struct {
 }
 
 type HTTPTimeouts struct {
-	Read  *time.Duration `mapstructure:"read"`
-	Write *time.Duration `mapstructure:"write"`
-	Idle  *time.Duration `mapstructure:"idle"`
+	Read  *time.Duration `koanf:"read"`
+	Write *time.Duration `koanf:"write"`
+	Idle  *time.Duration `koanf:"idle"`
 }
 
 type GatewayWSConfig struct {
 	// Host is the host interface on which to start the HTTP RPC server. Defaults to localhost.
-	Host string `mapstructure:"host"`
+	Host string `koanf:"host"`
 
 	// Port is the port number on which to start the HTTP RPC server. Defaults to 8545.
-	Port int `mapstructure:"port"`
+	Port int `koanf:"port"`
 
 	// PathPrefix specifies a path prefix on which http-rpc is to be served. Defaults to '/'.
-	PathPrefix string `mapstructure:"path_prefix"`
+	PathPrefix string `koanf:"path_prefix"`
 
 	// Origins is the list of domain to accept websocket requests from.
-	Origins []string `mapstructure:"origins"`
+	Origins []string `koanf:"origins"`
 
 	// Timeouts allows for customization of the timeout values used by the HTTP RPC
 	// interface.
-	Timeouts *HTTPTimeouts `mapstructure:"timeouts"`
+	Timeouts *HTTPTimeouts `koanf:"timeouts"`
 }
 
 // InitConfig initializes configuration from file.
-func InitConfig(file string) *Config {
-	v := viper.New()
+func InitConfig(f string) *Config {
+	var config Config
+	k := koanf.New(".")
 
-	// Set and load config file.
-	v.SetConfigFile(file)
-	err := v.ReadInConfig()
+	// Load configuration from the yaml config.
+	err := k.Load(file.Provider(f), yaml.Parser())
 	cobra.CheckErr(err)
 
-	// Unmarshal config.
-	var config Config
-	err = v.Unmarshal(&config)
+	// Load environment variables and merge into the loaded config.
+	err = k.Load(env.Provider("", ".", func(s string) string {
+		// `__` is used as a hierarchy delimiter.
+		return strings.Replace(strings.ToLower(s), "__", ".", -1)
+	}), nil)
+	cobra.CheckErr(err)
+
+	// Unmarshal into config.
+	err = k.Unmarshal("", &config)
 	cobra.CheckErr(err)
 
 	// Validate config.
