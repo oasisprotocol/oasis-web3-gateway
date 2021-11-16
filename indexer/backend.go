@@ -3,6 +3,7 @@ package indexer
 import (
 	"encoding/hex"
 	"errors"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"sync"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -358,7 +359,52 @@ func (p *psqlBackend) GetTransactionByBlockHashAndIndex(blockHash ethcommon.Hash
 }
 
 func (p *psqlBackend) GetTransactionReceipt(txHash ethcommon.Hash) (map[string]interface{}, error) {
-	return p.storage.GetTransactionReceipt(txHash.String())
+	dbReceipt, err := p.storage.GetTransactionReceipt(txHash.String())
+	if err != nil {
+		return nil, err
+	}
+
+	ethLogs := []*ethtypes.Log{}
+	for _, dbLog := range dbReceipt.Logs {
+		topics := []ethcommon.Hash{}
+		for _, dbTopic := range dbLog.Topics {
+			tp := ethcommon.HexToHash(dbTopic)
+			topics = append(topics, tp)
+		}
+
+		data, _ := hex.DecodeString(dbLog.Data)
+		log := &ethtypes.Log{
+			Address:     ethcommon.HexToAddress(dbLog.Address),
+			Topics:      topics,
+			Data:        data,
+			BlockNumber: dbLog.Round,
+			TxHash:      ethcommon.HexToHash(dbLog.TxHash),
+			TxIndex:     dbLog.TxIndex,
+			BlockHash:   ethcommon.HexToHash(dbLog.BlockHash),
+			Index:       dbLog.Index,
+			Removed:     dbLog.Removed,
+		}
+
+		ethLogs = append(ethLogs, log)
+	}
+
+	receipt := map[string]interface{}{
+		"status":            hexutil.Uint(dbReceipt.Status),
+		"cumulativeGasUsed": hexutil.Uint64(dbReceipt.CumulativeGasUsed),
+		"logsBloom":         ethtypes.BytesToBloom(ethtypes.LogsBloom(ethLogs)),
+		"logs":              ethLogs,
+		"transactionHash":   dbReceipt.TransactionHash,
+		"gasUsed":           hexutil.Uint64(dbReceipt.GasUsed),
+		"type":              hexutil.Uint64(dbReceipt.Type),
+		"blockHash":         dbReceipt.BlockHash,
+		"blockNumber":       hexutil.Uint64(dbReceipt.Round),
+		"transactionIndex":  hexutil.Uint64(dbReceipt.TransactionIndex),
+		"from":              dbReceipt.FromAddr,
+		"to":                dbReceipt.ToAddr,
+		"contractAddress":   dbReceipt.ContractAddress,
+	}
+
+	return receipt, nil
 }
 
 func (p *psqlBackend) BlockNumber() (uint64, error) {

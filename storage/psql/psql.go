@@ -6,10 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	ethtypes "github.com/ethereum/go-ethereum/core/types"
-
 	"github.com/go-pg/pg/v10"
 
 	"github.com/starfishlabs/oasis-evm-web3-gateway/conf"
@@ -230,62 +226,10 @@ func (db *PostDb) GetBlockTransaction(blockHash string, txIndex int) (*model.Tra
 	return blk.Transactions[txIndex], nil
 }
 
-func (db *PostDb) GetTransactionReceipt(txHash string) (map[string]interface{}, error) {
-	tx := new(model.Transaction)
-	if err := db.Db.Model(tx).Where("hash=?", txHash).Select(); err != nil {
+func (db *PostDb) GetTransactionReceipt(txHash string) (*model.Receipt, error) {
+	receipt := new(model.Receipt)
+	if err := db.Db.Model(receipt).Where("transaction_hash=?", txHash).Select(); err != nil {
 		return nil, err
-	}
-	block := new(model.Block)
-	if err := db.Db.Model(block).Where("hash=?", tx.BlockHash).Select(); err != nil {
-		return nil, err
-	}
-
-	cumulativeGasUsed := uint64(0)
-	for i := 0; i <= int(tx.Index) && i < len(block.Transactions); i++ {
-		cumulativeGasUsed += tx.Gas
-	}
-
-	dbLogs := []*model.Log{}
-	err := db.Db.Model(&dbLogs).Where("tx_hash=?", txHash).Select()
-	if err != nil {
-		return nil, err
-	}
-
-	ethLogs := []*ethtypes.Log{}
-	for _, log := range dbLogs {
-		data, _ := hexutil.Decode(log.Data)
-		topics := []common.Hash{}
-		for _, elem := range log.Topics {
-			tp := common.HexToHash(elem)
-			topics = append(topics, tp)
-		}
-		ethLog := &ethtypes.Log{
-			Address:     common.HexToAddress(log.Address),
-			Topics:      topics,
-			Data:        data,
-			BlockNumber: log.Round,
-			TxHash:      common.HexToHash(log.TxHash),
-			TxIndex:     log.TxIndex,
-			BlockHash:   common.HexToHash(log.BlockHash),
-			Index:       log.Index,
-			Removed:     log.Removed,
-		}
-		ethLogs = append(ethLogs, ethLog)
-	}
-
-	receipt := map[string]interface{}{
-		"status":            hexutil.Uint(tx.Status),
-		"cumulativeGasUsed": hexutil.Uint64(cumulativeGasUsed),
-		"logsBloom":         ethtypes.BytesToBloom(ethtypes.LogsBloom(ethLogs)),
-		"logs":              ethLogs,
-		"transactionHash":   tx.Hash,
-		"gasUsed":           hexutil.Uint64(tx.Gas),
-		"type":              hexutil.Uint64(tx.Type),
-		"blockHash":         tx.BlockHash,
-		"blockNumber":       hexutil.Uint64(tx.Round),
-		"transactionIndex":  hexutil.Uint64(tx.Index),
-		"from":              tx.FromAddr,
-		"to":                tx.ToAddr,
 	}
 
 	return receipt, nil
