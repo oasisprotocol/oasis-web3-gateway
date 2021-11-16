@@ -15,7 +15,6 @@ var (
 	defaultValidatorAddr = "0x0000000000000000000000000000000088888888"
 	defaultSize          = 100
 	defaultGasLimit      = 21000 * 1000
-	EmptyRootHash        = common.HexToHash("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
 )
 
 // ConvertToEthBlock returns a JSON-RPC compatible Ethereum Block from a given Oasis block and its block result.
@@ -32,8 +31,21 @@ func ConvertToEthBlock(
 
 	bloom := ethtypes.BytesToBloom(ethtypes.LogsBloom(logs))
 	gasUsed := big.NewInt(0).SetUint64(gas)
-	btxHash, _ := block.Header.IORoot.MarshalBinary()
 
+	var btxHash hexutil.Bytes
+	switch len(transactions) {
+	case 0:
+		// In case there are no ETH transactions in block return the
+		// Ethereum's empty root hash, since some WEB3 clients rely on it.
+		btxHash = hexutil.Bytes(ethtypes.EmptyRootHash.Bytes())
+	default:
+		ioRoot, err := block.Header.IORoot.MarshalBinary()
+		if err != nil {
+			return nil, err
+		}
+		btxHash = hexutil.Bytes(ioRoot)
+
+	}
 	res := map[string]interface{}{
 		"number":           hexutil.Uint64(block.Header.Round),
 		"hash":             common.BytesToHash(bHash),
@@ -50,7 +62,7 @@ func ConvertToEthBlock(
 		"gasLimit":         hexutil.Uint64(defaultGasLimit),
 		"gasUsed":          (*hexutil.Big)(gasUsed),
 		"timestamp":        hexutil.Uint64(block.Header.Timestamp),
-		"transactionsRoot": hexutil.Bytes(btxHash),
+		"transactionsRoot": btxHash,
 		"receiptsRoot":     ethtypes.EmptyRootHash,
 
 		"uncles":          []common.Hash{},
