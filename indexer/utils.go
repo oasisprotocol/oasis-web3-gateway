@@ -58,23 +58,22 @@ func convertToEthFormat(
 	gas uint64,
 ) (*model.Block, []*model.Transaction, []map[string]interface{}, error) {
 	encoded := block.Header.EncodedHash()
-	bhash, _ := encoded.MarshalBinary()
-	bprehash, _ := block.Header.PreviousHash.MarshalBinary()
-	bshash, _ := block.Header.StateRoot.MarshalBinary()
+	bhash := encoded.Hex()
+	bprehash := block.Header.PreviousHash.Hex()
+	bshash := block.Header.StateRoot.Hex()
 	bloom := ethtypes.BytesToBloom(ethtypes.LogsBloom(logs))
-	btxHash, _ := block.Header.IORoot.MarshalBinary()
-
+	btxHash := block.Header.IORoot.Hex()
 	baseFee := big.NewInt(10)
 	number := big.NewInt(0)
 	number.SetUint64(block.Header.Round)
 	bloomData, _ := bloom.MarshalText()
 
 	innerHeader := &model.Header{
-		ParentHash:  common.BytesToHash(bprehash).Hex(),
+		ParentHash:  bprehash,
 		UncleHash:   ethtypes.EmptyUncleHash.Hex(),
 		Coinbase:    common.HexToAddress(defaultValidatorAddr).Hex(),
-		Root:        common.BytesToHash(bshash).Hex(),
-		TxHash:      string(btxHash),
+		Root:        bshash,
+		TxHash:      btxHash,
 		ReceiptHash: ethtypes.EmptyRootHash.Hex(),
 		Bloom:       string(bloomData),
 		Difficulty:  big.NewInt(0).String(),
@@ -113,7 +112,7 @@ func convertToEthFormat(
 			Type:       ethTx.Type(),
 			ChainID:    ethTx.ChainId().String(),
 			Status:     uint(txsStatus[idx]),
-			BlockHash:  string(bhash),
+			BlockHash:  bhash,
 			Round:      number.Uint64(),
 			Index:      uint32(idx),
 			Gas:        ethTx.Gas(),
@@ -174,7 +173,7 @@ func convertToEthFormat(
 	}
 
 	innerBlock := &model.Block{
-		Hash:         string(bhash),
+		Hash:         bhash,
 		Round:        number.Uint64(),
 		Header:       innerHeader,
 		Uncles:       []*model.Header{},
@@ -251,15 +250,19 @@ func (p *psqlBackend) StoreBlockData(oasisBlock *block.Block, txResults []*clien
 	}
 
 	// Store txs
-	err = p.storage.Store(txs)
-	if err != nil {
-		return err
+	if len(txs) > 0 {
+		err = p.storage.Store(txs)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Store receipts
-	err = p.storage.Store(receipts)
-	if err != nil {
-		return err
+	if len(receipts) > 0 {
+		err = p.storage.Store(receipts)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Store block
