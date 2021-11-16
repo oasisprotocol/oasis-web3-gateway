@@ -208,44 +208,10 @@ func (p *psqlBackend) Index(oasisBlock *block.Block, txResults []*client.Transac
 	p.storage.Store(blockRef)
 
 	// oasis block -> eth block, store eth block
-	ethBlock, err := p.generateEthBlock(oasisBlock, txResults)
+	err := p.StoreBlockData(oasisBlock, txResults)
 	if err != nil {
 		p.logger.Error("generateEthBlock failed", "err", err)
 		return err
-	}
-	err = p.storage.Store(ethBlock)
-	if err != nil {
-		return err
-	}
-
-	// txIndex excludes non-ethereum transactions.
-	txIndex := uint32(0)
-	for _, item := range txResults {
-		utx := item.Tx
-		if len(utx.AuthProofs) != 1 || utx.AuthProofs[0].Module != "evm.ethereum.v0" {
-			// Skip non-Ethereum transactions.
-			continue
-		}
-		txRef, ethTx, err := p.DecodeUtx(&utx, blockHash.String(), round, txIndex)
-		if err != nil {
-			p.logger.Error("failed to decode transaction", "err", err, "round", round, "index", txIndex)
-			return err
-		}
-		// tx status/receipt status
-		if item.Result.IsSuccess() {
-			ethTx.Status = 1
-		} else {
-			ethTx.Status = 0
-		}
-		if err := p.storage.Store(ethTx); err != nil {
-			return err
-		}
-		txIndex++
-
-		// remove later
-		if err := p.storage.Store(txRef); err != nil {
-			return err
-		}
 	}
 
 	p.logger.Info("indexed block", "round", round)
@@ -396,7 +362,7 @@ func (p *psqlBackend) GetTransactionReceipt(txHash ethcommon.Hash) (map[string]i
 }
 
 func (p *psqlBackend) BlockNumber() (uint64, error) {
-	return p.storage.GetBlockNumber()
+	return p.storage.GetLatestBlockNumber()
 }
 
 func (p *psqlBackend) GetLogs(blockHash ethcommon.Hash, startRound, endRound uint64) ([]*model.Log, error) {
