@@ -97,7 +97,7 @@ func NewRPCTransaction(
 		GasFeeCap: (*hexutil.Big)(gasFee),
 		GasTipCap: (*hexutil.Big)(gasTip),
 		Hash:      common.HexToHash(dbTx.Hash),
-		Input:     hexutil.Bytes(dbTx.Data),
+		Input:     common.Hex2Bytes(dbTx.Data),
 		Nonce:     hexutil.Uint64(dbTx.Nonce),
 		To:        &to,
 		Value:     (*hexutil.Big)(value),
