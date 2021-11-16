@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -27,26 +26,16 @@ func InitDb(cfg *conf.DatabaseConfig) (*PostDb, error) {
 		return nil, errors.New("nil configuration")
 	}
 
-	// parse env var
-	dbUser := os.Getenv("DB_USER")
-	if dbUser == "" {
-		return nil, errors.New("failed to parse 'DB_USER' env var")
-	}
-	dbPwd := os.Getenv("DB_PWD")
-	if dbPwd == "" {
-		return nil, errors.New("failed to parse 'DB_PWD' env var")
-	}
-
 	// Connect db
 	db := pg.Connect(&pg.Options{
 		Addr:        fmt.Sprintf("%v:%v", cfg.Host, cfg.Port),
 		Database:    cfg.Db,
-		User:        dbUser,
-		Password:    dbPwd,
+		User:        cfg.User,
+		Password:    cfg.Password,
 		DialTimeout: time.Duration(cfg.Timeout) * time.Second,
 	})
 	// Ping
-	if err := db.Ping(context.TODO()); err != nil {
+	if err := db.Ping(context.Background()); err != nil {
 		return nil, err
 	}
 	// initialize models
@@ -173,7 +162,7 @@ func (db *PostDb) GetLastRetainedRound() (uint64, error) {
 	return retainedRound.Round, nil
 }
 
-func (db *PostDb) GetBlockNumber() (uint64, error) {
+func (db *PostDb) GetLatestBlockNumber() (uint64, error) {
 	blk := new(model.Block)
 	err := db.Db.Model(blk).Order("round DESC").Limit(1).Select()
 	if err != nil {
