@@ -96,3 +96,19 @@ type Log struct {
 	Index     uint   `pg:",use_zero,unique:tx_hash_log_index"`
 	Removed   bool
 }
+
+type Receipt struct {
+	Status            uint   `pg:",use_zero"`
+	CumulativeGasUsed uint64 `pg:",use_zero"`
+	LogsBloom         string
+	Logs              []*Log
+	TransactionHash   string `pg:",pk"`
+	BlockHash         string
+	GasUsed           uint64 `pg:",use_zero"`
+	Type              uint   `pg:",use_zero"`
+	Round             uint64 `pg:",use_zero"` // BlockNumber
+	TransactionIndex  uint64 `pg:",use_zero"`
+	FromAddr          string
+	ToAddr            string
+	ContractAddress   string
+}

@@ -14,6 +14,7 @@ func InitModel(db *pg.DB) error {
 		new(Transaction),
 		new(IndexedRoundWithTip),
 		new(Log),
+		new(Receipt),
 	}
 
 	for _, m := range models {

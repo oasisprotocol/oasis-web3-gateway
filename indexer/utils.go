@@ -7,7 +7,6 @@ import (
 	"github.com/fxamacker/cbor/v2"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 
@@ -52,21 +51,21 @@ func Logs2EthLogs(logs []*Log, round uint64, blockHash, txHash common.Hash, txIn
 func convertToEthFormat(
 	block *block.Block,
 	transactions ethtypes.Transactions,
-	logs []*ethtypes.Log,
+	ethLogs []*ethtypes.Log,
 	txsStatus []uint8,
 	results []types.CallResult,
 	gas uint64,
-) (*model.Block, []*model.Transaction, []map[string]interface{}, error) {
+) (*model.Block, []*model.Transaction, []*model.Receipt, error) {
 	encoded := block.Header.EncodedHash()
 	bhash := encoded.Hex()
 	bprehash := block.Header.PreviousHash.Hex()
 	bshash := block.Header.StateRoot.Hex()
-	bloom := ethtypes.BytesToBloom(ethtypes.LogsBloom(logs))
+	bloom := ethtypes.BytesToBloom(ethtypes.LogsBloom(ethLogs))
+	bloomData, _ := bloom.MarshalText()
 	btxHash := block.Header.IORoot.Hex()
 	baseFee := big.NewInt(10)
 	number := big.NewInt(0)
 	number.SetUint64(block.Header.Round)
-	bloomData, _ := bloom.MarshalText()
 
 	innerHeader := &model.Header{
 		ParentHash:  bprehash,
@@ -88,7 +87,7 @@ func convertToEthFormat(
 	}
 
 	innerTxs := []*model.Transaction{}
-	innerReceipts := []map[string]interface{}{}
+	innerReceipts := []*model.Receipt{}
 	cumulativeGasUsed := uint64(0)
 	for idx, ethTx := range transactions {
 		r, s, v := ethTx.RawSignatureValues()
@@ -138,36 +137,33 @@ func convertToEthFormat(
 
 		// receipts
 		cumulativeGasUsed += tx.Gas
-		receipt := map[string]interface{}{
-			"status":            hexutil.Uint(txsStatus[idx]),
-			"cumulativeGasUsed": hexutil.Uint64(cumulativeGasUsed),
-			"logsBloom":         ethtypes.BytesToBloom(ethtypes.LogsBloom(logs)),
-			"logs":              logs,
-			"transactionHash":   ethTx.Hash().Hex(),
-			"gasUsed":           hexutil.Uint64(ethTx.Gas()),
-			"type":              hexutil.Uint64(ethTx.Type()),
-			"blockHash":         bhash,
-			"blockNumber":       hexutil.Uint64(block.Header.Round),
-			"transactionIndex":  hexutil.Uint64(idx),
-			"from":              nil,
-			"to":                nil,
-			"contractAddress":   nil,
+		receipt := &model.Receipt{
+			Status:            uint(txsStatus[idx]),
+			CumulativeGasUsed: cumulativeGasUsed,
+			LogsBloom:         hex.EncodeToString(bloomData),
+			Logs:              eth2DbLogs(ethLogs),
+			TransactionHash:   ethTx.Hash().Hex(),
+			BlockHash:         bhash,
+			GasUsed:           ethTx.Gas(),
+			Type:              uint(ethTx.Type()),
+			Round:             block.Header.Round,
+			TransactionIndex:  uint64(idx),
 		}
 		if tx.FromAddr != "" {
-			receipt["from"] = tx.FromAddr
+			receipt.FromAddr = tx.FromAddr
 		}
 		if tx.ToAddr != "" {
-			receipt["to"] = tx.ToAddr
+			receipt.ToAddr = tx.ToAddr
 		}
-		if logs == nil {
-			receipt["logs"] = [][]*ethtypes.Log{}
+		if len(receipt.Logs) == 0 {
+			receipt.Logs = []*model.Log{}
 		}
 		if tx.ToAddr == "" && results[idx].IsSuccess() {
 			var out []byte
 			if err := cbor.Unmarshal(results[idx].Ok, &out); err != nil {
 				return nil, nil, nil, err
 			}
-			receipt["contractAddress"] = common.BytesToAddress(out)
+			receipt.ContractAddress = common.BytesToAddress(out).Hex()
 		}
 		innerReceipts = append(innerReceipts, receipt)
 	}
@@ -179,6 +175,7 @@ func convertToEthFormat(
 		Uncles:       []*model.Header{},
 		Transactions: innerTxs,
 	}
+
 	return innerBlock, innerTxs, innerReceipts, nil
 }
 
