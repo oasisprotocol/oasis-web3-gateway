@@ -2,19 +2,12 @@ package utils
 
 import (
 	"encoding/hex"
-	"math/big"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
-
+	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
-)
-
-var (
-	defaultValidatorAddr = "0x0000000000000000000000000000000088888888"
-	defaultSize          = 100
-	defaultGasLimit      = 21000 * 1000
+	"math/big"
 )
 
 // NewRPCTransaction returns a transaction that will serialize to the RPC representation.
@@ -87,6 +80,8 @@ func ConvertToEthBlock(block *model.Block, fullTx bool) map[string]interface{} {
 		}
 	}
 
+	serialized := cbor.Marshal(block)
+
 	res := map[string]interface{}{
 		"parentHash":       common.HexToHash(block.Header.ParentHash),
 		"sha3Uncles":       common.HexToHash(block.Header.UncleHash),
@@ -103,14 +98,11 @@ func ConvertToEthBlock(block *model.Block, fullTx bool) map[string]interface{} {
 		"extraData":        block.Header.Extra,
 		"mixHash":          common.HexToHash(block.Header.MixDigest),
 		"nonce":            ethtypes.EncodeNonce(block.Header.Nonce),
-
-		"uncles":       block.Uncles,
-		"transactions": transactions,
-
-		"hash": common.HexToHash(block.Hash),
-		"size": hexutil.Uint64(defaultSize),
-
-		"totalDifficulty": (*hexutil.Big)(big.NewInt(0)),
+		"uncles":           block.Uncles,
+		"transactions":     transactions,
+		"hash":             common.HexToHash(block.Hash),
+		"size":             hexutil.Uint64(len(serialized)),
+		"totalDifficulty":  (*hexutil.Big)(big.NewInt(0)),
 	}
 
 	return res
