@@ -3,6 +3,7 @@ package indexer
 import (
 	"encoding/hex"
 	"math/big"
+	"strings"
 
 	"github.com/fxamacker/cbor/v2"
 
@@ -57,7 +58,7 @@ func convertToEthFormat(
 	gas uint64,
 ) (*model.Block, []*model.Transaction, []*model.Receipt, error) {
 	encoded := block.Header.EncodedHash()
-	bhash := encoded.Hex()
+	bhash := common.HexToHash(encoded.Hex()).String()
 	bprehash := block.Header.PreviousHash.Hex()
 	bshash := block.Header.StateRoot.Hex()
 	bloom := ethtypes.BytesToBloom(ethtypes.LogsBloom(ethLogs))
@@ -186,7 +187,7 @@ func convertToEthFormat(
 
 func (p *psqlBackend) StoreBlockData(oasisBlock *block.Block, txResults []*client.TransactionWithResults) error {
 	encoded := oasisBlock.Header.EncodedHash()
-	bhash, _ := encoded.MarshalBinary()
+	bhash := common.HexToHash(encoded.Hex())
 	blockNum := oasisBlock.Header.Round
 
 	ethTxs := ethtypes.Transactions{}
@@ -238,7 +239,7 @@ func (p *psqlBackend) StoreBlockData(oasisBlock *block.Block, txResults []*clien
 			}
 		}
 
-		logs = Logs2EthLogs(oasisLogs, blockNum, common.BytesToHash(bhash), ethTx.Hash(), uint32(txIndex))
+		logs = Logs2EthLogs(oasisLogs, blockNum, bhash, ethTx.Hash(), uint32(txIndex))
 		// store logs
 		dbLogs := eth2DbLogs(logs)
 		p.storage.Store(dbLogs)
@@ -301,4 +302,8 @@ func eth2DbLogs(ethLogs []*ethtypes.Log) []*model.Log {
 	}
 
 	return res
+}
+
+func ConvertHashToString(hash common.Hash) string {
+	return strings.TrimLeft(hash.Hex(), "0x")
 }

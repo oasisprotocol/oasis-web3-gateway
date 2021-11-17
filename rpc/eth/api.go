@@ -426,7 +426,7 @@ func (api *PublicAPI) GetBlockByHash(blockHash common.Hash, fullTx bool) (map[st
 	api.Logger.Debug("eth_getBlockByHash", "hash", blockHash.Hex(), "full", fullTx)
 	blk, err := api.backend.GetBlockByHash(blockHash)
 	if err != nil {
-		api.Logger.Error("Matched block error, block hash: ", blockHash)
+		api.Logger.Error("Matched block error", "block hash: ", blockHash)
 		// Block doesn't exist, by web3 spec an empty response should be returned, not an error.
 		return nil, ErrInternalQuery
 	}

@@ -134,8 +134,8 @@ func TestUpdate(t *testing.T) {
 
 	require.NoError(err, "initialize db")
 
-	ir1 := &model.ContinuesIndexedRound{
-		Tip:   "tip",
+	ir1 := &model.IndexedRoundWithTip{
+		Tip:   model.Continues,
 		Round: 1,
 	}
 	require.NoError(db.Update(ir1), "update")
@@ -144,8 +144,8 @@ func TestUpdate(t *testing.T) {
 	require.NoError(err, "GetContinuesIndexedRound")
 	require.EqualValues(1, r1)
 
-	ir2 := &model.ContinuesIndexedRound{
-		Tip:   "tip",
+	ir2 := &model.IndexedRoundWithTip{
+		Tip:   model.Continues,
 		Round: 2,
 	}
 	require.NoError(db.Update(ir2), "update")
@@ -153,8 +153,8 @@ func TestUpdate(t *testing.T) {
 	require.NoError(err, "GetContinuesIndexedRound")
 	require.EqualValues(2, r2)
 
-	ir3 := &model.ContinuesIndexedRound{
-		Tip:   "tip",
+	ir3 := &model.IndexedRoundWithTip{
+		Tip:   model.Continues,
 		Round: 3,
 	}
 	require.NoError(db.Update(ir3), "update")
