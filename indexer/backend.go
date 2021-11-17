@@ -3,19 +3,17 @@ package indexer
 import (
 	"encoding/hex"
 	"errors"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"sync"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/rlp"
 
 	"github.com/oasisprotocol/oasis-core/go/common"
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/hash"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
-	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 
 	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/storage"
@@ -59,9 +57,6 @@ type QueryableBackend interface {
 
 	// QueryTransaction queries ethereum transaction by hash.
 	QueryTransaction(ethTxHash ethcommon.Hash) (*model.Transaction, error)
-
-	// Decode decodes an unverified transaction into ethereum transaction.
-	Decode(utx *types.UnverifiedTransaction) (*model.Transaction, error)
 }
 
 type GetEthInfoBackend interface {
@@ -102,99 +97,6 @@ type psqlBackend struct {
 	logger            *logging.Logger
 	storage           storage.Storage
 	indexedRoundMutex *sync.Mutex
-}
-
-func (p *psqlBackend) Decode(utx *types.UnverifiedTransaction) (*model.Transaction, error) {
-	ethTx := &ethtypes.Transaction{}
-	if err := rlp.DecodeBytes(utx.Body, ethTx); err != nil {
-		return nil, err
-	}
-	v, r, s := ethTx.RawSignatureValues()
-	signer := ethtypes.LatestSignerForChainID(ethTx.ChainId())
-	from, _ := signer.Sender(ethTx)
-	innerTx := &model.Transaction{
-		Hash:     ethTx.Hash().String(),
-		Gas:      ethTx.Gas(),
-		Nonce:    ethTx.Nonce(),
-		FromAddr: from.String(),
-		Value:    ethTx.Value().String(),
-		Data:     hex.EncodeToString(ethTx.Data()),
-		V:        v.String(),
-		R:        r.String(),
-		S:        s.String(),
-	}
-	to := ethTx.To()
-	if to == nil {
-		innerTx.ToAddr = ""
-	} else {
-		innerTx.ToAddr = to.Hex()
-	}
-	accList := []model.AccessTuple{}
-	if ethTx.Type() == ethtypes.AccessListTxType || ethTx.Type() == ethtypes.DynamicFeeTxType {
-		for _, tuple := range ethTx.AccessList() {
-			addr := tuple.Address.String()
-			keys := []string{}
-			for _, k := range tuple.StorageKeys {
-				keys = append(keys, k.String())
-			}
-			accList = append(accList, model.AccessTuple{
-				Address:     addr,
-				StorageKeys: keys,
-			})
-		}
-	}
-
-	switch ethTx.Type() {
-	case ethtypes.LegacyTxType:
-		{
-			innerTx.Type = ethtypes.LegacyTxType
-			innerTx.GasPrice = ethTx.GasPrice().String()
-			innerTx.GasFeeCap = "0"
-			innerTx.GasTipCap = "0"
-			innerTx.ChainID = "0"
-			innerTx.AccessList = []model.AccessTuple{}
-		}
-	case ethtypes.AccessListTxType:
-		{
-			innerTx.Type = ethtypes.AccessListTxType
-			innerTx.GasPrice = ethTx.GasPrice().String()
-			innerTx.ChainID = ethTx.ChainId().String()
-			innerTx.AccessList = accList
-			innerTx.GasFeeCap = "0"
-			innerTx.GasTipCap = "0"
-		}
-	case ethtypes.DynamicFeeTxType:
-		{
-			innerTx.Type = ethtypes.DynamicFeeTxType
-			innerTx.GasFeeCap = ethTx.GasFeeCap().String()
-			innerTx.GasTipCap = ethTx.GasTipCap().String()
-			innerTx.AccessList = accList
-			innerTx.GasPrice = "0"
-		}
-	default:
-		return nil, errors.New("unknown transaction type")
-	}
-
-	return innerTx, nil
-}
-
-func (p *psqlBackend) DecodeUtx(utx *types.UnverifiedTransaction, blockHash string, round uint64, idx uint32) (*model.TransactionRef, *model.Transaction, error) {
-	ethTx, err := p.Decode(utx)
-	if err != nil {
-		return nil, nil, err
-	}
-	ethTx.Index = idx
-	ethTx.Round = round
-	ethTx.BlockHash = blockHash
-
-	txRef := &model.TransactionRef{
-		EthTxHash: ethTx.Hash,
-		Index:     idx,
-		Round:     round,
-		BlockHash: blockHash,
-	}
-
-	return txRef, ethTx, nil
 }
 
 func (p *psqlBackend) Index(oasisBlock *block.Block, txResults []*client.TransactionWithResults) error {

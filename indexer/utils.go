@@ -62,10 +62,15 @@ func convertToEthFormat(
 	bshash := block.Header.StateRoot.Hex()
 	bloom := ethtypes.BytesToBloom(ethtypes.LogsBloom(ethLogs))
 	bloomData, _ := bloom.MarshalText()
-	btxHash := block.Header.IORoot.Hex()
 	baseFee := big.NewInt(10)
 	number := big.NewInt(0)
 	number.SetUint64(block.Header.Round)
+	var btxHash string
+	if len(transactions) == 0 {
+		btxHash = ethtypes.EmptyRootHash.Hex()
+	} else {
+		btxHash = block.Header.IORoot.Hex()
+	}
 
 	innerHeader := &model.Header{
 		ParentHash:  bprehash,
@@ -233,7 +238,7 @@ func (p *psqlBackend) StoreBlockData(oasisBlock *block.Block, txResults []*clien
 			}
 		}
 
-		logs = Logs2EthLogs(oasisLogs, oasisBlock.Header.Round, common.BytesToHash(bhash), ethTx.Hash(), uint32(txIndex))
+		logs = Logs2EthLogs(oasisLogs, blockNum, common.BytesToHash(bhash), ethTx.Hash(), uint32(txIndex))
 		// store logs
 		dbLogs := eth2DbLogs(logs)
 		p.storage.Store(dbLogs)
@@ -247,16 +252,16 @@ func (p *psqlBackend) StoreBlockData(oasisBlock *block.Block, txResults []*clien
 	}
 
 	// Store txs
-	if len(txs) > 0 {
-		err = p.storage.Store(txs)
+	for _, tx := range txs {
+		err = p.storage.Store(tx)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Store receipts
-	if len(receipts) > 0 {
-		err = p.storage.Store(receipts)
+	for _, receipt := range receipts {
+		err = p.storage.Store(receipt)
 		if err != nil {
 			return err
 		}
