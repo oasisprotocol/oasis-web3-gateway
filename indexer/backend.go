@@ -147,6 +147,14 @@ func (p *psqlBackend) Prune(round uint64) error {
 		return err
 	}
 
+	if err := p.storage.Delete(new(model.TransactionRef), round); err != nil {
+		return err
+	}
+
+	if err := p.storage.Delete(new(model.Receipt), round); err != nil {
+		return err
+	}
+
 	return nil
 }
 
