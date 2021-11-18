@@ -32,8 +32,8 @@ func InitDb(cfg *conf.DatabaseConfig) (*PostDb, error) {
 	// create db
 	db := bun.NewDB(sqlDB, pgdialect.New())
 
-	// register model
-	model.RegisterModel(db)
+	// create tables
+	model.CreateTables(db)
 
 	return &PostDb{Db: db}, nil
 }
@@ -74,8 +74,9 @@ func (db *PostDb) Update(value interface{}) error {
 	}
 	if l == 0 {
 		_, err = db.Db.NewInsert().Model(value).Exec(context.Background())
+
 	} else {
-		_, err = db.Db.NewUpdate().Model(value).Exec(context.Background())
+		_, err = db.Db.NewUpdate().Model(value).WherePK().Exec(context.Background())
 	}
 
 	return err
