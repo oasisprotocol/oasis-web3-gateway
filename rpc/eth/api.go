@@ -435,14 +435,9 @@ func (api *PublicAPI) GetBlockByHash(blockHash common.Hash, fullTx bool) (map[st
 }
 
 func (api *PublicAPI) getRPCTransaction(dbTx *model.Transaction) (*utils.RPCTransaction, error) {
-	dbTxRef, err := api.backend.QueryTransactionRef(dbTx.Hash)
-	if err != nil {
-		api.Logger.Error("Failed to QueryTransactionRef", "hash", dbTx.Hash)
-		return nil, ErrInternalQuery
-	}
-	blockHash := common.HexToHash(dbTxRef.BlockHash)
-	txIndex := hexutil.Uint64(dbTxRef.Index)
-	resTx, err := utils.NewRPCTransaction(dbTx, blockHash, dbTxRef.Round, txIndex)
+	blockHash := common.HexToHash(dbTx.BlockHash)
+	txIndex := hexutil.Uint64(dbTx.Index)
+	resTx, err := utils.NewRPCTransaction(dbTx, blockHash, dbTx.Round, txIndex)
 	if err != nil {
 		api.Logger.Error("Failed to NewRPCTransaction", "hash", dbTx.Hash, "error", err.Error())
 		return nil, ErrInternalQuery

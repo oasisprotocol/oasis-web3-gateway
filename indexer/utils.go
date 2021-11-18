@@ -153,12 +153,8 @@ func convertToEthFormat(
 			Type:              uint(ethTx.Type()),
 			Round:             block.Header.Round,
 			TransactionIndex:  uint64(idx),
-		}
-		if tx.FromAddr != "" {
-			receipt.FromAddr = tx.FromAddr
-		}
-		if tx.ToAddr != "" {
-			receipt.ToAddr = tx.ToAddr
+			FromAddr:          tx.FromAddr,
+			ToAddr:            tx.ToAddr,
 		}
 		if len(receipt.Logs) == 0 {
 			receipt.Logs = []*model.Log{}

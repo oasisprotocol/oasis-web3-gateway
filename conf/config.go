@@ -176,8 +176,5 @@ func InitConfig(f string) *Config {
 	err = config.Validate()
 	cobra.CheckErr(err)
 
-	// config.Database.User = os.Getenv("DATABASE__USER")
-	// config.Database.Password = os.Getenv("DATABASE__PASSWORD")
-
 	return &config
 }

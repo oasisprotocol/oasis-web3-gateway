@@ -309,11 +309,19 @@ func (p *psqlBackend) GetTransactionReceipt(txHash ethcommon.Hash) (map[string]i
 		"blockHash":         dbReceipt.BlockHash,
 		"blockNumber":       hexutil.Uint64(dbReceipt.Round),
 		"transactionIndex":  hexutil.Uint64(dbReceipt.TransactionIndex),
-		"from":              dbReceipt.FromAddr,
-		"to":                dbReceipt.ToAddr,
-		"contractAddress":   dbReceipt.ContractAddress,
+		"from":              nil,
+		"to":                nil,
+		"contractAddress":   nil,
 	}
-
+	if dbReceipt.FromAddr != "" {
+		receipt["from"] = dbReceipt.FromAddr
+	}
+	if dbReceipt.ToAddr != "" {
+		receipt["to"] = dbReceipt.ToAddr
+	}
+	if dbReceipt.ContractAddress != "" {
+		receipt["contractAddress"] = dbReceipt.ContractAddress
+	}
 	return receipt, nil
 }
 
