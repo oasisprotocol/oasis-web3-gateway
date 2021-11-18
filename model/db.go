@@ -1,16 +1,26 @@
 package model
 
+type AccessList []AccessTuple
+
+// Continues is the latest Indexed Block Round.
+const Continues string = "tip"
+
+type ContinuesIndexedRound struct {
+	Tip   string `bun:",pk"`
+	Round uint64
+}
+
 // BlockRef represents the relationship between block round and block hash.
 type BlockRef struct {
-	Round uint64 `pg:",pk"`
+	Round uint64 `bun:",pk"`
 	Hash  string
 }
 
 // TransactionRef represents the relationship between ethereum tx and oasis tx.
 type TransactionRef struct {
-	EthTxHash string `pg:",pk"`
-	Index     uint32 `pg:",use_zero"`
-	Round     uint64 `pg:",use_zero"`
+	EthTxHash string `bun:",pk"`
+	Index     uint32
+	Round     uint64
 	BlockHash string
 }
 
@@ -20,26 +30,16 @@ type AccessTuple struct {
 	StorageKeys []string
 }
 
-// Continues is the latest Indexed Block Round.
-const Continues string = "tip"
-
-type ContinuesIndexedRound struct {
-	Tip   string `pg:",pk"`
-	Round uint64
-}
-
-type AccessList []AccessTuple
-
 // Transaction is ethereum transaction.
 type Transaction struct {
-	Hash       string `pg:",pk"`
-	Type       uint8  `pg:",use_zero"`
+	Hash       string `bun:",pk"`
+	Type       uint8
 	ChainID    string
-	Gas        uint64 `pg:",use_zero"`
+	Gas        uint64
 	GasPrice   string
 	GasTipCap  string
 	GasFeeCap  string
-	Nonce      uint64 `pg:",use_zero"`
+	Nonce      uint64
 	FromAddr   string
 	ToAddr     string
 	Value      string
