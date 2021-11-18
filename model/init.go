@@ -6,12 +6,9 @@ import (
 
 // RegisterModel initializes db models.
 func RegisterModel(db *bun.DB) {
-	models := []interface{}{
-		new(BlockRef),
-		new(TransactionRef),
-		new(Transaction),
-		new(ContinuesIndexedRound)}
-
 	// register model
-	db.RegisterModel(models)
+	db.RegisterModel(new(BlockRef))
+	db.RegisterModel(new(TransactionRef))
+	db.RegisterModel(new(Transaction))
+	db.RegisterModel(new(ContinuesIndexedRound))
 }
