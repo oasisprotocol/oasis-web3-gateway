@@ -508,7 +508,7 @@ func (api *PublicAPI) GetTransactionReceipt(txHash common.Hash) (map[string]inte
 	receipt, err := api.backend.GetTransactionReceipt(txHash)
 	if err != nil {
 		// Transaction doesn't exist, don't return an error, but empty response.
-		api.Logger.Error("failed to get transaction receipt, err:", err)
+		api.Logger.Error("failed to get transaction receipt", "err:", err)
 		return nil, nil
 	}
 

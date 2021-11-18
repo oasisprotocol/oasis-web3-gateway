@@ -20,7 +20,6 @@ import (
 var (
 	defaultValidatorAddr = "0x0000000000000000000000000000000088888888"
 	defaultGasLimit      = 21000 * 1000
-	EmptyRootHash        = common.HexToHash("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
 )
 
 // Log is the Oasis Log.

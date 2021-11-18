@@ -2,12 +2,13 @@ package utils
 
 import (
 	"encoding/hex"
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
-	"math/big"
 )
 
 // NewRPCTransaction returns a transaction that will serialize to the RPC representation.
@@ -46,7 +47,7 @@ func NewRPCTransaction(
 		GasFeeCap: (*hexutil.Big)(gasFee),
 		GasTipCap: (*hexutil.Big)(gasTip),
 		Hash:      common.HexToHash(dbTx.Hash),
-		Input:     hexutil.Bytes(dbTx.Data),
+		Input:     common.Hex2Bytes(dbTx.Data),
 		Nonce:     hexutil.Uint64(dbTx.Nonce),
 		To:        &to,
 		Value:     (*hexutil.Big)(value),
