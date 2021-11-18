@@ -41,7 +41,7 @@ func InitDb(cfg *conf.DatabaseConfig) (*PostDb, error) {
 // GetTransactionRef returns block hash, round and index of the transaction.
 func (db *PostDb) GetTransactionRef(txHash string) (*model.TransactionRef, error) {
 	tx := new(model.TransactionRef)
-	err := db.Db.NewSelect().Model(tx).Where("eth_tx_hash =? ", txHash).Scan(context.Background())
+	err := db.Db.NewSelect().Model(tx).Where("eth_tx_hash = ? ", txHash).Scan(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +74,6 @@ func (db *PostDb) Update(value interface{}) error {
 	}
 	if l == 0 {
 		_, err = db.Db.NewInsert().Model(value).Exec(context.Background())
-
 	} else {
 		_, err = db.Db.NewUpdate().Model(value).WherePK().Exec(context.Background())
 	}
