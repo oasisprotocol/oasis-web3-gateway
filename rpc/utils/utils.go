@@ -32,32 +32,28 @@ func NewRPCTransaction(dbTx *model.Transaction) (*RPCTransaction, error) {
 		}
 		accesses = append(accesses, access)
 	}
-
-	resTx := &RPCTransaction{
-		From:      common.HexToAddress(dbTx.FromAddr),
-		Gas:       hexutil.Uint64(dbTx.Gas),
-		GasPrice:  (*hexutil.Big)(gasPrice),
-		GasFeeCap: (*hexutil.Big)(gasFee),
-		GasTipCap: (*hexutil.Big)(gasTip),
-		Hash:      common.HexToHash(dbTx.Hash),
-		Input:     common.Hex2Bytes(dbTx.Data),
-		Nonce:     hexutil.Uint64(dbTx.Nonce),
-		To:        &to,
-		Value:     (*hexutil.Big)(value),
-		Type:      hexutil.Uint64(dbTx.Type),
-		Accesses:  &accesses,
-		ChainID:   (*hexutil.Big)(chainID),
-		V:         (*hexutil.Big)(v),
-		R:         (*hexutil.Big)(r),
-		S:         (*hexutil.Big)(s),
-	}
-
 	blockHash := common.HexToHash(dbTx.BlockHash)
 	txIndex := hexutil.Uint64(dbTx.Index)
-	if blockHash != (common.Hash{}) {
-		resTx.BlockHash = &blockHash
-		resTx.BlockNumber = (*hexutil.Big)(new(big.Int).SetUint64(dbTx.Round))
-		resTx.TransactionIndex = &txIndex
+	resTx := &RPCTransaction{
+		From:             common.HexToAddress(dbTx.FromAddr),
+		Gas:              hexutil.Uint64(dbTx.Gas),
+		GasPrice:         (*hexutil.Big)(gasPrice),
+		GasFeeCap:        (*hexutil.Big)(gasFee),
+		GasTipCap:        (*hexutil.Big)(gasTip),
+		Hash:             common.HexToHash(dbTx.Hash),
+		Input:            common.Hex2Bytes(dbTx.Data),
+		Nonce:            hexutil.Uint64(dbTx.Nonce),
+		To:               &to,
+		Value:            (*hexutil.Big)(value),
+		Type:             hexutil.Uint64(dbTx.Type),
+		Accesses:         &accesses,
+		ChainID:          (*hexutil.Big)(chainID),
+		V:                (*hexutil.Big)(v),
+		R:                (*hexutil.Big)(r),
+		S:                (*hexutil.Big)(s),
+		BlockHash:        &blockHash,
+		BlockNumber:      (*hexutil.Big)(new(big.Int).SetUint64(dbTx.Round)),
+		TransactionIndex: &txIndex,
 	}
 
 	return resTx, nil
