@@ -12,15 +12,8 @@ import (
 )
 
 // NewRPCTransaction returns a transaction that will serialize to the RPC representation.
-func NewRPCTransaction(
-	dbTx *model.Transaction,
-	blockHash common.Hash,
-	blockNumber uint64,
-	index hexutil.Uint64,
-) (*RPCTransaction, error) {
-
+func NewRPCTransaction(dbTx *model.Transaction) (*RPCTransaction, error) {
 	to := common.HexToAddress(dbTx.ToAddr)
-
 	gasPrice, _ := new(big.Int).SetString(dbTx.GasPrice, 10)
 	gasFee, _ := new(big.Int).SetString(dbTx.GasFeeCap, 10)
 	gasTip, _ := new(big.Int).SetString(dbTx.GasTipCap, 10)
@@ -59,10 +52,12 @@ func NewRPCTransaction(
 		S:         (*hexutil.Big)(s),
 	}
 
+	blockHash := common.HexToHash(dbTx.BlockHash)
+	txIndex := hexutil.Uint64(dbTx.Index)
 	if blockHash != (common.Hash{}) {
 		resTx.BlockHash = &blockHash
-		resTx.BlockNumber = (*hexutil.Big)(new(big.Int).SetUint64(blockNumber))
-		resTx.TransactionIndex = &index
+		resTx.BlockNumber = (*hexutil.Big)(new(big.Int).SetUint64(dbTx.Round))
+		resTx.TransactionIndex = &txIndex
 	}
 
 	return resTx, nil
@@ -72,11 +67,11 @@ func ConvertToEthBlock(block *model.Block, fullTx bool) map[string]interface{} {
 	v1 := big.NewInt(0)
 	diff, _ := v1.SetString(block.Header.Difficulty, 10)
 	transactions := []interface{}{}
-
-	if fullTx {
-		transactions = append(transactions, block.Transactions)
-	} else {
-		for _, tx := range block.Transactions {
+	for _, dbTx := range block.Transactions {
+		tx, _ := NewRPCTransaction(dbTx)
+		if fullTx {
+			transactions = append(transactions, tx)
+		} else {
 			transactions = append(transactions, tx.Hash)
 		}
 	}
