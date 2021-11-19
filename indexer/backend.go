@@ -59,6 +59,7 @@ type QueryableBackend interface {
 	QueryTransaction(ethTxHash ethcommon.Hash) (*model.Transaction, error)
 }
 
+// GetEthInfoBackend is a backend for handling ethereum data.
 type GetEthInfoBackend interface {
 	GetBlockByNumber(number uint64) (*model.Block, error)
 	GetBlockByHash(blockHash ethcommon.Hash) (*model.Block, error)
@@ -99,6 +100,7 @@ type psqlBackend struct {
 	indexedRoundMutex *sync.Mutex
 }
 
+// Index indexes oasis block.
 func (p *psqlBackend) Index(oasisBlock *block.Block, txResults []*client.TransactionWithResults) error {
 	round := oasisBlock.Header.Round
 	blockHash := ethcommon.HexToHash(oasisBlock.Header.EncodedHash().Hex())
@@ -122,10 +124,12 @@ func (p *psqlBackend) Index(oasisBlock *block.Block, txResults []*client.Transac
 	return nil
 }
 
+// UpdateLastIndexedRound updates the last indexed round.
 func (p *psqlBackend) UpdateLastIndexedRound(round uint64) error {
 	return p.storeIndexedRound(round)
 }
 
+// Prune prunes data in db.
 func (p *psqlBackend) Prune(round uint64) error {
 	if err := p.storeLastRetainedRound(round); err != nil {
 		return err
@@ -158,6 +162,7 @@ func (p *psqlBackend) Prune(round uint64) error {
 	return nil
 }
 
+// QueryBlockRound returns block number by block hash.
 func (p *psqlBackend) QueryBlockRound(blockHash ethcommon.Hash) (uint64, error) {
 	round, err := p.storage.GetBlockRound(blockHash.String())
 	if err != nil {
@@ -168,6 +173,7 @@ func (p *psqlBackend) QueryBlockRound(blockHash ethcommon.Hash) (uint64, error) 
 	return round, nil
 }
 
+// QueryBlockHash returns block by block hash.
 func (p *psqlBackend) QueryBlockHash(round uint64) (ethcommon.Hash, error) {
 	var blockHash string
 	var err error
@@ -185,6 +191,7 @@ func (p *psqlBackend) QueryBlockHash(round uint64) (ethcommon.Hash, error) {
 	return ethcommon.HexToHash(blockHash), nil
 }
 
+// storeIndexedRound stores indexed round.
 func (p *psqlBackend) storeIndexedRound(round uint64) error {
 	p.indexedRoundMutex.Lock()
 	defer p.indexedRoundMutex.Unlock()
@@ -197,6 +204,7 @@ func (p *psqlBackend) storeIndexedRound(round uint64) error {
 	return p.storage.Update(r)
 }
 
+// QueryLastIndexedRound returns the last indexed round.
 func (p *psqlBackend) QueryLastIndexedRound() uint64 {
 	p.indexedRoundMutex.Lock()
 	indexedRound, err := p.storage.GetContinuesIndexedRound()
@@ -209,6 +217,7 @@ func (p *psqlBackend) QueryLastIndexedRound() uint64 {
 	return indexedRound
 }
 
+// storeLastRetainedRound stores the last retained round.
 func (p *psqlBackend) storeLastRetainedRound(round uint64) error {
 	r := &model.IndexedRoundWithTip{
 		Tip:   model.LastRetained,
@@ -218,6 +227,7 @@ func (p *psqlBackend) storeLastRetainedRound(round uint64) error {
 	return p.storage.Update(r)
 }
 
+// QueryLastRetainedRound returns the last retained round.
 func (p *psqlBackend) QueryLastRetainedRound() (uint64, error) {
 	lastRetainedRound, err := p.storage.GetLastRetainedRound()
 	if err != nil {
@@ -226,18 +236,21 @@ func (p *psqlBackend) QueryLastRetainedRound() (uint64, error) {
 	return lastRetainedRound, nil
 }
 
-func (p *psqlBackend) QueryTransaction(ethTxHash ethcommon.Hash) (*model.Transaction, error) {
-	tx, err := p.storage.GetTransaction(ethTxHash.String())
+// QueryTransaction returns transaction by transaction hash.
+func (p *psqlBackend) QueryTransaction(txHash ethcommon.Hash) (*model.Transaction, error) {
+	tx, err := p.storage.GetTransaction(txHash.String())
 	if err != nil {
 		return nil, err
 	}
 	return tx, nil
 }
 
+// QueryTransactionRef returns TransactionRef by transaction hash.
 func (p *psqlBackend) QueryTransactionRef(hash string) (*model.TransactionRef, error) {
 	return p.storage.GetTransactionRef(hash)
 }
 
+// GetBlockByNumber returns a block by block number.
 func (p *psqlBackend) GetBlockByNumber(number uint64) (*model.Block, error) {
 	blk, err := p.storage.GetBlockByNumber(number)
 	if err != nil {
@@ -247,6 +260,7 @@ func (p *psqlBackend) GetBlockByNumber(number uint64) (*model.Block, error) {
 	return blk, nil
 }
 
+// GetBlockByHash returns a block by bock hash.
 func (p *psqlBackend) GetBlockByHash(blockHash ethcommon.Hash) (*model.Block, error) {
 	blk, err := p.storage.GetBlockByHash(blockHash.String())
 	if err != nil {
@@ -256,18 +270,22 @@ func (p *psqlBackend) GetBlockByHash(blockHash ethcommon.Hash) (*model.Block, er
 	return blk, nil
 }
 
+// GetBlockTransactionCountByNumber returns the count of block transactions by block number.
 func (p *psqlBackend) GetBlockTransactionCountByNumber(number uint64) (int, error) {
 	return p.storage.GetBlockTransactionCountByNumber(number)
 }
 
+// GetBlockTransactionCountByHash returns the count of block transactions by block hash.
 func (p *psqlBackend) GetBlockTransactionCountByHash(blockHash ethcommon.Hash) (int, error) {
 	return p.storage.GetBlockTransactionCountByHash(blockHash.String())
 }
 
+// GetTransactionByBlockHashAndIndex returns transaction by the block hash and transaction index.
 func (p *psqlBackend) GetTransactionByBlockHashAndIndex(blockHash ethcommon.Hash, txIndex int) (*model.Transaction, error) {
 	return p.storage.GetBlockTransaction(blockHash.String(), txIndex)
 }
 
+// GetTransactionReceipt returns the receipt for the given tx.
 func (p *psqlBackend) GetTransactionReceipt(txHash ethcommon.Hash) (map[string]interface{}, error) {
 	dbReceipt, err := p.storage.GetTransactionReceipt(txHash.String())
 	if err != nil {
@@ -325,18 +343,22 @@ func (p *psqlBackend) GetTransactionReceipt(txHash ethcommon.Hash) (map[string]i
 	return receipt, nil
 }
 
+// BlockNumber returns the latest block.
 func (p *psqlBackend) BlockNumber() (uint64, error) {
 	return p.storage.GetLatestBlockNumber()
 }
 
+// GetLogs returns logs from db.
 func (p *psqlBackend) GetLogs(blockHash ethcommon.Hash, startRound, endRound uint64) ([]*model.Log, error) {
 	return p.storage.GetLogs(blockHash.String(), startRound, endRound)
 }
 
+// Close closes postgresql backend.
 func (p *psqlBackend) Close() {
 	p.logger.Info("Psql backend closed!")
 }
 
+// newPsqlBackend creates a Backend.
 func newPsqlBackend(runtimeID common.Namespace, storage storage.Storage) (Backend, error) {
 	b := &psqlBackend{
 		runtimeID:         runtimeID,
@@ -349,6 +371,7 @@ func newPsqlBackend(runtimeID common.Namespace, storage storage.Storage) (Backen
 	return b, nil
 }
 
+// NewPsqlBackend returns a PsqlBackend.
 func NewPsqlBackend() BackendFactory {
 	return newPsqlBackend
 }

@@ -27,6 +27,7 @@ type Log struct {
 	Data    []byte
 }
 
+// Logs2EthLogs converts logs in db to ethereum logs.
 func Logs2EthLogs(logs []*Log, round uint64, blockHash, txHash common.Hash, txIndex uint32) []*ethtypes.Log {
 	ethLogs := []*ethtypes.Log{}
 	for i := range logs {
@@ -46,6 +47,7 @@ func Logs2EthLogs(logs []*Log, round uint64, blockHash, txHash common.Hash, txIn
 	return ethLogs
 }
 
+// convertToEthFormat converts oasis block to ethereum block.
 func convertToEthFormat(
 	block *block.Block,
 	transactions ethtypes.Transactions,
@@ -178,6 +180,7 @@ func convertToEthFormat(
 	return innerBlock, innerTxs, innerReceipts, nil
 }
 
+// StoreBlockData parses oasis block and stores in db.
 func (p *psqlBackend) StoreBlockData(oasisBlock *block.Block, txResults []*client.TransactionWithResults) error {
 	encoded := oasisBlock.Header.EncodedHash()
 	bhash := common.HexToHash(encoded.Hex())
@@ -270,6 +273,7 @@ func (p *psqlBackend) StoreBlockData(oasisBlock *block.Block, txResults []*clien
 	return nil
 }
 
+// eth2DbLogs converts ethereum log to model log.
 func eth2DbLogs(ethLogs []*ethtypes.Log) []*model.Log {
 	res := []*model.Log{}
 

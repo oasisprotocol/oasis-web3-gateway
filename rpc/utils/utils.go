@@ -59,6 +59,7 @@ func NewRPCTransaction(dbTx *model.Transaction) (*RPCTransaction, error) {
 	return resTx, nil
 }
 
+// ConvertToEthBlock converts block in db to rpc response format of a block.
 func ConvertToEthBlock(block *model.Block, fullTx bool) map[string]interface{} {
 	v1 := big.NewInt(0)
 	diff, _ := v1.SetString(block.Header.Difficulty, 10)
@@ -100,6 +101,7 @@ func ConvertToEthBlock(block *model.Block, fullTx bool) map[string]interface{} {
 	return res
 }
 
+// Db2EthLogs converts log in db to ethereum log.
 func Db2EthLogs(dbLogs []*model.Log) []*ethtypes.Log {
 	res := []*ethtypes.Log{}
 

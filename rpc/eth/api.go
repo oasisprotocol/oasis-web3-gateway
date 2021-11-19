@@ -83,7 +83,7 @@ func (api *PublicAPI) roundParamFromBlockNum(blockNum ethrpc.BlockNumber) (uint6
 	case ethrpc.LatestBlockNumber:
 		return client.RoundLatest, nil
 	case ethrpc.EarliestBlockNumber:
-		var earliest uint64 = 0
+		var earliest uint64
 		clrBlk, err := api.client.GetLastRetainedBlock(api.ctx)
 		if err != nil {
 			api.Logger.Error("failed to get last retained block from client", "error", err)
@@ -195,7 +195,7 @@ func (api *PublicAPI) GasPrice() (*hexutil.Big, error) {
 	coremod := core.NewV1(api.client)
 	mgp, err := coremod.MinGasPrice(api.ctx)
 	if err != nil {
-		api.Logger.Error("Qeury MinGasPrice failed", "error", err)
+		api.Logger.Error("Query MinGasPrice failed", "error", err)
 		return nil, err
 	}
 	nativeMGP := mgp[types.NativeDenomination]
@@ -426,7 +426,7 @@ func (api *PublicAPI) GetBlockByHash(blockHash common.Hash, fullTx bool) (map[st
 	api.Logger.Debug("eth_getBlockByHash", "hash", blockHash.Hex(), "full", fullTx)
 	blk, err := api.backend.GetBlockByHash(blockHash)
 	if err != nil {
-		api.Logger.Error("Matched block error", "block hash: ", blockHash)
+		api.Logger.Error("Matched block error", "block hash", blockHash)
 		// Block doesn't exist, by web3 spec an empty response should be returned, not an error.
 		return nil, ErrInternalQuery
 	}
@@ -434,6 +434,7 @@ func (api *PublicAPI) GetBlockByHash(blockHash common.Hash, fullTx bool) (map[st
 	return utils.ConvertToEthBlock(blk, fullTx), nil
 }
 
+// getRPCTransaction extracts data from model dbTx and returns.
 func (api *PublicAPI) getRPCTransaction(dbTx *model.Transaction) (*utils.RPCTransaction, error) {
 	resTx, err := utils.NewRPCTransaction(dbTx)
 	if err != nil {
@@ -463,13 +464,13 @@ func (api *PublicAPI) GetTransactionByBlockHashAndIndex(blockHash common.Hash, i
 
 	dbBlock, err := api.backend.GetBlockByHash(blockHash)
 	if err != nil {
-		api.Logger.Error("Matched block error, block hash: ", blockHash)
+		api.Logger.Error("Matched block error, block hash", blockHash)
 		// Block doesn't exist, by web3 spec an empty response should be returned, not an error.
 		return nil, nil
 	}
 	l := len(dbBlock.Transactions)
 	if uint32(l) <= index {
-		api.Logger.Error("out of index", "tx len:", l, "index:", index)
+		api.Logger.Error("out of index", "tx len", l, "index", index)
 		return nil, ErrIndexOutOfRange
 	}
 
@@ -501,13 +502,14 @@ func (api *PublicAPI) GetTransactionReceipt(txHash common.Hash) (map[string]inte
 	receipt, err := api.backend.GetTransactionReceipt(txHash)
 	if err != nil {
 		// Transaction doesn't exist, don't return an error, but empty response.
-		api.Logger.Error("failed to get transaction receipt", "err:", err)
+		api.Logger.Error("failed to get transaction receipt", "err", err)
 		return nil, nil
 	}
 
 	return receipt, nil
 }
 
+// GetLogs returns the ethereum logs.
 func (api *PublicAPI) GetLogs(filter filters.FilterCriteria) ([]*ethtypes.Log, error) {
 	api.Logger.Debug("eth_getLogs", "filter", filter)
 
@@ -537,22 +539,7 @@ func (api *PublicAPI) GetLogs(filter filters.FilterCriteria) ([]*ethtypes.Log, e
 		}
 	}
 
-	// Warning: this is unboundedly expensive
-	//var ethLogs []*ethtypes.Log
-	//for round := startRoundInclusive; ; /* see explicit break */ round++ {
-	//	dbLogs, err := api.backend.GetLogs(*filter.BlockHash)
-	//	if err != nil {
-	//		api.Logger.Error("get logs, err:", err)
-	//		continue
-	//	}
-	//	// TODO: filter addresses and topics
-	//	blockLogs := utils.DbLogs2EthLogs(dbLogs)
-	//	ethLogs = append(ethLogs, blockLogs...)
-	//
-	//	if round == endRoundInclusive {
-	//		break
-	//	}
-	//}
+	//TODO: filter addresses and topics
 
 	ethLogs := []*ethtypes.Log{}
 	dbLogs, err := api.backend.GetLogs(*filter.BlockHash, startRoundInclusive, endRoundInclusive)
@@ -566,6 +553,7 @@ func (api *PublicAPI) GetLogs(filter filters.FilterCriteria) ([]*ethtypes.Log, e
 	return ethLogs, nil
 }
 
+// GetBlockHash returns the block hash by the given number.
 func (api *PublicAPI) GetBlockHash(blockNum ethrpc.BlockNumber, _ bool) (common.Hash, error) {
 	round, err := api.roundParamFromBlockNum(blockNum)
 	if err != nil {
@@ -574,14 +562,15 @@ func (api *PublicAPI) GetBlockHash(blockNum ethrpc.BlockNumber, _ bool) (common.
 	return api.backend.QueryBlockHash(round)
 }
 
+// BlockNumber returns the latest block number.
 func (api *PublicAPI) BlockNumber() (hexutil.Uint64, error) {
 	api.Logger.Debug("eth_getBlockNumber start")
 	blockNumber, err := api.backend.BlockNumber()
 	if err != nil {
-		api.Logger.Error("failed to get the latest block number", "err:", err)
+		api.Logger.Error("failed to get the latest block number", "err", err)
 		return 0, err
 	}
-	api.Logger.Debug("eth_getBlockNumber get the current number", "blockNumber:", blockNumber)
+	api.Logger.Debug("eth_getBlockNumber get the the latest block number", "blockNumber", blockNumber)
 
 	return hexutil.Uint64(blockNumber), nil
 }

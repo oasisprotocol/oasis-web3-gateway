@@ -158,6 +158,7 @@ func (db *PostDb) GetLastRetainedRound() (uint64, error) {
 	return retainedRound.Round, nil
 }
 
+// GetLatestBlockNumber returns the latest block number.
 func (db *PostDb) GetLatestBlockNumber() (uint64, error) {
 	blk := new(model.Block)
 	err := db.Db.Model(blk).Order("round DESC").Limit(1).Select()
@@ -190,6 +191,7 @@ func (db *PostDb) GetBlockByNumber(round uint64) (*model.Block, error) {
 	return blk, nil
 }
 
+// GetBlockTransactionCountByNumber returns the count of transactions in block by block number.
 func (db *PostDb) GetBlockTransactionCountByNumber(round uint64) (int, error) {
 	blk := new(model.Block)
 	err := db.Db.Model(blk).Where("round=?", round).Select()
@@ -200,6 +202,7 @@ func (db *PostDb) GetBlockTransactionCountByNumber(round uint64) (int, error) {
 	return len(blk.Transactions), nil
 }
 
+// GetBlockTransactionCountByHash returns the count of transactions in block by block hash.
 func (db *PostDb) GetBlockTransactionCountByHash(blockHash string) (int, error) {
 	blk := new(model.Block)
 	err := db.Db.Model(blk).Where("hash=?", blockHash).Select()
@@ -210,6 +213,7 @@ func (db *PostDb) GetBlockTransactionCountByHash(blockHash string) (int, error) 
 	return len(blk.Transactions), nil
 }
 
+// GetBlockTransaction returns transaction by bock hash and transaction index.
 func (db *PostDb) GetBlockTransaction(blockHash string, txIndex int) (*model.Transaction, error) {
 	blk := new(model.Block)
 	err := db.Db.Model(blk).Where("hash=?", blockHash).Select()
@@ -226,6 +230,7 @@ func (db *PostDb) GetBlockTransaction(blockHash string, txIndex int) (*model.Tra
 	return blk.Transactions[txIndex], nil
 }
 
+// GetTransactionReceipt returns receipt by transaction hash.
 func (db *PostDb) GetTransactionReceipt(txHash string) (*model.Receipt, error) {
 	receipt := new(model.Receipt)
 	if err := db.Db.Model(receipt).Where("transaction_hash=?", txHash).Select(); err != nil {
@@ -235,6 +240,7 @@ func (db *PostDb) GetTransactionReceipt(txHash string) (*model.Receipt, error) {
 	return receipt, nil
 }
 
+// GetLogs return the logs by block hash and round.
 func (db *PostDb) GetLogs(blockHash string, startRound, endRound uint64) ([]*model.Log, error) {
 	logs := []*model.Log{}
 	err := db.Db.Model(&logs).
