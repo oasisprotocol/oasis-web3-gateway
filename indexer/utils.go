@@ -2,10 +2,8 @@ package indexer
 
 import (
 	"encoding/hex"
-	"math/big"
-	"strings"
-
 	"github.com/fxamacker/cbor/v2"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -297,8 +295,4 @@ func eth2DbLogs(ethLogs []*ethtypes.Log) []*model.Log {
 	}
 
 	return res
-}
-
-func ConvertHashToString(hash common.Hash) string {
-	return strings.TrimLeft(hash.Hex(), "0x")
 }
