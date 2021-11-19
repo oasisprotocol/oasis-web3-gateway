@@ -66,16 +66,19 @@ func (db *PostDb) Store(value interface{}) error {
 	return err
 }
 
+// Exist returns whether the record exists.
+func (db *PostDb) Exist(value interface{}) bool {
+	count, _ := db.Db.NewSelect().Model(value).Count(context.Background())
+	return count > 0
+}
+
 // Update updates record.
 func (db *PostDb) Update(value interface{}) error {
-	l, err := db.Db.NewSelect().Model(value).Count(context.Background())
-	if err != nil {
-		return err
-	}
-	if l == 0 {
-		_, err = db.Db.NewInsert().Model(value).Exec(context.Background())
-	} else {
+	var err error
+	if db.Exist(value) {
 		_, err = db.Db.NewUpdate().Model(value).WherePK().Exec(context.Background())
+	} else {
+		_, err = db.Db.NewInsert().Model(value).Exec(context.Background())
 	}
 
 	return err

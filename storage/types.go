@@ -11,6 +11,9 @@ type Storage interface {
 	// Update updates record.
 	Update(value interface{}) error
 
+	// Exist returns whether the record exists.
+	Exist(value interface{}) bool
+
 	// Delete deletes all records with round less than the given round.
 	Delete(table interface{}, round uint64) error
 
