@@ -2,8 +2,8 @@ package model
 
 // BlockRef represents the relationship between block round and block hash.
 type BlockRef struct {
-	Round uint64 `pg:",pk"`
-	Hash  string
+	Hash  string `pg:",pk"`
+	Round uint64
 }
 
 // TransactionRef represents the relationship between ethereum tx and oasis tx.
@@ -91,9 +91,9 @@ type Log struct {
 	Data      string
 	Round     uint64 `pg:",use_zero"` // BlockNumber
 	BlockHash string
-	TxHash    string `pg:",use_zero,unique:tx_hash_log_index"`
+	TxHash    string `pg:",pk"`
 	TxIndex   uint   `pg:",use_zero"`
-	Index     uint   `pg:",use_zero,unique:tx_hash_log_index"`
+	Index     uint   `pg:",pk,use_zero"`
 	Removed   bool
 }
 
