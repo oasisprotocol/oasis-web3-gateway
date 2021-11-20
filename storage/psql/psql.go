@@ -10,6 +10,7 @@ import (
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/driver/pgdriver"
+	"time"
 )
 
 type PostDb struct {
@@ -22,16 +23,18 @@ func InitDb(cfg *conf.DatabaseConfig) (*PostDb, error) {
 		return nil, errors.New("nil configuration")
 	}
 
-	// dsn
-	dsn := fmt.Sprintf("postgres://%v:%v@%v:%v/%v?sslmode=disable&dial_timeout=%v&read_timeout=%v&write_timeout=%v",
-		cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Db, cfg.DialTimeout, cfg.ReadTimeout, cfg.WriteTimeout)
-
+	pgConn := pgdriver.NewConnector(
+		pgdriver.WithAddr(fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)),
+		pgdriver.WithDatabase(cfg.Db),
+		pgdriver.WithUser(cfg.User),
+		pgdriver.WithPassword(cfg.Password),
+		pgdriver.WithDialTimeout(time.Duration(cfg.DialTimeout)*time.Second),
+		pgdriver.WithReadTimeout(time.Duration(cfg.ReadTimeout)*time.Second),
+		pgdriver.WithWriteTimeout(time.Duration(cfg.WriteTimeout)*time.Second))
 	// open
-	sqlDB := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn)))
-
+	sqlDB := sql.OpenDB(pgConn)
 	// create db
 	db := bun.NewDB(sqlDB, pgdialect.New())
-
 	// create tables
 	model.CreateTables(db)
 

@@ -12,8 +12,8 @@ type ContinuesIndexedRound struct {
 
 // BlockRef represents the relationship between block round and block hash.
 type BlockRef struct {
-	Round uint64 `bun:",pk"`
-	Hash  string
+	Hash  string `bun:",pk"`
+	Round uint64
 }
 
 // TransactionRef represents the relationship between ethereum tx and oasis tx.
