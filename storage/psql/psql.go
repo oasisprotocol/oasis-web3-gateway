@@ -26,8 +26,8 @@ func InitDb(cfg *conf.DatabaseConfig) (*PostDb, error) {
 	db := pg.Connect(&pg.Options{
 		Addr:        fmt.Sprintf("%v:%v", cfg.Host, cfg.Port),
 		Database:    cfg.Db,
-		User:        cfg.User,
-		Password:    cfg.Password,
+		User:        "postgres",
+		Password:    "postgres",
 		DialTimeout: time.Duration(cfg.Timeout) * time.Second,
 	})
 	// Ping
@@ -70,23 +70,31 @@ func (db *PostDb) GetTransaction(hash string) (*model.Transaction, error) {
 	return tx, nil
 }
 
-// Store stores data.
-func (db *PostDb) Store(value interface{}) error {
-	_, err := db.Db.Model(value).Insert()
+// insertOrUpdate updates record when it exists, or inserts.
+func (db *PostDb) insertOrUpdate(value interface{}) error {
+	query := db.Db.Model(value).WherePK()
+	exist, err := query.Exists()
+	if err != nil {
+		return err
+	}
+
+	if exist {
+		_, err = query.Update()
+	} else {
+		_, err = query.Insert()
+	}
+
 	return err
+}
+
+// Store stores data in db.
+func (db *PostDb) Store(value interface{}) error {
+	return db.insertOrUpdate(value)
 }
 
 // Update updates record.
 func (db *PostDb) Update(value interface{}) error {
-	var err error
-	query := db.Db.Model(value)
-	exists, _ := query.WherePK().Exists()
-	if !exists {
-		_, err = query.Insert()
-	} else {
-		_, err = query.WherePK().Update()
-	}
-	return err
+	return db.insertOrUpdate(value)
 }
 
 // Delete deletes all records with round less than the given round.
