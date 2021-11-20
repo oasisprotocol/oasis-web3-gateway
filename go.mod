@@ -4,7 +4,6 @@ go 1.16
 
 require (
 	github.com/ethereum/go-ethereum v1.10.10-0.20211005163353-57ff2dee06a1
-	github.com/go-pg/pg/v10 v10.10.6
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
 	github.com/knadh/koanf v1.3.2
