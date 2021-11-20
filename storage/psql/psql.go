@@ -26,8 +26,8 @@ func InitDb(cfg *conf.DatabaseConfig) (*PostDb, error) {
 	db := pg.Connect(&pg.Options{
 		Addr:        fmt.Sprintf("%v:%v", cfg.Host, cfg.Port),
 		Database:    cfg.Db,
-		User:        "postgres",
-		Password:    "postgres",
+		User:        cfg.User,
+		Password:    cfg.Password,
 		DialTimeout: time.Duration(cfg.Timeout) * time.Second,
 	})
 	// Ping
