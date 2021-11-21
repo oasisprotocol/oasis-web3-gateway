@@ -70,31 +70,36 @@ func (db *PostDb) GetTransaction(hash string) (*model.Transaction, error) {
 	return tx, nil
 }
 
-// insertOrUpdate updates record when it exists, or inserts.
-func (db *PostDb) insertOrUpdate(value interface{}) error {
-	query := db.Db.Model(value).WherePK()
-	exist, err := query.Exists()
-	if err != nil {
-		return err
+// upsert updates record when PK conflicts, otherwise inserts.
+func (db *PostDb) upsert(value interface{}) error {
+	// PKs are required for ON CONFLICT DO UPDATE
+	pks := db.Db.Model(value).Table().TableModel().Table().PKs
+	b := ""
+	for i, f := range pks {
+		if i > 0 {
+			b += ","
+		}
+		b += string(f.Column)
 	}
-
-	if exist {
-		_, err = query.Update()
-	} else {
-		_, err = query.Insert()
+	// If the table has more than one PK, remove the last comma.
+	if string(b[len(b)-1]) == "," {
+		b = b[:len(b)-1]
 	}
+	_, err := db.Db.Model(value).
+		OnConflict(fmt.Sprintf("(%s) DO UPDATE", b)).
+		Insert()
 
 	return err
 }
 
 // Store stores data in db.
 func (db *PostDb) Store(value interface{}) error {
-	return db.insertOrUpdate(value)
+	return db.upsert(value)
 }
 
 // Update updates record.
 func (db *PostDb) Update(value interface{}) error {
-	return db.insertOrUpdate(value)
+	return db.upsert(value)
 }
 
 // Delete deletes all records with round less than the given round.
