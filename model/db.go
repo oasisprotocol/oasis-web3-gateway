@@ -43,13 +43,13 @@ type IndexedRoundWithTip struct {
 // Transaction is ethereum transaction in db.
 type Transaction struct {
 	Hash       string `bun:",pk"`
-	Type       uint8  `bun:",use_zero"`
-	Status     uint   `bun:",use_zero"` // tx/receipt status
+	Type       uint8
+	Status     uint // tx/receipt status
 	ChainID    string
 	BlockHash  string
-	Round      uint64 `bun:",use_zero"`
-	Index      uint32 `bun:",use_zero"`
-	Gas        uint64 `bun:",use_zero"`
+	Round      uint64
+	Index      uint32
+	Gas        uint64
 	GasPrice   string
 	GasTipCap  string
 	GasFeeCap  string
@@ -65,10 +65,10 @@ type Transaction struct {
 // Block represents ethereum block in db.
 type Block struct {
 	Hash         string `bun:",pk"`
-	Round        uint64 `bun:",use_zero"`
+	Round        uint64
 	Header       *Header
 	Uncles       []*Header
-	Transactions []*Transaction `bun:"rel:has-many"`
+	Transactions []*Transaction
 }
 
 // Header represents ethereum block header in db.
@@ -82,12 +82,12 @@ type Header struct {
 	Bloom       string
 	Difficulty  string
 	Number      string
-	GasLimit    uint64 `bun:",use_zero"`
-	GasUsed     uint64 `bun:",use_zero"`
-	Time        uint64 `bun:",use_zero"`
+	GasLimit    uint64
+	GasUsed     uint64
+	Time        uint64
 	Extra       string
 	MixDigest   string
-	Nonce       uint64 `bun:",use_zero"`
+	Nonce       uint64
 	BaseFee     string
 }
 
@@ -96,26 +96,26 @@ type Log struct {
 	Address   string
 	Topics    []string
 	Data      string
-	Round     uint64 `bun:",use_zero"` // BlockNumber
+	Round     uint64 // BlockNumber
 	BlockHash string
 	TxHash    string `bun:",pk"`
-	TxIndex   uint   `bun:",use_zero"`
-	Index     uint   `bun:",pk,use_zero"`
+	TxIndex   uint
+	Index     uint `bun:",pk"`
 	Removed   bool
 }
 
 // Receipt represents ethereum receipt in db.
 type Receipt struct {
-	Status            uint   `bun:",use_zero"`
-	CumulativeGasUsed uint64 `bun:",use_zero"`
+	Status            uint
+	CumulativeGasUsed uint64
 	LogsBloom         string
 	Logs              []*Log
 	TransactionHash   string `bun:",pk"`
 	BlockHash         string
-	GasUsed           uint64 `bun:",use_zero"`
-	Type              uint   `bun:",use_zero"`
-	Round             uint64 `bun:",use_zero"` // BlockNumber
-	TransactionIndex  uint64 `bun:",use_zero"`
+	GasUsed           uint64
+	Type              uint
+	Round             uint64 // BlockNumber
+	TransactionIndex  uint64
 	FromAddr          string
 	ToAddr            string
 	ContractAddress   string
