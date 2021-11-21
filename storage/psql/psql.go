@@ -81,10 +81,6 @@ func (db *PostDb) upsert(value interface{}) error {
 		}
 		b += string(f.Column)
 	}
-	// If the table has more than one PK, remove the last comma.
-	if string(b[len(b)-1]) == "," {
-		b = b[:len(b)-1]
-	}
 	_, err := db.Db.Model(value).
 		OnConflict(fmt.Sprintf("(%s) DO UPDATE", b)).
 		Insert()
