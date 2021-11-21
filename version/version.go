@@ -8,7 +8,7 @@ const (
 	VersionMajor = 0
 	VersionMinor = 1
 	VersionPatch = 0
-	VersionTag  = "alpha"
+	VersionTag   = "alpha"
 )
 
 func Version() string {
