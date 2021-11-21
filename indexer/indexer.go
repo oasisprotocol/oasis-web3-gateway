@@ -5,8 +5,6 @@ import (
 	"errors"
 	"time"
 
-	ethcommon "github.com/ethereum/go-ethereum/common"
-
 	"github.com/oasisprotocol/oasis-core/go/common"
 	"github.com/oasisprotocol/oasis-core/go/common/service"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
@@ -22,9 +20,9 @@ const (
 const RoundLatest = client.RoundLatest
 
 var (
-	ErrGetBlockFailed        = errors.New("GetBlock failed")
-	ErrGetTransactionsFailed = errors.New("GetTransactions failed")
-	ErrIndexedFailed         = errors.New("Index block failed")
+	ErrGetBlockFailed        = errors.New("get block failed")
+	ErrGetTransactionsFailed = errors.New("get transactions failed")
+	ErrIndexedFailed         = errors.New("index block failed")
 )
 
 // Service is an indexer service.
@@ -42,18 +40,19 @@ type Service struct {
 	cancelCtx context.CancelFunc
 }
 
+// indexBlock
 func (s *Service) indexBlock(round uint64) error {
 	blk, err := s.client.GetBlock(s.ctx, round)
 	if err != nil {
 		return ErrGetBlockFailed
 	}
 
-	txs, err := s.client.GetTransactions(s.ctx, blk.Header.Round)
+	txs, err := s.client.GetTransactionsWithResults(s.ctx, blk.Header.Round)
 	if err != nil {
 		return ErrGetTransactionsFailed
 	}
 
-	err = s.backend.Index(blk.Header.Round, ethcommon.HexToHash(blk.Header.EncodedHash().Hex()), txs)
+	err = s.backend.Index(blk, txs)
 	if err != nil {
 		return ErrIndexedFailed
 	}
@@ -61,6 +60,7 @@ func (s *Service) indexBlock(round uint64) error {
 	return nil
 }
 
+// getRoundLatest returns the latest round.
 func (s *Service) getRoundLatest() (uint64, error) {
 	blk, err := s.client.GetBlock(s.ctx, RoundLatest)
 	if err != nil {
@@ -70,6 +70,7 @@ func (s *Service) getRoundLatest() (uint64, error) {
 	return blk.Header.Round, nil
 }
 
+// pruningWorker handles data pruning.
 func (s *Service) pruningWorker() {
 	s.Logger.Debug("starting periodic pruning worker")
 
@@ -93,6 +94,7 @@ func (s *Service) pruningWorker() {
 	}
 }
 
+// indexingWorker is a worker for indexing.
 func (s *Service) indexingWorker() {
 	for {
 		select {
@@ -163,6 +165,7 @@ func (s *Service) indexingWorker() {
 	}
 }
 
+// Start starts service.
 func (s *Service) Start() {
 	go s.indexingWorker()
 
@@ -171,6 +174,7 @@ func (s *Service) Start() {
 	}
 }
 
+// Stop stops service.
 func (s *Service) Stop() {
 	s.cancelCtx()
 }

@@ -1,88 +1,19 @@
 package utils
 
 import (
+	"encoding/hex"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
-
+	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
 )
 
-var (
-	defaultValidatorAddr = "0x0000000000000000000000000000000088888888"
-	defaultSize          = 100
-	defaultGasLimit      = 21000 * 1000
-)
-
-// ConvertToEthBlock returns a JSON-RPC compatible Ethereum Block from a given Oasis block and its block result.
-func ConvertToEthBlock(
-	block *block.Block,
-	transactions []interface{},
-	logs []*ethtypes.Log,
-	gas uint64,
-) (map[string]interface{}, error) {
-	encoded := block.Header.EncodedHash()
-	bHash, _ := encoded.MarshalBinary()
-	bPrevHash, _ := block.Header.PreviousHash.MarshalBinary()
-	bStateHash, _ := block.Header.StateRoot.MarshalBinary()
-
-	bloom := ethtypes.BytesToBloom(ethtypes.LogsBloom(logs))
-	gasUsed := big.NewInt(0).SetUint64(gas)
-
-	var btxHash hexutil.Bytes
-	switch len(transactions) {
-	case 0:
-		// In case there are no ETH transactions in block return the
-		// Ethereum's empty root hash, since some WEB3 clients rely on it.
-		btxHash = hexutil.Bytes(ethtypes.EmptyRootHash.Bytes())
-	default:
-		ioRoot, err := block.Header.IORoot.MarshalBinary()
-		if err != nil {
-			return nil, err
-		}
-		btxHash = hexutil.Bytes(ioRoot)
-
-	}
-	res := map[string]interface{}{
-		"number":           hexutil.Uint64(block.Header.Round),
-		"hash":             common.BytesToHash(bHash),
-		"parentHash":       common.BytesToHash(bPrevHash),
-		"nonce":            ethtypes.BlockNonce{},
-		"sha3Uncles":       ethtypes.EmptyUncleHash,
-		"logsBloom":        bloom,
-		"stateRoot":        hexutil.Bytes(bStateHash),
-		"miner":            defaultValidatorAddr,
-		"mixHash":          common.Hash{},
-		"difficulty":       (*hexutil.Big)(big.NewInt(0)),
-		"extraData":        "0x",
-		"size":             hexutil.Uint64(defaultSize),
-		"gasLimit":         hexutil.Uint64(defaultGasLimit),
-		"gasUsed":          (*hexutil.Big)(gasUsed),
-		"timestamp":        hexutil.Uint64(block.Header.Timestamp),
-		"transactionsRoot": btxHash,
-		"receiptsRoot":     ethtypes.EmptyRootHash,
-
-		"uncles":          []common.Hash{},
-		"transactions":    transactions,
-		"totalDifficulty": (*hexutil.Big)(big.NewInt(0)),
-	}
-
-	return res, nil
-}
-
 // NewRPCTransaction returns a transaction that will serialize to the RPC representation.
-func NewRPCTransaction(
-	dbTx *model.Transaction,
-	blockHash common.Hash,
-	blockNumber uint64,
-	index hexutil.Uint64,
-) (*RPCTransaction, error) {
-
+func NewRPCTransaction(dbTx *model.Transaction) (*RPCTransaction, error) {
 	to := common.HexToAddress(dbTx.ToAddr)
-
 	gasPrice, _ := new(big.Int).SetString(dbTx.GasPrice, 10)
 	gasFee, _ := new(big.Int).SetString(dbTx.GasFeeCap, 10)
 	gasTip, _ := new(big.Int).SetString(dbTx.GasTipCap, 10)
@@ -101,31 +32,100 @@ func NewRPCTransaction(
 		}
 		accesses = append(accesses, access)
 	}
-
+	blockHash := common.HexToHash(dbTx.BlockHash)
+	txIndex := hexutil.Uint64(dbTx.Index)
 	resTx := &RPCTransaction{
-		From:      common.HexToAddress(dbTx.FromAddr),
-		Gas:       hexutil.Uint64(dbTx.Gas),
-		GasPrice:  (*hexutil.Big)(gasPrice),
-		GasFeeCap: (*hexutil.Big)(gasFee),
-		GasTipCap: (*hexutil.Big)(gasTip),
-		Hash:      common.HexToHash(dbTx.Hash),
-		Input:     common.Hex2Bytes(dbTx.Data),
-		Nonce:     hexutil.Uint64(dbTx.Nonce),
-		To:        &to,
-		Value:     (*hexutil.Big)(value),
-		Type:      hexutil.Uint64(dbTx.Type),
-		Accesses:  &accesses,
-		ChainID:   (*hexutil.Big)(chainID),
-		V:         (*hexutil.Big)(v),
-		R:         (*hexutil.Big)(r),
-		S:         (*hexutil.Big)(s),
-	}
-
-	if blockHash != (common.Hash{}) {
-		resTx.BlockHash = &blockHash
-		resTx.BlockNumber = (*hexutil.Big)(new(big.Int).SetUint64(blockNumber))
-		resTx.TransactionIndex = &index
+		From:             common.HexToAddress(dbTx.FromAddr),
+		Gas:              hexutil.Uint64(dbTx.Gas),
+		GasPrice:         (*hexutil.Big)(gasPrice),
+		GasFeeCap:        (*hexutil.Big)(gasFee),
+		GasTipCap:        (*hexutil.Big)(gasTip),
+		Hash:             common.HexToHash(dbTx.Hash),
+		Input:            common.Hex2Bytes(dbTx.Data),
+		Nonce:            hexutil.Uint64(dbTx.Nonce),
+		To:               &to,
+		Value:            (*hexutil.Big)(value),
+		Type:             hexutil.Uint64(dbTx.Type),
+		Accesses:         &accesses,
+		ChainID:          (*hexutil.Big)(chainID),
+		V:                (*hexutil.Big)(v),
+		R:                (*hexutil.Big)(r),
+		S:                (*hexutil.Big)(s),
+		BlockHash:        &blockHash,
+		BlockNumber:      (*hexutil.Big)(new(big.Int).SetUint64(dbTx.Round)),
+		TransactionIndex: &txIndex,
 	}
 
 	return resTx, nil
+}
+
+// ConvertToEthBlock converts block in db to rpc response format of a block.
+func ConvertToEthBlock(block *model.Block, fullTx bool) map[string]interface{} {
+	v1 := big.NewInt(0)
+	diff, _ := v1.SetString(block.Header.Difficulty, 10)
+	transactions := []interface{}{}
+	for _, dbTx := range block.Transactions {
+		tx, _ := NewRPCTransaction(dbTx)
+		if fullTx {
+			transactions = append(transactions, tx)
+		} else {
+			transactions = append(transactions, tx.Hash)
+		}
+	}
+
+	serialized := cbor.Marshal(block)
+
+	res := map[string]interface{}{
+		"parentHash":       common.HexToHash(block.Header.ParentHash),
+		"sha3Uncles":       common.HexToHash(block.Header.UncleHash),
+		"miner":            block.Header.Coinbase,
+		"stateRoot":        common.HexToHash(block.Header.Root),
+		"transactionsRoot": common.HexToHash(block.Header.TxHash),
+		"receiptsRoot":     common.HexToHash(block.Header.ReceiptHash),
+		"logsBloom":        block.Header.Bloom,
+		"difficulty":       (*hexutil.Big)(diff),
+		"number":           hexutil.Uint64(block.Round),
+		"gasLimit":         hexutil.Uint64(block.Header.GasLimit),
+		"gasUsed":          hexutil.Uint64(block.Header.GasUsed),
+		"timestamp":        hexutil.Uint64(block.Header.Time),
+		"extraData":        block.Header.Extra,
+		"mixHash":          common.HexToHash(block.Header.MixDigest),
+		"nonce":            ethtypes.EncodeNonce(block.Header.Nonce),
+		"uncles":           block.Uncles,
+		"transactions":     transactions,
+		"hash":             common.HexToHash(block.Hash),
+		"size":             hexutil.Uint64(len(serialized)),
+		"totalDifficulty":  (*hexutil.Big)(big.NewInt(0)),
+	}
+
+	return res
+}
+
+// Db2EthLogs converts log in db to ethereum log.
+func Db2EthLogs(dbLogs []*model.Log) []*ethtypes.Log {
+	res := []*ethtypes.Log{}
+
+	for _, log := range dbLogs {
+		data, _ := hex.DecodeString(log.Data)
+		topics := []common.Hash{}
+		for _, tp := range log.Topics {
+			topics = append(topics, common.HexToHash(tp))
+		}
+
+		ethLog := &ethtypes.Log{
+			Address:     common.HexToAddress(log.Address),
+			Topics:      topics,
+			Data:        data,
+			BlockNumber: log.Round,
+			TxHash:      common.HexToHash(log.TxHash),
+			TxIndex:     log.TxIndex,
+			BlockHash:   common.HexToHash(log.BlockHash),
+			Index:       log.Index,
+			Removed:     log.Removed,
+		}
+
+		res = append(res, ethLog)
+	}
+
+	return res
 }

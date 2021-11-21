@@ -15,17 +15,13 @@ import (
 	"github.com/ethereum/go-ethereum/eth/filters"
 	"github.com/ethereum/go-ethereum/rlp"
 	ethrpc "github.com/ethereum/go-ethereum/rpc"
-	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
-	roothash "github.com/oasisprotocol/oasis-core/go/roothash/api"
-	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/secp256k1"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/accounts"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/evm"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
-
 	"github.com/starfishlabs/oasis-evm-web3-gateway/indexer"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/utils"
@@ -42,6 +38,7 @@ var (
 	ErrBlockNotFound              = errors.New("block not found")
 	ErrTransactionNotFound        = errors.New("transaction not found")
 	ErrTransactionReceiptNotFound = errors.New("transaction receipt not found")
+	ErrIndexOutOfRange            = errors.New("index out of range")
 	ErrMalformedTransaction       = errors.New("malformed transaction")
 
 	// estimateGasSigSpec is a dummy signature spec used by the estimate gas method, as
@@ -50,13 +47,6 @@ var (
 )
 
 const revertErrorPrefix = "reverted: "
-
-// Log is the Oasis Log.
-type Log struct {
-	Address common.Address
-	Topics  []common.Hash
-	Data    []byte
-}
 
 // PublicAPI is the eth_ prefixed set of APIs in the Web3 JSON-RPC spec.
 type PublicAPI struct {
@@ -93,101 +83,24 @@ func (api *PublicAPI) roundParamFromBlockNum(blockNum ethrpc.BlockNumber) (uint6
 	case ethrpc.LatestBlockNumber:
 		return client.RoundLatest, nil
 	case ethrpc.EarliestBlockNumber:
-		lrBlk, err := api.client.GetLastRetainedBlock(api.ctx)
+		var earliest uint64
+		clrBlk, err := api.client.GetLastRetainedBlock(api.ctx)
 		if err != nil {
-			return 0, fmt.Errorf("failed to get last retained block: %w", err)
+			api.Logger.Error("failed to get last retained block from client", "error", err)
 		}
-		// TODO: Take Web3 pruning into account.
-		return lrBlk.Header.Round, nil
+		ilrRound, err := api.backend.QueryLastRetainedRound()
+		if err != nil {
+			api.Logger.Error("failed to get last retained block from indexer", "error", err)
+		}
+		if clrBlk.Header.Round < ilrRound {
+			earliest = ilrRound
+		} else {
+			earliest = clrBlk.Header.Round
+		}
+		return earliest, nil
 	default:
 		return uint64(blockNum), nil
 	}
-}
-
-func (api *PublicAPI) getRPCBlockData(oasisBlock *block.Block, fullTx bool) (uint64, []interface{}, uint64, []*ethtypes.Log, error) {
-	encoded := oasisBlock.Header.EncodedHash()
-	bHash, _ := encoded.MarshalBinary()
-	blockNum := oasisBlock.Header.Round
-	// ethRPCTxs will contain either RPCTransactions or the transaction hashes,
-	// it depends on the value of fullTx:
-	//   	true  => RPCTransactions,
-	// 		false => transaction hashes
-	ethRPCTxs := []interface{}{}
-	var gasUsed uint64
-	var logs []*ethtypes.Log
-	txResults, err := api.client.GetTransactionsWithResults(api.ctx, blockNum)
-	if err != nil {
-		api.Logger.Error("Failed to get transaction results", "number", blockNum, "error", err.Error())
-		return 0, nil, 0, nil, err
-	}
-
-	for txIndex, item := range txResults {
-		oasisTx := item.Tx
-		if len(oasisTx.AuthProofs) != 1 || oasisTx.AuthProofs[0].Module != "evm.ethereum.v0" {
-			// Skip non-Ethereum transactions.
-			continue
-		}
-
-		// Extract raw Ethereum transaction for further processing.
-		rawEthTx := oasisTx.Body
-		// Decode the Ethereum transaction.
-		ethTx := &ethtypes.Transaction{}
-		err := rlp.DecodeBytes(rawEthTx, ethTx)
-		if err != nil {
-			api.Logger.Error("Failed to decode UnverifiedTransaction", "height", blockNum, "index", txIndex, "error", err.Error())
-			continue
-		}
-
-		gasUsed += uint64(ethTx.Gas())
-
-		if !fullTx {
-			hash := ethTx.Hash()
-			ethRPCTxs = append(ethRPCTxs, hash)
-		} else {
-			dbTx, err := api.backend.QueryTransaction(ethTx.Hash())
-			if err != nil {
-				api.Logger.Error("Failed to QueryTransaction", "hash", ethTx.Hash(), "error", err.Error())
-				continue
-			}
-			rpcTx, err := api.getRPCTransaction(dbTx)
-			if err != nil {
-				api.Logger.Error("Failed to getRPCTransaction", "hash", ethTx.Hash(), "error", err.Error())
-				continue
-			}
-			ethRPCTxs = append(ethRPCTxs, rpcTx)
-		}
-
-		var oasisLogs []*Log
-		resEvents := item.Events
-		for eventIndex, event := range resEvents {
-			if event.Code == 1 {
-				log := &Log{}
-				if err := cbor.Unmarshal(event.Value, log); err != nil {
-					api.Logger.Error("Failed to unmarshal event value", "index", eventIndex)
-					continue
-				}
-				oasisLogs = append(oasisLogs, log)
-			}
-		}
-
-		logs = logs2EthLogs(oasisLogs, oasisBlock.Header.Round, common.BytesToHash(bHash), ethTx.Hash(), uint32(txIndex))
-	}
-
-	return blockNum, ethRPCTxs, gasUsed, logs, nil
-}
-
-func (api *PublicAPI) getRPCBlock(oasisBlock *block.Block, fullTx bool) (map[string]interface{}, error) {
-	blockNum, ethTxs, gasUsed, logs, err := api.getRPCBlockData(oasisBlock, fullTx)
-	if err != nil {
-		return nil, err
-	}
-
-	res, err := utils.ConvertToEthBlock(oasisBlock, ethTxs, logs, gasUsed)
-	if err != nil {
-		api.Logger.Debug("Failed to ConvertToEthBlock", "height", blockNum, "error", err.Error())
-		return nil, err
-	}
-	return res, nil
 }
 
 // GetBlockByNumber returns the block identified by number.
@@ -200,33 +113,34 @@ func (api *PublicAPI) GetBlockByNumber(blockNum ethrpc.BlockNumber, fullTx bool)
 		api.Logger.Error("GetBlock failed", "number", blockNum, "error", err.Error())
 		return nil, err
 	}
-	resBlock, err := api.client.GetBlock(api.ctx, round)
+
+	blk, err := api.backend.GetBlockByNumber(round)
 	if err != nil {
 		api.Logger.Error("GetBlock failed", "number", blockNum, "error", err.Error())
 		// Block doesn't exist, by web3 spec an empty response should be returned, not an error.
 		return nil, ErrInternalQuery
 	}
 
-	return api.getRPCBlock(resBlock, fullTx)
+	return utils.ConvertToEthBlock(blk, fullTx), nil
 }
 
 // GetBlockTransactionCountByNumber returns the number of transactions in the block.
-func (api *PublicAPI) GetBlockTransactionCountByNumber(blockNum ethrpc.BlockNumber) *hexutil.Uint {
+func (api *PublicAPI) GetBlockTransactionCountByNumber(blockNum ethrpc.BlockNumber) (hexutil.Uint, error) {
+	api.Logger.Debug("eth_getBlockTransactionCountByNumber", "number", blockNum.Int64())
+
 	round, err := api.roundParamFromBlockNum(blockNum)
 	if err != nil {
 		err = fmt.Errorf("convert block number to round: %w", err)
-		api.Logger.Error("Get Transactions failed", "number", blockNum, "error", err.Error())
-		var dunno hexutil.Uint
-		return &dunno
+		api.Logger.Error("GetBlock failed", "number", blockNum, "error", err.Error())
+		return 0, err
 	}
-	resTxs, err := api.client.GetTransactions(api.ctx, round)
+	n, err := api.backend.GetBlockTransactionCountByNumber(round)
 	if err != nil {
-		api.Logger.Error("Get Transactions failed", "number", blockNum, "error", err.Error())
+		api.Logger.Error("Query failed", "number", blockNum, "error", err.Error())
+		return 0, ErrInternalQuery
 	}
 
-	// TODO: only filter the eth transactions ?
-	n := hexutil.Uint(len(resTxs))
-	return &n
+	return hexutil.Uint(n), nil
 }
 
 func (api *PublicAPI) GetStorageAt(address common.Address, position hexutil.Big, blockNum ethrpc.BlockNumber) (hexutil.Big, error) {
@@ -281,7 +195,7 @@ func (api *PublicAPI) GasPrice() (*hexutil.Big, error) {
 	coremod := core.NewV1(api.client)
 	mgp, err := coremod.MinGasPrice(api.ctx)
 	if err != nil {
-		api.Logger.Error("Qeury MinGasPrice failed", "error", err)
+		api.Logger.Error("Query MinGasPrice failed", "error", err)
 		return nil, err
 	}
 	nativeMGP := mgp[types.NativeDenomination]
@@ -289,34 +203,23 @@ func (api *PublicAPI) GasPrice() (*hexutil.Big, error) {
 }
 
 // GetBlockTransactionCountByHash returns the number of transactions in the block identified by hash.
-func (api *PublicAPI) GetBlockTransactionCountByHash(blockHash common.Hash) *hexutil.Uint {
+func (api *PublicAPI) GetBlockTransactionCountByHash(blockHash common.Hash) (hexutil.Uint, error) {
 	api.Logger.Debug("eth_getBlockTransactionCountByHash", "hash", blockHash.Hex())
 
-	round, err := api.backend.QueryBlockRound(blockHash)
+	n, err := api.backend.GetBlockTransactionCountByHash(blockHash)
 	if err != nil {
-		api.Logger.Error("Matched block error, block hash: ", blockHash)
+		api.Logger.Error("Query failed", "hash", blockHash, "error", err.Error())
+		return 0, ErrInternalQuery
 	}
 
-	blk, err := api.client.GetBlock(api.ctx, round)
-	if err != nil {
-		api.Logger.Error("Matched block error, block round: ", round)
-	}
-
-	resTxs, err := api.client.GetTransactions(api.ctx, blk.Header.Round)
-	if err != nil {
-		api.Logger.Error("Call GetTransactions error")
-	}
-
-	// TODO: only filter the eth transactions ?
-	n := hexutil.Uint(len(resTxs))
-	return &n
+	return hexutil.Uint(n), nil
 }
 
 // GetTransactionCount returns the number of transactions the given address has sent for the given block number.
-func (api *PublicAPI) GetTransactionCount(ethaddr common.Address, blockNum ethrpc.BlockNumber) (*hexutil.Uint64, error) {
-	api.Logger.Debug("eth_getTransactionCount", "address", ethaddr.Hex(), "blockNumber", blockNum)
+func (api *PublicAPI) GetTransactionCount(ethAddr common.Address, blockNum ethrpc.BlockNumber) (*hexutil.Uint64, error) {
+	api.Logger.Debug("eth_getTransactionCount", "address", ethAddr.Hex(), "blockNumber", blockNum)
 	accountsMod := accounts.NewV1(api.client)
-	accountsAddr := types.NewAddressRaw(types.AddressV0Secp256k1EthContext, ethaddr[:])
+	accountsAddr := types.NewAddressRaw(types.AddressV0Secp256k1EthContext, ethAddr[:])
 
 	round, err := api.roundParamFromBlockNum(blockNum)
 	if err != nil {
@@ -521,31 +424,19 @@ func (api *PublicAPI) EstimateGas(args utils.TransactionArgs, blockNum *ethrpc.B
 // GetBlockByHash returns the block identified by hash.
 func (api *PublicAPI) GetBlockByHash(blockHash common.Hash, fullTx bool) (map[string]interface{}, error) {
 	api.Logger.Debug("eth_getBlockByHash", "hash", blockHash.Hex(), "full", fullTx)
-	round, err := api.backend.QueryBlockRound(blockHash)
+	blk, err := api.backend.GetBlockByHash(blockHash)
 	if err != nil {
-		api.Logger.Error("Matched block error, block hash: ", blockHash)
+		api.Logger.Error("Matched block error", "block hash", blockHash)
 		// Block doesn't exist, by web3 spec an empty response should be returned, not an error.
-		return nil, nil
-	}
-
-	blk, err := api.client.GetBlock(api.ctx, round)
-	if err != nil {
-		api.Logger.Error("Matched block error, block round: ", round)
-		return nil, err
-	}
-
-	return api.getRPCBlock(blk, fullTx)
-}
-
-func (api *PublicAPI) getRPCTransaction(dbTx *model.Transaction) (*utils.RPCTransaction, error) {
-	dbTxRef, err := api.backend.QueryTransactionRef(dbTx.Hash)
-	if err != nil {
-		api.Logger.Error("Failed to QueryTransactionRef", "hash", dbTx.Hash)
 		return nil, ErrInternalQuery
 	}
-	blockHash := common.HexToHash(dbTxRef.BlockHash)
-	txIndex := hexutil.Uint64(dbTxRef.Index)
-	resTx, err := utils.NewRPCTransaction(dbTx, blockHash, dbTxRef.Round, txIndex)
+
+	return utils.ConvertToEthBlock(blk, fullTx), nil
+}
+
+// getRPCTransaction extracts data from model dbTx and returns.
+func (api *PublicAPI) getRPCTransaction(dbTx *model.Transaction) (*utils.RPCTransaction, error) {
+	resTx, err := utils.NewRPCTransaction(dbTx)
 	if err != nil {
 		api.Logger.Error("Failed to NewRPCTransaction", "hash", dbTx.Hash, "error", err.Error())
 		return nil, ErrInternalQuery
@@ -571,36 +462,19 @@ func (api *PublicAPI) GetTransactionByHash(hash common.Hash) (*utils.RPCTransact
 func (api *PublicAPI) GetTransactionByBlockHashAndIndex(blockHash common.Hash, index uint32) (*utils.RPCTransaction, error) {
 	api.Logger.Debug("eth_getTransactionByBlockHashAndIndex", "hash", blockHash.Hex(), "index", index)
 
-	round, err := api.backend.QueryBlockRound(blockHash)
+	dbBlock, err := api.backend.GetBlockByHash(blockHash)
 	if err != nil {
-		api.Logger.Error("Matched block error, block hash: ", blockHash)
+		api.Logger.Error("Matched block error, block hash", blockHash)
 		// Block doesn't exist, by web3 spec an empty response should be returned, not an error.
 		return nil, nil
 	}
-
-	blk, err := api.client.GetBlock(api.ctx, round)
-	if err != nil {
-		api.Logger.Error("Matched block error, block round: ", round)
-		return nil, err
+	l := len(dbBlock.Transactions)
+	if uint32(l) <= index {
+		api.Logger.Error("out of index", "tx len", l, "index", index)
+		return nil, ErrIndexOutOfRange
 	}
 
-	txs, err := api.client.GetTransactions(api.ctx, blk.Header.Round)
-	if err != nil {
-		api.Logger.Error("Call GetTransactions error")
-		return nil, err
-	}
-
-	if index >= uint32(len(txs)) {
-		return nil, errors.New("out of tx index")
-	}
-
-	dbTx, err := api.backend.Decode(txs[index])
-	if err != nil {
-		api.Logger.Error("Call Decode error")
-		return nil, err
-	}
-
-	return api.getRPCTransaction(dbTx)
+	return api.getRPCTransaction(dbBlock.Transactions[index])
 }
 
 // GetTransactionByBlockNumberAndIndex returns the transaction identified by number and index.
@@ -625,95 +499,17 @@ func (api *PublicAPI) GetTransactionByBlockNumberAndIndex(blockNum ethrpc.BlockN
 // GetTransactionReceipt returns the transaction receipt by hash.
 func (api *PublicAPI) GetTransactionReceipt(txHash common.Hash) (map[string]interface{}, error) {
 	api.Logger.Debug("eth_getTransactionReceipt", "hash", txHash.Hex())
-	txRef, err := api.backend.QueryTransactionRef(txHash.String())
+	receipt, err := api.backend.GetTransactionReceipt(txHash)
 	if err != nil {
-		api.Logger.Error("failed query transaction round and index", "hash", txHash.Hex(), "error", err.Error())
 		// Transaction doesn't exist, don't return an error, but empty response.
+		api.Logger.Error("failed to get transaction receipt", "err", err)
 		return nil, nil
 	}
-	txResults, err := api.client.GetTransactionsWithResults(api.ctx, txRef.Round)
-	if err != nil {
-		api.Logger.Error("failed to get transaction results", "round", txRef.Round, "error", err.Error())
-		return nil, err
-	}
-	if len(txResults) == 0 || len(txResults)-1 < int(txRef.Index) {
-		return nil, errors.New("out of index")
-	}
 
-	utx := txResults[txRef.Index].Tx
-	ethTx, err := api.backend.Decode(&utx)
-	if err != nil {
-		api.Logger.Error("decode utx error", err.Error())
-		return nil, err
-	}
-
-	// cumulativeGasUsed
-	cumulativeGasUsed := uint64(0)
-	for i := 0; i <= int(txRef.Index) && i < len(txResults); i++ {
-		tx, err := api.backend.Decode(&txResults[i].Tx)
-		if err != nil {
-			api.Logger.Error("decode utx error", err.Error())
-			return nil, err
-		}
-		cumulativeGasUsed += tx.Gas
-	}
-
-	// status
-	status := uint8(0)
-	if txResults[txRef.Index].Result.IsSuccess() {
-		status = uint8(ethtypes.ReceiptStatusSuccessful)
-	} else {
-		status = uint8(ethtypes.ReceiptStatusFailed)
-	}
-
-	// logs
-	oasisLogs := []*Log{}
-	for i, ev := range txResults[txRef.Index].Events {
-		if ev.Code == 1 {
-			log := &Log{}
-			if err := cbor.Unmarshal(ev.Value, log); err != nil {
-				api.Logger.Error("failed unmarshal event value", "index", i)
-				continue
-			}
-			oasisLogs = append(oasisLogs, log)
-		}
-	}
-	logs := logs2EthLogs(oasisLogs, txRef.Round, common.HexToHash(txRef.BlockHash), txHash, txRef.Index)
-	receipt := map[string]interface{}{
-		"status":            hexutil.Uint(status),
-		"cumulativeGasUsed": hexutil.Uint64(cumulativeGasUsed),
-		"logsBloom":         ethtypes.BytesToBloom(ethtypes.LogsBloom(logs)),
-		"logs":              logs,
-		"transactionHash":   txHash.Hex(),
-		"gasUsed":           hexutil.Uint64(ethTx.Gas),
-		"type":              hexutil.Uint64(ethTx.Type),
-		"blockHash":         txRef.BlockHash,
-		"blockNumber":       hexutil.Uint64(txRef.Round),
-		"transactionIndex":  hexutil.Uint64(txRef.Index),
-		"from":              nil,
-		"to":                nil,
-		"contractAddress":   nil,
-	}
-	if ethTx.FromAddr != "" {
-		receipt["from"] = ethTx.FromAddr
-	}
-	if ethTx.ToAddr != "" {
-		receipt["to"] = ethTx.ToAddr
-	}
-	if logs == nil {
-		receipt["logs"] = [][]*ethtypes.Log{}
-	}
-	if ethTx.ToAddr == "" && txResults[txRef.Index].Result.IsSuccess() {
-		var out []byte
-		if err := cbor.Unmarshal(txResults[txRef.Index].Result.Ok, &out); err != nil {
-			return nil, err
-		}
-		receipt["contractAddress"] = common.BytesToAddress(out)
-	}
-	api.Logger.Debug("eth_getTransactionReceipt done", "receipt", receipt)
 	return receipt, nil
 }
 
+// GetLogs returns the ethereum logs.
 func (api *PublicAPI) GetLogs(filter filters.FilterCriteria) ([]*ethtypes.Log, error) {
 	api.Logger.Debug("eth_getLogs", "filter", filter)
 
@@ -743,56 +539,21 @@ func (api *PublicAPI) GetLogs(filter filters.FilterCriteria) ([]*ethtypes.Log, e
 		}
 	}
 
-	// Warning: this is unboundedly expensive
-	var ethLogs []*ethtypes.Log
-	for round := startRoundInclusive; ; /* see explicit break */ round++ {
-		block, err := api.client.GetBlock(api.ctx, round)
-		if err != nil {
-			if errors.Is(err, roothash.ErrNotFound) && round != client.RoundLatest && endRoundInclusive == client.RoundLatest {
-				// We've walked up to the latest round
-				break
-			}
-			return nil, fmt.Errorf("get block %d: %w", round, err)
-		}
-		_, _, _, blockLogs, err := api.getRPCBlockData(block, true)
-		if err != nil {
-			return nil, fmt.Errorf("convert block %d to rpc block: %w", block.Header.Round, err)
-		}
+	//TODO: filter addresses and topics
 
-		// TODO: filter addresses and topics
-
-		ethLogs = append(ethLogs, blockLogs...)
-
-		if round == endRoundInclusive {
-			break
-		}
+	ethLogs := []*ethtypes.Log{}
+	dbLogs, err := api.backend.GetLogs(*filter.BlockHash, startRoundInclusive, endRoundInclusive)
+	if err != nil {
+		return ethLogs, nil
 	}
+	ethLogs = utils.Db2EthLogs(dbLogs)
 
 	api.Logger.Debug("eth_getLogs response", "resp", ethLogs)
 
 	return ethLogs, nil
 }
 
-// logs2EthLogs casts the Oasis Logs to a slice of Ethereum Logs.
-func logs2EthLogs(logs []*Log, round uint64, blockHash, txHash common.Hash, txIndex uint32) []*ethtypes.Log {
-	ethLogs := []*ethtypes.Log{}
-	for i := range logs {
-		ethLog := &ethtypes.Log{
-			Address:     logs[i].Address,
-			Topics:      logs[i].Topics,
-			Data:        logs[i].Data,
-			BlockNumber: round,
-			TxHash:      txHash,
-			TxIndex:     uint(txIndex),
-			BlockHash:   blockHash,
-			Index:       uint(i),
-			Removed:     false,
-		}
-		ethLogs = append(ethLogs, ethLog)
-	}
-	return ethLogs
-}
-
+// GetBlockHash returns the block hash by the given number.
 func (api *PublicAPI) GetBlockHash(blockNum ethrpc.BlockNumber, _ bool) (common.Hash, error) {
 	round, err := api.roundParamFromBlockNum(blockNum)
 	if err != nil {
@@ -801,16 +562,17 @@ func (api *PublicAPI) GetBlockHash(blockNum ethrpc.BlockNumber, _ bool) (common.
 	return api.backend.QueryBlockHash(round)
 }
 
+// BlockNumber returns the latest block number.
 func (api *PublicAPI) BlockNumber() (hexutil.Uint64, error) {
 	api.Logger.Debug("eth_getBlockNumber start")
-	blk, err := api.client.GetBlock(api.ctx, client.RoundLatest)
+	blockNumber, err := api.backend.BlockNumber()
 	if err != nil {
-		api.Logger.Error("eth_getBlockNumber get the latest number", "error", err.Error())
+		api.Logger.Error("failed to get the latest block number", "err", err)
 		return 0, err
 	}
+	api.Logger.Debug("eth_getBlockNumber get the the latest block number", "blockNumber", blockNumber)
 
-	api.Logger.Debug("eth_getBlockNumber get the current number", "blockNumber", blk.Header.Round)
-	return hexutil.Uint64(blk.Header.Round), nil
+	return hexutil.Uint64(blockNumber), nil
 }
 
 // Accounts returns the list of accounts available to this node.

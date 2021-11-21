@@ -8,10 +8,14 @@ import (
 // InitModel initializes db models.
 func InitModel(db *pg.DB) error {
 	models := []interface{}{
+		new(Block),
 		new(BlockRef),
 		new(TransactionRef),
 		new(Transaction),
-		new(ContinuesIndexedRound)}
+		new(IndexedRoundWithTip),
+		new(Log),
+		new(Receipt),
+	}
 
 	for _, m := range models {
 		if err := db.Model(m).CreateTable(&orm.CreateTableOptions{IfNotExists: true}); err != nil {

@@ -142,20 +142,19 @@ func TestEth_SendRawTransaction(t *testing.T) {
 }
 
 func TestEth_GetBlockByNumberAndGetBlockByHash(t *testing.T) {
-	ec := localClient()
-	ctx := context.Background()
+	param1 := []interface{}{"0x1", false}
+	rpcRes1 := call(t, "eth_getBlockByNumber", param1)
 
-	number := big.NewInt(1)
-	blk1, err := ec.BlockByNumber(ctx, number)
+	blk1 := make(map[string]interface{})
+	err := json.Unmarshal(rpcRes1.Result, &blk1)
 	require.NoError(t, err)
-	_ = blk1
 
-	param := []interface{}{number.String(), false}
+	param := []interface{}{"0x1", false}
 	rpcRes := call(t, "eth_getBlockHash", param)
 	var blk_hash interface{}
 	err = json.Unmarshal(rpcRes.Result, &blk_hash)
 	require.NoError(t, err)
-	_ = rpcRes
+	require.Equal(t, blk_hash, blk1["hash"])
 
 	blkhash := blk_hash.(string)
 	hash := common.HexToHash(blkhash)
@@ -164,7 +163,7 @@ func TestEth_GetBlockByNumberAndGetBlockByHash(t *testing.T) {
 	blk2 := make(map[string]interface{})
 	err = json.Unmarshal(rpcRes.Result, &blk2)
 	require.NoError(t, err)
-	require.Equal(t, "0x1", blk2["number"].(string))
+	require.Equal(t, blk1, blk2)
 }
 
 func TestEth_BlockNumber(t *testing.T) {
@@ -177,8 +176,7 @@ func TestEth_BlockNumber(t *testing.T) {
 }
 
 func TestEth_GetTransactionByHash(t *testing.T) {
-	HOST = "http://localhost:8545"
-	ec, _ := ethclient.Dial(HOST)
+	ec := localClient()
 
 	chainID := big.NewInt(42261)
 	data := common.FromHex("0x7f7465737432000000000000000000000000000000000000000000000000000000600057")
