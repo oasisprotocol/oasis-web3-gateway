@@ -10,11 +10,6 @@ const (
 
 type AccessList []AccessTuple
 
-type ContinuesIndexedRound struct {
-	Tip   string `bun:",pk"`
-	Round uint64
-}
-
 // BlockRef represents the relationship between block round and block hash.
 type BlockRef struct {
 	Hash  string `bun:",pk"`

@@ -14,7 +14,6 @@ func CreateTables(db *bun.DB) error {
 		new(BlockRef),
 		new(Transaction),
 		new(TransactionRef),
-		new(ContinuesIndexedRound),
 		new(IndexedRoundWithTip),
 		new(Receipt),
 		new(Log),
