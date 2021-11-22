@@ -237,8 +237,10 @@ func (p *psqlBackend) StoreBlockData(oasisBlock *block.Block, txResults []*clien
 
 		logs = Logs2EthLogs(oasisLogs, blockNum, bhash, ethTx.Hash(), uint32(txIndex))
 		// store logs
-		if err = p.storage.BulkStore([]interface{}{eth2DbLogs(logs)}); err != nil {
-			return err
+		for _, log := range eth2DbLogs(logs) {
+			if err := p.storage.Store(log); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -250,15 +252,18 @@ func (p *psqlBackend) StoreBlockData(oasisBlock *block.Block, txResults []*clien
 	}
 
 	// Store txs
-	if err = p.storage.BulkStore([]interface{}{txs}); err != nil {
-		return err
+	for _, tx := range txs {
+		if err := p.storage.Store(tx); err != nil {
+			return err
+		}
 	}
 
 	// Store receipts
-	if err = p.storage.BulkStore([]interface{}{receipts}); err != nil {
-		return err
+	for _, receipt := range receipts {
+		if err := p.storage.Store(receipt); err != nil {
+			return err
+		}
 	}
-
 	// Store block
 	if err = p.storage.Store(blk); err != nil {
 		return err
