@@ -98,9 +98,31 @@ func (db *PostDb) Store(value interface{}) error {
 	return db.upsert(value)
 }
 
+// BulkStore stores a set of data.
+func (db *PostDb) BulkStore(values []interface{}) error {
+	for _, v := range values {
+		if err := db.upsert(v); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // Update updates record.
 func (db *PostDb) Update(value interface{}) error {
 	return db.upsert(value)
+}
+
+// BulkUpdate updates a set of data.
+func (db *PostDb) BulkUpdate(values []interface{}) error {
+	for _, v := range values {
+		if err := db.upsert(v); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // Delete deletes all records with round less than the given round.
