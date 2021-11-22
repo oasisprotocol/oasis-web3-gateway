@@ -6,15 +6,27 @@ import (
 )
 
 // CreateTables creates tables.
-func CreateTables(db *bun.DB) {
+func CreateTables(db *bun.DB) error {
+	var err error
+	// tables
+	tables := []interface{}{
+		new(Block),
+		new(BlockRef),
+		new(Transaction),
+		new(TransactionRef),
+		new(ContinuesIndexedRound),
+		new(IndexedRoundWithTip),
+		new(Receipt),
+		new(Log),
+	}
+
 	// create tables
-	create := db.NewCreateTable()
-	create.Model(new(Block)).Exec(context.Background())
-	create.Model(new(BlockRef)).Exec(context.Background())
-	create.Model(new(TransactionRef)).Exec(context.Background())
-	create.Model(new(Transaction)).Exec(context.Background())
-	create.Model(new(ContinuesIndexedRound)).Exec(context.Background())
-	create.Model(new(IndexedRoundWithTip)).Exec(context.Background())
-	create.Model(new(Receipt)).Exec(context.Background())
-	create.Model(new(Log)).Exec(context.Background())
+	for _, tb := range tables {
+		_, err = db.NewCreateTable().Model(tb).IfNotExists().Exec(context.Background())
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

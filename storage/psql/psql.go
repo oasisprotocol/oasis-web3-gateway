@@ -10,6 +10,7 @@ import (
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/driver/pgdriver"
+	"reflect"
 	"time"
 )
 
@@ -35,7 +36,10 @@ func InitDb(cfg *conf.DatabaseConfig) (*PostDb, error) {
 	// create db
 	db := bun.NewDB(sqlDB, pgdialect.New())
 	// create tables
-	model.CreateTables(db)
+	err := model.CreateTables(db)
+	if err != nil {
+		return nil, err
+	}
 
 	return &PostDb{Db: db}, nil
 }
@@ -74,27 +78,17 @@ func (db *PostDb) Exist(value interface{}) (bool, error) {
 // upsert updates record when PK conflicts, otherwise inserts.
 func (db *PostDb) upsert(value interface{}) error {
 	// PKs are required for ON CONFLICT DO UPDATE
-	//pks := db.Db.Model(value).Table().TableModel().Table().PKs
-	//b := ""
-	//for i, f := range pks {
-	//	if i > 0 {
-	//		b += ","
-	//	}
-	//	b += string(f.Column)
-	//}
-	//_, err := db.Db.Model(value).
-	//	OnConflict(fmt.Sprintf("(%s) DO UPDATE", b)).
-	//	Insert()
-
-	exist, err := db.Exist(value)
-	if err != nil {
-		return err
+	typ := reflect.TypeOf(value)
+	pks := db.Db.Table(typ).PKs
+	b := ""
+	for i, f := range pks {
+		if i > 0 {
+			b += ","
+		}
+		b += f.Name
 	}
-	if exist {
-		_, err = db.Db.NewUpdate().Model(value).WherePK().Exec(context.Background())
-	} else {
-		_, err = db.Db.NewInsert().Model(value).Exec(context.Background())
-	}
+	_, err := db.Db.NewInsert().Model(value).
+		On(fmt.Sprintf("CONFLICT (%v) DO UPDATE", b)).Exec(context.Background())
 
 	return err
 }
