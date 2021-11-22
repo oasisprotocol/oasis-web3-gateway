@@ -203,7 +203,7 @@ func (p *psqlBackend) storeIndexedRound(round uint64) error {
 		Round: round,
 	}
 
-	return p.storage.Update(r)
+	return p.storage.Store(r)
 }
 
 // QueryLastIndexedRound returns the last indexed round.
@@ -226,7 +226,7 @@ func (p *psqlBackend) storeLastRetainedRound(round uint64) error {
 		Round: round,
 	}
 
-	return p.storage.Update(r)
+	return p.storage.Store(r)
 }
 
 // QueryLastRetainedRound returns the last retained round.

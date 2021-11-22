@@ -111,13 +111,14 @@ func (db *PostDb) BulkStore(values []interface{}) error {
 
 // Update updates record.
 func (db *PostDb) Update(value interface{}) error {
-	return db.upsert(value)
+	_, err := db.Db.NewUpdate().Model(value).WherePK().Exec(context.Background())
+	return err
 }
 
 // BulkUpdate updates a set of data.
 func (db *PostDb) BulkUpdate(values []interface{}) error {
 	for _, v := range values {
-		if err := db.upsert(v); err != nil {
+		if err := db.Update(v); err != nil {
 			return err
 		}
 	}
