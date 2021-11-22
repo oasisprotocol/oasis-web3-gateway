@@ -250,7 +250,7 @@ func (db *PostDb) GetBlockTransaction(blockHash string, txIndex int) (*model.Tra
 		return nil, err
 	}
 	if len(block.Transactions) == 0 {
-		return nil, errors.New("the block doesn't has any transactions")
+		return nil, errors.New("the block doesn't have any transactions")
 	}
 	if len(block.Transactions)-1 < txIndex {
 		return nil, errors.New("index out of range")
