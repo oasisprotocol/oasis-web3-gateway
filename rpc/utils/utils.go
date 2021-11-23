@@ -13,7 +13,6 @@ import (
 
 // NewRPCTransaction returns a transaction that will serialize to the RPC representation.
 func NewRPCTransaction(dbTx *model.Transaction) (*RPCTransaction, error) {
-	to := common.HexToAddress(dbTx.ToAddr)
 	gasPrice, _ := new(big.Int).SetString(dbTx.GasPrice, 10)
 	gasFee, _ := new(big.Int).SetString(dbTx.GasFeeCap, 10)
 	gasTip, _ := new(big.Int).SetString(dbTx.GasTipCap, 10)
@@ -35,7 +34,6 @@ func NewRPCTransaction(dbTx *model.Transaction) (*RPCTransaction, error) {
 	blockHash := common.HexToHash(dbTx.BlockHash)
 	txIndex := hexutil.Uint64(dbTx.Index)
 	resTx := &RPCTransaction{
-		From:             common.HexToAddress(dbTx.FromAddr),
 		Gas:              hexutil.Uint64(dbTx.Gas),
 		GasPrice:         (*hexutil.Big)(gasPrice),
 		GasFeeCap:        (*hexutil.Big)(gasFee),
@@ -43,7 +41,6 @@ func NewRPCTransaction(dbTx *model.Transaction) (*RPCTransaction, error) {
 		Hash:             common.HexToHash(dbTx.Hash),
 		Input:            common.Hex2Bytes(dbTx.Data),
 		Nonce:            hexutil.Uint64(dbTx.Nonce),
-		To:               &to,
 		Value:            (*hexutil.Big)(value),
 		Type:             hexutil.Uint64(dbTx.Type),
 		Accesses:         &accesses,
@@ -54,6 +51,19 @@ func NewRPCTransaction(dbTx *model.Transaction) (*RPCTransaction, error) {
 		BlockHash:        &blockHash,
 		BlockNumber:      (*hexutil.Big)(new(big.Int).SetUint64(dbTx.Round)),
 		TransactionIndex: &txIndex,
+	}
+
+	if len(dbTx.FromAddr) == 0 {
+		resTx.From = common.Address{}
+	} else {
+		resTx.From = common.HexToAddress(dbTx.FromAddr)
+	}
+
+	if len(dbTx.ToAddr) == 0 {
+		resTx.To = nil
+	} else {
+		to := common.HexToAddress(dbTx.ToAddr)
+		resTx.To = &to
 	}
 
 	return resTx, nil
