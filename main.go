@@ -15,6 +15,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/starfishlabs/oasis-evm-web3-gateway/conf"
+	"github.com/starfishlabs/oasis-evm-web3-gateway/filters"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/indexer"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/log"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc"
@@ -90,21 +91,24 @@ func runRoot() error {
 	}
 
 	// Create Indexer
-	f := indexer.NewPsqlBackend()
-	indx, backend, err := indexer.New(ctx, f, rc, runtimeID, db, cfg.EnablePruning, cfg.PruningStep)
+	f := indexer.NewIndexBackend()
+	indx, backend, subBackend, err := indexer.New(ctx, f, rc, runtimeID, db, cfg.EnablePruning, cfg.PruningStep)
 	if err != nil {
 		logger.Error("failed to create indexer", err)
 		return err
 	}
 	indx.Start()
 
-	// Create web3 gateway instance
+	// Create event system.
+	es := filters.NewEventSystem(subBackend)
+
+	// Create web3 gateway instance.
 	w3, err := server.New(ctx, cfg.Gateway)
 	if err != nil {
 		logger.Error("failed to create web3", err)
 		return err
 	}
-	w3.RegisterAPIs(rpc.GetRPCAPIs(ctx, rc, backend, cfg.Gateway))
+	w3.RegisterAPIs(rpc.GetRPCAPIs(ctx, rc, backend, cfg.Gateway, es))
 	w3.RegisterHealthChecks([]server.HealthCheck{indx})
 
 	svr := server.Server{
