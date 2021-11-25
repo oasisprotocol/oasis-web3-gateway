@@ -513,12 +513,13 @@ func (api *PublicAPI) GetTransactionReceipt(txHash common.Hash) (map[string]inte
 func (api *PublicAPI) GetLogs(filter filters.FilterCriteria) ([]*ethtypes.Log, error) {
 	api.Logger.Debug("eth_getLogs", "filter", filter)
 
+	ethLogs := []*ethtypes.Log{}
 	startRoundInclusive := client.RoundLatest
 	endRoundInclusive := client.RoundLatest
 	if filter.BlockHash != nil {
 		round, err := api.backend.QueryBlockRound(*filter.BlockHash)
 		if err != nil {
-			return nil, fmt.Errorf("query block round: %w", err)
+			return ethLogs, fmt.Errorf("query block round: %w", err)
 		}
 		startRoundInclusive = round
 		endRoundInclusive = round
@@ -541,7 +542,6 @@ func (api *PublicAPI) GetLogs(filter filters.FilterCriteria) ([]*ethtypes.Log, e
 
 	//TODO: filter addresses and topics
 
-	ethLogs := []*ethtypes.Log{}
 	dbLogs, err := api.backend.GetLogs(*filter.BlockHash, startRoundInclusive, endRoundInclusive)
 	if err != nil {
 		return ethLogs, nil
