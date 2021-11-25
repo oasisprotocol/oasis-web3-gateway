@@ -16,12 +16,26 @@ on:
       - stable/*
 
 jobs:
-
-
   test-go:
-    # NOTE: This name appears in GitHub's Checks API.
-    name: test-go
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_HOST: 127.0.0.1
+          POSTGRES_PORT: 5432
+          POSTGRES_DB: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+    env:
+      OASIS_CORE_VERSION: 21.3.6
+      OASIS_NODE: ${{ github.workspace }}/oasis_core/oasis-node
+      OASIS_NET_RUNNER: ${{ github.workspace }}/oasis_core/oasis-net-runner
+      OASIS_EMERALD_VERSION: 5.0.0
+      OASIS_EMERALD_PARATIME: ${{ github.workspace }}/oasis_core/emerald-paratime
+      OASIS_NODE_DATADIR: /tmp/eth-runtime-test
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -31,8 +45,37 @@ jobs:
         with:
           go-version: "1.16.x"
 
+      - name: Install prerequisites
+        run: |
+          sudo apt update && sudo apt install bubblewrap -y
+          wget "https://github.com/oasisprotocol/oasis-core/releases/download/v${OASIS_CORE_VERSION}/oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz"
+          tar xfvz "oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz"
+          mkdir -p "$(dirname ${OASIS_NODE})"
+          mv "oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-node" "${OASIS_NODE}"
+          mkdir -p "$(dirname ${OASIS_NET_RUNNER})"
+          mv "oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-net-runner" "${OASIS_NET_RUNNER}"
+          mkdir -p "$(dirname ${OASIS_EMERALD_PARATIME})"
+          wget "https://github.com/oasisprotocol/emerald-paratime/releases/download/v${OASIS_EMERALD_VERSION}/emerald-paratime" -O "${OASIS_EMERALD_PARATIME}"
+          chmod a+x "${OASIS_EMERALD_PARATIME}"
+
+      - name: Spinup oasis-node
+        run: tests/tools/spinup-oasis-stack.sh > /dev/null &
+
+      - run: go build
+
       - name: Unit tests with coverage
         run: go test -race -coverprofile=coverage.txt -covermode=atomic -v ./...
+
+      - name: Shutdown oasis-node
+        run: killall oasis-node
+        if: always()
+
+      - name: Upload oasis-node logs artifacts
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: oasis-node-logs
+          path: ${{ env.OASIS_NODE_DATADIR }}/**/*.log
 
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v2.1.0

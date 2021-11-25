@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -22,14 +23,14 @@ type httpConfig struct {
 	prefix             string // path prefix on which to mount http handler
 }
 
-// wsConfig is the JSON-RPC/Websocket configuration
+// wsConfig is the JSON-RPC/Websocket configuration.
 type wsConfig struct {
 	Origins []string
 	Modules []string
 	prefix  string // path prefix on which to mount ws handler
 }
 
-// httpServer handle http connection and rpc requests
+// httpServer handle http connection and rpc requests.
 type httpServer struct {
 	logger   *logging.Logger
 	timeouts rpc.HTTPTimeouts
@@ -85,10 +86,26 @@ func (h *httpServer) start() error {
 		h.logger.Error("tcp listen failed", "err", err)
 		return err
 	}
-	// h.listener = listener
+
+	// nolint:errcheck
 	go h.server.Serve(listener)
+	// Random port is determined by the server. Retrieve it.
+	if h.port == 0 {
+		h.endpoint = listener.Addr().String()
+		_, portStr, err := net.SplitHostPort(h.endpoint)
+		if err != nil {
+			h.logger.Error("Splitting host:port of listener failed")
+			return err
+		}
+		h.port, err = strconv.Atoi(portStr)
+		if err != nil {
+			h.logger.Error("Parsing of listener port failed. Is '%s' a service name instead?", portStr)
+			return err
+		}
+	}
 
 	h.logger.Info("HTTP server started",
+		"provided_endpoint", h.endpoint,
 		"endpoint", listener.Addr(),
 		"prefix", h.httpConfig.prefix,
 		"cors", strings.Join(h.httpConfig.CorsAllowedOrigins, ","),
@@ -115,7 +132,9 @@ func validatePrefix(what, path string) error {
 
 // stop shuts down the HTTP server.
 func (h *httpServer) stop() {
-	h.server.Shutdown(context.Background())
+	if err := h.server.Shutdown(context.Background()); err != nil {
+		h.logger.Error("Error while shutting down HTTP server: %w", err)
+	}
 	h.logger.Info("HTTP server stopped", "endpoint", h.endpoint)
 }
 
@@ -130,7 +149,7 @@ func (h *httpServer) enableRPC(apis []rpc.API, config httpConfig) error {
 
 	h.rpcServer = srv
 	router := mux.NewRouter()
-	router.HandleFunc("/", h.rpcServer.ServeHTTP).Methods("POST")
+	router.PathPrefix(h.httpConfig.prefix).HandlerFunc(h.rpcServer.ServeHTTP).Methods("POST")
 	h.rpcHandler = newCorsHandler(router, h.httpConfig.CorsAllowedOrigins)
 
 	return nil
@@ -147,7 +166,7 @@ func (h *httpServer) enableWS(apis []rpc.API, config wsConfig) error {
 
 	h.rpcServer = srv
 	router := mux.NewRouter()
-	router.HandleFunc("/", h.rpcServer.WebsocketHandler(config.Origins).ServeHTTP)
+	router.PathPrefix(h.wsConfig.prefix).HandlerFunc(h.rpcServer.WebsocketHandler(config.Origins).ServeHTTP)
 	h.rpcHandler = router
 
 	return nil
@@ -185,7 +204,7 @@ func RegisterApis(apis []rpc.API, modules []string, srv *rpc.Server, exposeAll b
 	return nil
 }
 
-// CheckTimeouts ensures that timeout values are meaningful
+// CheckTimeouts ensures that timeout values are meaningful.
 func CheckTimeouts(timeouts *rpc.HTTPTimeouts) {
 	if timeouts.ReadTimeout < time.Second {
 		timeouts.ReadTimeout = rpc.DefaultHTTPTimeouts.ReadTimeout

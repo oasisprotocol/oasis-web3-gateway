@@ -1,14 +1,14 @@
 package rpc
 
-// The ERC20 ABI json is generated from TestToken contract
+// The ERC20 ABI json is generated from TestToken contract.
 //
-// pragma solidity ^0.8.0;
-// import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-// contract TestToken is ERC20 {
-// 	constructor() ERC20("Test", "TST") public {
-// 		_mint(msg.sender, 1000000 * (10 ** uint256(decimals())));
-// 	}
-// }
+//   pragma solidity ^0.8.0;
+//   import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+//   contract TestToken is ERC20 {
+// 	   constructor() ERC20("Test", "TST") public {
+// 	     _mint(msg.sender, 1000000 * (10 ** uint256(decimals())));
+// 	   }
+//   }
 const erc20abi = `
 	[
 		{

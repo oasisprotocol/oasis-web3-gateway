@@ -59,3 +59,6 @@ linters-settings:
   govet:
     # Enabled checking for shadowed variables.
     check-shadowing: true
+  goimports:
+    # Put local imports after 3rd-party packages.
+    local-prefixes: github.com/starfishlabs/oasis-evm-web3-gateway
