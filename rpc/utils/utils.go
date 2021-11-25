@@ -59,9 +59,7 @@ func NewRPCTransaction(dbTx *model.Transaction) (*RPCTransaction, error) {
 		resTx.From = common.HexToAddress(dbTx.FromAddr)
 	}
 
-	if len(dbTx.ToAddr) == 0 {
-		resTx.To = nil
-	} else {
+	if len(dbTx.ToAddr) > 0 {
 		to := common.HexToAddress(dbTx.ToAddr)
 		resTx.To = &to
 	}
