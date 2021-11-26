@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/eth/filters"
 	"github.com/ethereum/go-ethereum/rlp"
 	ethrpc "github.com/ethereum/go-ethereum/rpc"
+	"github.com/go-pg/pg/v10"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/secp256k1"
@@ -519,7 +520,10 @@ func (api *PublicAPI) GetLogs(filter filters.FilterCriteria) ([]*ethtypes.Log, e
 	if filter.BlockHash != nil {
 		round, err := api.backend.QueryBlockRound(*filter.BlockHash)
 		if err != nil {
-			return ethLogs, fmt.Errorf("query block round: %w", err)
+			if err != pg.ErrNoRows {
+				return nil, fmt.Errorf("query block round: %w", err)
+			}
+			return ethLogs, nil
 		}
 		startRoundInclusive = round
 		endRoundInclusive = round
