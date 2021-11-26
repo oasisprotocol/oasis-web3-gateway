@@ -515,7 +515,6 @@ func (api *PublicAPI) GetTransactionReceipt(txHash common.Hash) (map[string]inte
 // GetLogs returns the ethereum logs.
 func (api *PublicAPI) GetLogs(filter filters.FilterCriteria) ([]*ethtypes.Log, error) {
 	api.Logger.Debug("eth_getLogs", "filter", filter)
-
 	ethLogs := []*ethtypes.Log{}
 	startRoundInclusive := client.RoundLatest
 	endRoundInclusive := client.RoundLatest
@@ -527,48 +526,31 @@ func (api *PublicAPI) GetLogs(filter filters.FilterCriteria) ([]*ethtypes.Log, e
 			}
 			return ethLogs, nil
 		}
-		return round, round, nil
-	}
-
-	start := client.RoundLatest
-	end := client.RoundLatest
-	if filter.FromBlock != nil {
-		round, err := api.roundParamFromBlockNum(ethrpc.BlockNumber(filter.FromBlock.Int64()))
-		if err != nil {
-			return 0, 0, fmt.Errorf("convert from block number to round: %w", err)
+		startRoundInclusive = round
+		endRoundInclusive = round
+	} else {
+		if filter.FromBlock != nil {
+			round, err := api.roundParamFromBlockNum(ethrpc.BlockNumber(filter.FromBlock.Int64()))
+			if err != nil {
+				return nil, fmt.Errorf("convert from block number to round: %w", err)
+			}
+			startRoundInclusive = round
 		}
-		start = round
-	}
-	if filter.ToBlock != nil {
-		round, err := api.roundParamFromBlockNum(ethrpc.BlockNumber(filter.ToBlock.Int64()))
-		if err != nil {
-			return 0, 0, fmt.Errorf("convert to block number to round: %w", err)
+		if filter.ToBlock != nil {
+			round, err := api.roundParamFromBlockNum(ethrpc.BlockNumber(filter.ToBlock.Int64()))
+			if err != nil {
+				return nil, fmt.Errorf("convert to block number to round: %w", err)
+			}
+			endRoundInclusive = round
 		}
-		end = round
 	}
-
-	return start, end, nil
-}
-
-// GetLogs returns the ethereum logs.
-func (api *PublicAPI) GetLogs(filter filters.FilterCriteria) ([]*ethtypes.Log, error) {
-	api.Logger.Debug("eth_getLogs", "filter", filter)
-
-	startRoundInclusive, endRoundInclusive, err := api.getStartEndRounds(filter)
-	if err != nil {
-		return nil, fmt.Errorf("error getting start and end rounds: %w", err)
-	}
-
-	// TODO: filter addresses and topics
-
+	//TODO: filter addresses and topics
 	dbLogs, err := api.backend.GetLogs(*filter.BlockHash, startRoundInclusive, endRoundInclusive)
 	if err != nil {
 		return ethLogs, nil
 	}
 	ethLogs = utils.DB2EthLogs(dbLogs)
-
 	api.Logger.Debug("eth_getLogs response", "resp", ethLogs)
-
 	return ethLogs, nil
 }
 
