@@ -6,7 +6,7 @@ import (
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 )
 
-// RPCTransaction represents a transaction that will serialize to the RPC representation of a transaction
+// RPCTransaction represents a transaction that will serialize to the RPC representation of a transaction.
 type RPCTransaction struct {
 	BlockHash        *common.Hash         `json:"blockHash"`
 	BlockNumber      *hexutil.Big         `json:"blockNumber"`
@@ -29,7 +29,7 @@ type RPCTransaction struct {
 	S                *hexutil.Big         `json:"s"`
 }
 
-// TransactionArgs represents the call arguments of a transaction
+// TransactionArgs represents the call arguments of a transaction.
 type TransactionArgs struct {
 	From                 *common.Address `json:"from"`
 	To                   *common.Address `json:"to"`

@@ -14,8 +14,11 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	oasisTesting "github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing"
 	"github.com/stretchr/testify/require"
 )
+
+const ethTimeout = 15 * time.Second
 
 // We store the compiled EVM bytecode for the SimpleSolEVMTest in a separate
 // file (in hex) to preserve readability of this file.
@@ -36,8 +39,8 @@ func waitTransaction(ctx context.Context, ec *ethclient.Client, txhash common.Ha
 		if receipt != nil {
 			return receipt, nil
 		}
-		if err != nil {
-			// fmt.Printf("Receipt retrieval failed: %s\n", err)
+		if err != ethereum.NotFound {
+			return nil, err
 		}
 		// Wait for the next round.
 		select {
@@ -48,20 +51,26 @@ func waitTransaction(ctx context.Context, ec *ethclient.Client, txhash common.Ha
 	}
 }
 
-func TestContractCreation(t *testing.T) {
-	HOST = "http://localhost:8545"
-	ec, _ := ethclient.Dial(HOST)
+func testContractCreation(t *testing.T, value *big.Int) uint64 {
+	ec := localClient()
 
+	t.Logf("compiled contract: %s", evmSolTestCompiledHex)
 	code := common.FromHex(strings.TrimSpace(evmSolTestCompiledHex))
 
 	chainID, err := ec.ChainID(context.Background())
 	require.Nil(t, err, "get chainid")
 
-	nonce, err := ec.NonceAt(context.Background(), common.HexToAddress(daveEVMAddr), nil)
+	nonce, err := ec.NonceAt(context.Background(), oasisTesting.Dave.EthAddress, nil)
 	require.Nil(t, err, "get nonce failed")
 
 	// Create transaction
-	tx := types.NewContractCreation(nonce, big.NewInt(0), 1000000, big.NewInt(2), code)
+	tx := types.NewTx(&types.LegacyTx{
+		Nonce:    nonce,
+		Value:    value,
+		Gas:      1000000,
+		GasPrice: big.NewInt(2),
+		Data:     code,
+	})
 	signer := types.LatestSignerForChainID(chainID)
 	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), daveKey)
 	require.Nil(t, err, "sign tx")
@@ -69,55 +78,28 @@ func TestContractCreation(t *testing.T) {
 	signedTx, err := tx.WithSignature(signer, signature)
 	require.Nil(t, err, "pack tx")
 
-	ec.SendTransaction(context.Background(), signedTx)
+	err = ec.SendTransaction(context.Background(), signedTx)
+	require.Nil(t, err, "send transaction failed")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), ethTimeout)
 	defer cancel()
 
 	receipt, err := waitTransaction(ctx, ec, signedTx.Hash())
-	if err != nil {
-		t.Errorf("get receipt failed: %s", err)
-		return
-	}
-	// t.Logf("Contract address: %s", receipt.ContractAddress)
+	require.NoError(t, err)
 
-	require.Equal(t, receipt.Status, uint64(1))
+	t.Logf("Contract address: %s", receipt.ContractAddress)
+
+	return receipt.Status
+}
+
+func TestContractCreation(t *testing.T) {
+	status := testContractCreation(t, big.NewInt(0))
+	require.Equal(t, uint64(1), status)
 }
 
 func TestContractFailCreation(t *testing.T) {
-	HOST = "http://localhost:8545"
-	ec, _ := ethclient.Dial(HOST)
-
-	code := common.FromHex(strings.TrimSpace(evmSolTestCompiledHex))
-
-	chainID, err := ec.ChainID(context.Background())
-	require.Nil(t, err, "get chainid")
-
-	nonce, err := ec.NonceAt(context.Background(), common.HexToAddress(daveEVMAddr), nil)
-	require.Nil(t, err, "get nonce failed")
-
-	// Create transaction with transfer which is not allowed in solidity non payale
-	tx := types.NewContractCreation(nonce, big.NewInt(1), 1000000, big.NewInt(2), code)
-	signer := types.LatestSignerForChainID(chainID)
-	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), daveKey)
-	require.Nil(t, err, "sign tx")
-
-	signedTx, err := tx.WithSignature(signer, signature)
-	require.Nil(t, err, "pack tx")
-
-	ec.SendTransaction(context.Background(), signedTx)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-
-	receipt, err := waitTransaction(ctx, ec, signedTx.Hash())
-	if err != nil {
-		t.Errorf("get receipt failed: %s", err)
-		return
-	}
-	// t.Logf("failed creation receipt: %#v", receipt)
-
-	require.Equal(t, receipt.Status, uint64(0))
+	status := testContractCreation(t, big.NewInt(1))
+	require.Equal(t, uint64(0), status)
 }
 
 func TestEth_EstimateGas(t *testing.T) {
@@ -127,12 +109,12 @@ func TestEth_EstimateGas(t *testing.T) {
 	chainID, err := ec.ChainID(context.Background())
 	require.Nil(t, err, "get chainid")
 
-	nonce, err := ec.NonceAt(context.Background(), common.HexToAddress(daveEVMAddr), nil)
+	nonce, err := ec.NonceAt(context.Background(), oasisTesting.Dave.EthAddress, nil)
 	require.Nil(t, err, "get nonce failed")
 
 	// Build call args for estimate gas
 	msg := ethereum.CallMsg{
-		From:  common.HexToAddress(daveEVMAddr),
+		From:  oasisTesting.Dave.EthAddress,
 		Value: big.NewInt(0),
 		Data:  code,
 	}
@@ -149,23 +131,30 @@ func TestEth_EstimateGas(t *testing.T) {
 	signedTx, err := tx.WithSignature(signer, signature)
 	require.Nil(t, err, "pack tx")
 
-	ec.SendTransaction(context.Background(), signedTx)
+	err = ec.SendTransaction(context.Background(), signedTx)
+	require.Nil(t, err, "send transaction failed")
+
+	ctx, cancel := context.WithTimeout(context.Background(), ethTimeout)
+	defer cancel()
+
+	_, err = waitTransaction(ctx, ec, signedTx.Hash())
+	require.NoError(t, err)
 }
 
 func TestEth_GetCode(t *testing.T) {
-	HOST = "http://localhost:8545"
-	ec, _ := ethclient.Dial(HOST)
+	ec := localClient()
 
 	code := common.FromHex(strings.TrimSpace(evmSolTestCompiledHex))
 
 	chainID, err := ec.ChainID(context.Background())
 	require.Nil(t, err, "get chainid")
 
-	nonce, err := ec.NonceAt(context.Background(), common.HexToAddress(daveEVMAddr), nil)
+	nonce, err := ec.NonceAt(context.Background(), oasisTesting.Dave.EthAddress, nil)
 	require.Nil(t, err, "get nonce failed")
+	t.Logf("got nonce: %v", nonce)
 
 	// Create transaction
-	tx := types.NewContractCreation(nonce, big.NewInt(0), 1000000, big.NewInt(2), code)
+	tx := types.NewContractCreation(nonce, big.NewInt(0), 500000, big.NewInt(2), code)
 	signer := types.LatestSignerForChainID(chainID)
 	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), daveKey)
 	require.Nil(t, err, "sign tx")
@@ -173,16 +162,15 @@ func TestEth_GetCode(t *testing.T) {
 	signedTx, err := tx.WithSignature(signer, signature)
 	require.Nil(t, err, "pack tx")
 
-	ec.SendTransaction(context.Background(), signedTx)
+	err = ec.SendTransaction(context.Background(), signedTx)
+	require.Nil(t, err, "send transaction failed")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), ethTimeout)
 	defer cancel()
 
 	receipt, err := waitTransaction(ctx, ec, signedTx.Hash())
-	if err != nil {
-		t.Errorf("get receipt failed: %s", err)
-		return
-	}
+	require.NoError(t, err)
+	t.Logf("SignedTx hash: %s", signedTx.Hash().Hex())
 	t.Logf("Contract address: %s", receipt.ContractAddress)
 
 	require.Equal(t, uint64(1), receipt.Status)
@@ -217,19 +205,19 @@ func TestEth_Call(t *testing.T) {
 	`
 	testabi, _ := abi.JSON(strings.NewReader(abidata))
 
-	HOST = "http://localhost:8545"
-	ec, _ := ethclient.Dial(HOST)
+	ec := localClient()
 
 	code := common.FromHex(strings.TrimSpace(evmSolTestCompiledHex))
 
 	chainID, err := ec.ChainID(context.Background())
 	require.Nil(t, err, "get chainid")
 
-	nonce, err := ec.NonceAt(context.Background(), common.HexToAddress(daveEVMAddr), nil)
+	nonce, err := ec.NonceAt(context.Background(), oasisTesting.Dave.EthAddress, nil)
 	require.Nil(t, err, "get nonce failed")
+	t.Logf("got nonce: %v", nonce)
 
 	// Create transaction
-	tx := types.NewContractCreation(nonce, big.NewInt(0), 1000000, big.NewInt(2), code)
+	tx := types.NewContractCreation(nonce, big.NewInt(0), 500000, big.NewInt(2), code)
 	signer := types.LatestSignerForChainID(chainID)
 	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), daveKey)
 	require.Nil(t, err, "sign tx")
@@ -237,24 +225,21 @@ func TestEth_Call(t *testing.T) {
 	signedTx, err := tx.WithSignature(signer, signature)
 	require.Nil(t, err, "pack tx")
 
-	ec.SendTransaction(context.Background(), signedTx)
+	err = ec.SendTransaction(context.Background(), signedTx)
+	require.Nil(t, err, "send transaction failed")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), ethTimeout)
 	defer cancel()
 
 	receipt, err := waitTransaction(ctx, ec, signedTx.Hash())
-	if err != nil {
-		t.Errorf("get receipt failed: %s", err)
-		return
-	}
-	// t.Logf("Contract address: %s", receipt.ContractAddress)
+	require.NoError(t, err)
+	t.Logf("SignedTx hash: %s", signedTx.Hash().Hex())
+	t.Logf("Contract address: %s", receipt.ContractAddress)
 
-	require.Equal(t, receipt.Status, uint64(1))
+	require.Equal(t, uint64(1), receipt.Status)
 
 	calldata, err := testabi.Pack("name")
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	t.Logf("calldata: %x", calldata)
 
 	msg := ethereum.CallMsg{
@@ -263,9 +248,7 @@ func TestEth_Call(t *testing.T) {
 	}
 
 	out, err := ec.CallContract(context.Background(), msg, nil)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	require.NoError(t, err)
 	t.Logf("contract call return: %x", out)
 
 	ret, err := testabi.Unpack("name", out)
@@ -273,27 +256,26 @@ func TestEth_Call(t *testing.T) {
 	require.Equal(t, "test", ret[0])
 }
 
-// TestERC20 deploy erc20 with no constructor
+// TestERC20 deploy erc20 with no constructor.
 //
-// pragma solidity ^0.8.0;
-// import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-// contract TestToken is ERC20 {
-// 	constructor() ERC20("Test", "TST") public {
-// 		_mint(msg.sender, 1000000 * (10 ** uint256(decimals())));
-// 	}
-// }
+//   pragma solidity ^0.8.0;
+//   import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+//   contract TestToken is ERC20 {
+// 	   constructor() ERC20("Test", "TST") public {
+// 	     _mint(msg.sender, 1000000 * (10 ** uint256(decimals())));
+// 	   }
+//   }
 func TestERC20(t *testing.T) {
 	testabi, _ := abi.JSON(strings.NewReader(erc20abi))
 
-	HOST = "http://localhost:8545"
-	ec, _ := ethclient.Dial(HOST)
+	ec := localClient()
 
 	code := common.FromHex(strings.TrimSpace(evmERC20TestCompiledHex))
 
 	chainID, err := ec.ChainID(context.Background())
 	require.Nil(t, err, "get chainid")
 
-	nonce, err := ec.NonceAt(context.Background(), common.HexToAddress(daveEVMAddr), nil)
+	nonce, err := ec.NonceAt(context.Background(), oasisTesting.Dave.EthAddress, nil)
 	require.Nil(t, err, "get nonce failed")
 
 	// Deploy ERC20 contract
@@ -305,21 +287,20 @@ func TestERC20(t *testing.T) {
 	signedTx, err := tx.WithSignature(signer, signature)
 	require.Nil(t, err, "pack tx")
 
-	ec.SendTransaction(context.Background(), signedTx)
+	err = ec.SendTransaction(context.Background(), signedTx)
+	require.Nil(t, err, "send transaction failed")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), ethTimeout)
 	defer cancel()
+
 	receipt, err := waitTransaction(ctx, ec, signedTx.Hash())
-	if err != nil {
-		t.Errorf("get receipt failed: %s", err)
-		return
-	}
+	require.NoError(t, err)
 	require.Equal(t, uint64(1), receipt.Status)
 	tokenAddr := receipt.ContractAddress
 	t.Logf("ERC20 address: %s", tokenAddr.Hex())
 
 	// Make transfer token transaction
-	nonce, err = ec.NonceAt(context.Background(), common.HexToAddress(daveEVMAddr), nil)
+	nonce, err = ec.NonceAt(context.Background(), oasisTesting.Dave.EthAddress, nil)
 	require.Nil(t, err, "get nonce failed")
 	transferCall, err := testabi.Pack("transfer", common.Address{1}, big.NewInt(10))
 	if err != nil {
@@ -332,20 +313,16 @@ func TestERC20(t *testing.T) {
 	require.Nil(t, err, "sign tx")
 	signedTx, err = tx.WithSignature(signer, signature)
 	require.Nil(t, err, "pack tx")
-	ec.SendTransaction(context.Background(), signedTx)
+	err = ec.SendTransaction(context.Background(), signedTx)
+	require.Nil(t, err, "send transaction failed")
 
 	receipt, err = waitTransaction(context.Background(), ec, signedTx.Hash())
-	if err != nil {
-		t.Errorf("get receipt failed: %s", err)
-		return
-	}
+	require.NoError(t, err)
 	require.Equal(t, uint64(1), receipt.Status)
 
 	// Get balance of token receiver
 	balanceOfCall, err := testabi.Pack("balanceOf", common.Address{1})
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	msg := ethereum.CallMsg{
 		To:   &tokenAddr,
 		Data: balanceOfCall,

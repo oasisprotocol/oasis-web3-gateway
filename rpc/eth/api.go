@@ -23,6 +23,7 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/evm"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
+
 	"github.com/starfishlabs/oasis-evm-web3-gateway/indexer"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/utils"
@@ -87,11 +88,11 @@ func (api *PublicAPI) roundParamFromBlockNum(blockNum ethrpc.BlockNumber) (uint6
 		var earliest uint64
 		clrBlk, err := api.client.GetLastRetainedBlock(api.ctx)
 		if err != nil {
-			api.Logger.Error("failed to get last retained block from client", "error", err)
+			return 0, fmt.Errorf("failed to get last retained block from client: %w", err)
 		}
 		ilrRound, err := api.backend.QueryLastRetainedRound()
 		if err != nil {
-			api.Logger.Error("failed to get last retained block from indexer", "error", err)
+			return 0, fmt.Errorf("failed to get last retained block from indexer: %w", err)
 		}
 		if clrBlk.Header.Round < ilrRound {
 			earliest = ilrRound
@@ -111,13 +112,13 @@ func (api *PublicAPI) GetBlockByNumber(blockNum ethrpc.BlockNumber, fullTx bool)
 	round, err := api.roundParamFromBlockNum(blockNum)
 	if err != nil {
 		err = fmt.Errorf("convert block number to round: %w", err)
-		api.Logger.Error("GetBlock failed", "number", blockNum, "error", err.Error())
+		api.Logger.Error("GetBlock failed", "number", blockNum, "err", err)
 		return nil, err
 	}
 
 	blk, err := api.backend.GetBlockByNumber(round)
 	if err != nil {
-		api.Logger.Error("GetBlock failed", "number", blockNum, "error", err.Error())
+		api.Logger.Error("GetBlock failed", "number", blockNum, "err", err)
 		// Block doesn't exist, by web3 spec an empty response should be returned, not an error.
 		return nil, ErrInternalQuery
 	}
@@ -132,12 +133,12 @@ func (api *PublicAPI) GetBlockTransactionCountByNumber(blockNum ethrpc.BlockNumb
 	round, err := api.roundParamFromBlockNum(blockNum)
 	if err != nil {
 		err = fmt.Errorf("convert block number to round: %w", err)
-		api.Logger.Error("GetBlock failed", "number", blockNum, "error", err.Error())
+		api.Logger.Error("GetBlock failed", "number", blockNum, "err", err)
 		return 0, err
 	}
 	n, err := api.backend.GetBlockTransactionCountByNumber(round)
 	if err != nil {
-		api.Logger.Error("Query failed", "number", blockNum, "error", err.Error())
+		api.Logger.Error("Query failed", "number", blockNum, "err", err)
 		return 0, ErrInternalQuery
 	}
 
@@ -150,7 +151,7 @@ func (api *PublicAPI) GetStorageAt(address common.Address, position hexutil.Big,
 	round, err := api.roundParamFromBlockNum(blockNum)
 	if err != nil {
 		err = fmt.Errorf("convert block number to round: %w", err)
-		api.Logger.Error("GetBlock failed", "number", blockNum, "error", err.Error())
+		api.Logger.Error("GetBlock failed", "number", blockNum, "err", err)
 		return hexutil.Big{}, err
 	}
 	// EVM module takes index as H256, which needs leading zeros.
@@ -186,7 +187,8 @@ func (api *PublicAPI) GetBalance(address common.Address, blockNum ethrpc.BlockNu
 	return (*hexutil.Big)(res.ToBigInt()), nil
 }
 
-// ChainId return the EIP-155  chain id for the current network
+// nolint:revive,stylecheck
+// ChainId return the EIP-155 chain id for the current network.
 func (api *PublicAPI) ChainId() (*hexutil.Big, error) {
 	return (*hexutil.Big)(big.NewInt(int64(api.chainID))), nil
 }
@@ -196,7 +198,7 @@ func (api *PublicAPI) GasPrice() (*hexutil.Big, error) {
 	coremod := core.NewV1(api.client)
 	mgp, err := coremod.MinGasPrice(api.ctx)
 	if err != nil {
-		api.Logger.Error("Query MinGasPrice failed", "error", err)
+		api.Logger.Error("Query MinGasPrice failed", "err", err)
 		return nil, err
 	}
 	nativeMGP := mgp[types.NativeDenomination]
@@ -209,7 +211,7 @@ func (api *PublicAPI) GetBlockTransactionCountByHash(blockHash common.Hash) (hex
 
 	n, err := api.backend.GetBlockTransactionCountByHash(blockHash)
 	if err != nil {
-		api.Logger.Error("Query failed", "hash", blockHash, "error", err.Error())
+		api.Logger.Error("Query failed", "hash", blockHash, "err", err)
 		return 0, ErrInternalQuery
 	}
 
@@ -239,7 +241,7 @@ func (api *PublicAPI) GetCode(address common.Address, blockNum ethrpc.BlockNumbe
 	ethmod := evm.NewV1(api.client)
 	round, err := api.roundParamFromBlockNum(blockNum)
 	if err != nil {
-		api.Logger.Error("GetBlock failed", "number", blockNum, "error", err.Error())
+		api.Logger.Error("GetBlock failed", "number", blockNum, "err", err)
 		return nil, fmt.Errorf("convert block number to round: %w", err)
 	}
 	res, err := ethmod.Code(api.ctx, round, address[:])
@@ -250,41 +252,41 @@ func (api *PublicAPI) GetCode(address common.Address, blockNum ethrpc.BlockNumbe
 	return res, nil
 }
 
-type revertError struct {
+type RevertError struct {
 	error
-	reason string `json:"reason"`
+	Reason string `json:"reason"`
 }
 
 // ErrorData returns the ABI encoded error reason.
-func (e *revertError) ErrorData() interface{} {
-	return e.reason
+func (e *RevertError) ErrorData() interface{} {
+	return e.Reason
 }
 
 // NewRevertError returns an revert error with ABI encoded revert reason.
-func (api *PublicAPI) NewRevertError(revertErr error) *revertError {
+func (api *PublicAPI) NewRevertError(revertErr error) *RevertError {
 	// ABI encoded function.
 	abiReason := []byte{0x08, 0xc3, 0x79, 0xa0} // Keccak256("Error(string)")
 
-	// ABI encode the revert reason string.
+	// ABI encode the revert Reason string.
 	revertReason := strings.TrimPrefix(revertErr.Error(), revertErrorPrefix)
 	typ, _ := abi.NewType("string", "", nil)
 	unpacked, err := (abi.Arguments{{Type: typ}}).Pack(revertReason)
 	if err != nil {
 		api.Logger.Error("failed to encode revert error", "revert_reason", revertReason, "err", err)
-		return &revertError{
+		return &RevertError{
 			error: revertErr,
 		}
 	}
 	abiReason = append(abiReason, unpacked...)
 
-	return &revertError{
+	return &RevertError{
 		error:  revertErr,
-		reason: hexutil.Encode(abiReason),
+		Reason: hexutil.Encode(abiReason),
 	}
 }
 
 // Call executes the given transaction on the state for the given block number.
-// this function doesn't make any changes in the evm state of blockchain
+// This function doesn't make any changes in the evm state of blockchain.
 func (api *PublicAPI) Call(args utils.TransactionArgs, blockNum ethrpc.BlockNumber, _ *utils.StateOverride) (hexutil.Bytes, error) {
 	api.Logger.Info("eth_call", "args", args)
 	var (
@@ -297,7 +299,7 @@ func (api *PublicAPI) Call(args utils.TransactionArgs, blockNum ethrpc.BlockNumb
 	)
 	round, err := api.roundParamFromBlockNum(blockNum)
 	if err != nil {
-		api.Logger.Error("GetBlock failed", "number", blockNum, "error", err.Error())
+		api.Logger.Error("GetBlock failed", "number", blockNum, "err", err)
 		return nil, fmt.Errorf("convert block number to round: %w", err)
 	}
 
@@ -333,10 +335,10 @@ func (api *PublicAPI) Call(args utils.TransactionArgs, blockNum ethrpc.BlockNumb
 	if err != nil {
 		if strings.HasPrefix(err.Error(), revertErrorPrefix) {
 			revertErr := api.NewRevertError(err)
-			api.Logger.Error("failed to execute SimulateCall, reverted", "error", err, "reason", revertErr.reason)
+			api.Logger.Error("failed to execute SimulateCall, reverted", "err", err, "reason", revertErr.Reason)
 			return nil, revertErr
 		}
-		api.Logger.Error("failed to execute SimulateCall", "error", err)
+		api.Logger.Error("failed to execute SimulateCall", "err", err)
 		return nil, err
 	}
 
@@ -352,7 +354,7 @@ func (api *PublicAPI) SendRawTransaction(data hexutil.Bytes) (common.Hash, error
 	// Decode the Ethereum transaction.
 	ethTx := &ethtypes.Transaction{}
 	if err := rlp.DecodeBytes(data, ethTx); err != nil {
-		api.Logger.Error("failed to decode raw transaction data", "err", err.Error())
+		api.Logger.Error("failed to decode raw transaction data", "err", err)
 		return common.Hash{}, ErrMalformedTransaction
 	}
 
@@ -366,7 +368,7 @@ func (api *PublicAPI) SendRawTransaction(data hexutil.Bytes) (common.Hash, error
 
 	err := api.client.SubmitTxNoWait(api.ctx, &utx)
 	if err != nil {
-		api.Logger.Warn("failed to submit transaction", "err", err.Error())
+		api.Logger.Warn("failed to submit transaction", "err", err)
 		return ethTx.Hash(), err
 	}
 
@@ -397,7 +399,7 @@ func (api *PublicAPI) EstimateGas(args utils.TransactionArgs, blockNum *ethrpc.B
 		round, err = api.roundParamFromBlockNum(*blockNum)
 		if err != nil {
 			err = fmt.Errorf("convert block number to round: %w", err)
-			api.Logger.Error("Failed to EstimateGas", "error", err.Error())
+			api.Logger.Error("Failed to EstimateGas", "err", err)
 			return 0, err
 		}
 	}
@@ -413,7 +415,7 @@ func (api *PublicAPI) EstimateGas(args utils.TransactionArgs, blockNum *ethrpc.B
 	copy(ethAddress[:], args.From[:])
 	gas, err := core.NewV1(api.client).EstimateGasForCaller(api.ctx, round, types.CallerAddress{EthAddress: &ethAddress}, tx)
 	if err != nil {
-		api.Logger.Error("Failed to EstimateGas", "error", err.Error())
+		api.Logger.Error("Failed to EstimateGas", "err", err)
 		return 0, ErrInternalQuery
 	}
 
@@ -439,7 +441,7 @@ func (api *PublicAPI) GetBlockByHash(blockHash common.Hash, fullTx bool) (map[st
 func (api *PublicAPI) getRPCTransaction(dbTx *model.Transaction) (*utils.RPCTransaction, error) {
 	resTx, err := utils.NewRPCTransaction(dbTx)
 	if err != nil {
-		api.Logger.Error("Failed to NewRPCTransaction", "hash", dbTx.Hash, "error", err.Error())
+		api.Logger.Error("Failed to NewRPCTransaction", "hash", dbTx.Hash, "err", err)
 		return nil, ErrInternalQuery
 	}
 	return resTx, nil
@@ -451,7 +453,7 @@ func (api *PublicAPI) GetTransactionByHash(hash common.Hash) (*utils.RPCTransact
 
 	dbTx, err := api.backend.QueryTransaction(hash)
 	if err != nil {
-		api.Logger.Error("Failed to QueryTransaction", "hash", hash.String(), "error", err.Error())
+		api.Logger.Error("Failed to QueryTransaction", "hash", hash.String(), "err", err)
 		// Transaction doesn't exist, by web3 spec an empty response should be returned, not an error.
 		return nil, nil
 	}
@@ -484,12 +486,12 @@ func (api *PublicAPI) GetTransactionByBlockNumberAndIndex(blockNum ethrpc.BlockN
 	round, err := api.roundParamFromBlockNum(blockNum)
 	if err != nil {
 		err = fmt.Errorf("convert block number to round: %w", err)
-		api.Logger.Error("Failed to QueryBlockHash", "number", blockNum, "error", err.Error())
+		api.Logger.Error("Failed to QueryBlockHash", "number", blockNum, "err", err)
 		return nil, err
 	}
 	blockHash, err := api.backend.QueryBlockHash(round)
 	if err != nil {
-		api.Logger.Error("Failed to QueryBlockHash", "number", blockNum, "error", err.Error())
+		api.Logger.Error("Failed to QueryBlockHash", "number", blockNum, "err", err)
 		// Block doesn't exist, by web3 spec an empty response should be returned, not an error.
 		return nil, nil
 	}
@@ -499,11 +501,11 @@ func (api *PublicAPI) GetTransactionByBlockNumberAndIndex(blockNum ethrpc.BlockN
 
 // GetTransactionReceipt returns the transaction receipt by hash.
 func (api *PublicAPI) GetTransactionReceipt(txHash common.Hash) (map[string]interface{}, error) {
-	api.Logger.Debug("eth_getTransactionReceipt", "hash", txHash.Hex())
+	api.Logger.Debug("eth_getTransactionReceipt", "hash", txHash)
 	receipt, err := api.backend.GetTransactionReceipt(txHash)
 	if err != nil {
 		// Transaction doesn't exist, don't return an error, but empty response.
-		api.Logger.Error("failed to get transaction receipt", "err", err)
+		api.Logger.Error("failed to get transaction receipt", "hash", txHash, "err", err)
 		return nil, nil
 	}
 
@@ -525,32 +527,45 @@ func (api *PublicAPI) GetLogs(filter filters.FilterCriteria) ([]*ethtypes.Log, e
 			}
 			return ethLogs, nil
 		}
-		startRoundInclusive = round
-		endRoundInclusive = round
-	} else {
-		if filter.FromBlock != nil {
-			round, err := api.roundParamFromBlockNum(ethrpc.BlockNumber(filter.FromBlock.Int64()))
-			if err != nil {
-				return nil, fmt.Errorf("convert from block number to round: %w", err)
-			}
-			startRoundInclusive = round
-		}
-		if filter.ToBlock != nil {
-			round, err := api.roundParamFromBlockNum(ethrpc.BlockNumber(filter.ToBlock.Int64()))
-			if err != nil {
-				return nil, fmt.Errorf("convert to block number to round: %w", err)
-			}
-			endRoundInclusive = round
-		}
+		return round, round, nil
 	}
 
-	//TODO: filter addresses and topics
+	start := client.RoundLatest
+	end := client.RoundLatest
+	if filter.FromBlock != nil {
+		round, err := api.roundParamFromBlockNum(ethrpc.BlockNumber(filter.FromBlock.Int64()))
+		if err != nil {
+			return 0, 0, fmt.Errorf("convert from block number to round: %w", err)
+		}
+		start = round
+	}
+	if filter.ToBlock != nil {
+		round, err := api.roundParamFromBlockNum(ethrpc.BlockNumber(filter.ToBlock.Int64()))
+		if err != nil {
+			return 0, 0, fmt.Errorf("convert to block number to round: %w", err)
+		}
+		end = round
+	}
+
+	return start, end, nil
+}
+
+// GetLogs returns the ethereum logs.
+func (api *PublicAPI) GetLogs(filter filters.FilterCriteria) ([]*ethtypes.Log, error) {
+	api.Logger.Debug("eth_getLogs", "filter", filter)
+
+	startRoundInclusive, endRoundInclusive, err := api.getStartEndRounds(filter)
+	if err != nil {
+		return nil, fmt.Errorf("error getting start and end rounds: %w", err)
+	}
+
+	// TODO: filter addresses and topics
 
 	dbLogs, err := api.backend.GetLogs(*filter.BlockHash, startRoundInclusive, endRoundInclusive)
 	if err != nil {
 		return ethLogs, nil
 	}
-	ethLogs = utils.Db2EthLogs(dbLogs)
+	ethLogs = utils.DB2EthLogs(dbLogs)
 
 	api.Logger.Debug("eth_getLogs response", "resp", ethLogs)
 
