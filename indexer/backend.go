@@ -19,7 +19,7 @@ import (
 	"github.com/starfishlabs/oasis-evm-web3-gateway/storage"
 )
 
-var GetLastRetainedError = errors.New("Get last retained round error in db.")
+var ErrGetLastRetainedRound = errors.New("get last retained round error in db")
 
 // Result is a query result.
 type Result struct {
@@ -168,7 +168,7 @@ func (p *psqlBackend) Prune(round uint64) error {
 func (p *psqlBackend) QueryBlockRound(blockHash ethcommon.Hash) (uint64, error) {
 	round, err := p.storage.GetBlockRound(blockHash.String())
 	if err != nil {
-		p.logger.Error("Can't find matched block")
+		p.logger.Error("can't find matched block")
 		return 0, err
 	}
 
@@ -187,7 +187,7 @@ func (p *psqlBackend) QueryBlockHash(round uint64) (ethcommon.Hash, error) {
 	}
 
 	if err != nil {
-		p.logger.Error("indexer error", "err", err)
+		p.logger.Error("failed to query block hash", "err", err)
 		return ethcommon.Hash{}, err
 	}
 	return ethcommon.HexToHash(blockHash), nil
@@ -233,7 +233,7 @@ func (p *psqlBackend) storeLastRetainedRound(round uint64) error {
 func (p *psqlBackend) QueryLastRetainedRound() (uint64, error) {
 	lastRetainedRound, err := p.storage.GetLastRetainedRound()
 	if err != nil {
-		return 0, GetLastRetainedError
+		return 0, ErrGetLastRetainedRound
 	}
 	return lastRetainedRound, nil
 }

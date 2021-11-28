@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
+
 	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
 )
 
@@ -109,8 +110,8 @@ func ConvertToEthBlock(block *model.Block, fullTx bool) map[string]interface{} {
 	return res
 }
 
-// Db2EthLogs converts log in db to ethereum log.
-func Db2EthLogs(dbLogs []*model.Log) []*ethtypes.Log {
+// DB2EthLogs converts log in db to ethereum log.
+func DB2EthLogs(dbLogs []*model.Log) []*ethtypes.Log {
 	res := []*ethtypes.Log{}
 
 	for _, log := range dbLogs {

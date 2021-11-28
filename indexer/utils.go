@@ -2,16 +2,16 @@ package indexer
 
 import (
 	"encoding/hex"
-	"github.com/fxamacker/cbor/v2"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
-
+	"github.com/fxamacker/cbor/v2"
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
+
 	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
 )
 
@@ -206,7 +206,7 @@ func (p *psqlBackend) StoreBlockData(oasisBlock *block.Block, txResults []*clien
 		ethTx := &ethtypes.Transaction{}
 		err := rlp.DecodeBytes(rawEthTx, ethTx)
 		if err != nil {
-			p.logger.Error("Failed to decode UnverifiedTransaction", "height", blockNum, "index", txIndex, "error", err.Error())
+			p.logger.Error("Failed to decode UnverifiedTransaction", "height", blockNum, "index", txIndex, "err", err)
 			continue
 		}
 
@@ -227,7 +227,7 @@ func (p *psqlBackend) StoreBlockData(oasisBlock *block.Block, txResults []*clien
 		for eventIndex, event := range resEvents {
 			if event.Code == 1 {
 				log := &Log{}
-				if err := cbor.Unmarshal(event.Value, log); err != nil {
+				if err = cbor.Unmarshal(event.Value, log); err != nil {
 					p.logger.Error("Failed to unmarshal event value", "index", eventIndex)
 					continue
 				}
@@ -247,7 +247,7 @@ func (p *psqlBackend) StoreBlockData(oasisBlock *block.Block, txResults []*clien
 	// Get convert block, transactions and receipts
 	blk, txs, receipts, err := convertToEthFormat(oasisBlock, ethTxs, logs, txsStatus, results, gasUsed)
 	if err != nil {
-		p.logger.Debug("Failed to ConvertToEthBlock", "height", blockNum, "error", err.Error())
+		p.logger.Debug("Failed to ConvertToEthBlock", "height", blockNum, "err", err)
 		return err
 	}
 

@@ -14,7 +14,7 @@ import (
 	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/web3"
 )
 
-// GetRPCAPIs returns the list of all APIs
+// GetRPCAPIs returns the list of all APIs.
 func GetRPCAPIs(
 	ctx context.Context,
 	client client.RuntimeClient,
@@ -33,13 +33,13 @@ func GetRPCAPIs(
 		ethRpc.API{
 			Namespace: "net",
 			Version:   "1.0",
-			Service:   net.NewPublicAPI(config.ChainId),
+			Service:   net.NewPublicAPI(config.ChainID),
 			Public:    true,
 		},
 		ethRpc.API{
 			Namespace: "eth",
 			Version:   "1.0",
-			Service:   eth.NewPublicAPI(ctx, client, logging.GetLogger("eth_rpc"), config.ChainId, backend),
+			Service:   eth.NewPublicAPI(ctx, client, logging.GetLogger("eth_rpc"), config.ChainID, backend),
 			Public:    true,
 		},
 	)

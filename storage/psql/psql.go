@@ -15,15 +15,17 @@ import (
 	"time"
 )
 
+
 type PostDb struct {
 	Db *bun.DB
 }
 
-// InitDb creates postgresql db instance
-func InitDb(cfg *conf.DatabaseConfig) (*PostDb, error) {
+// InitDb creates postgresql db instance.
+func InitDB(cfg *conf.DatabaseConfig) (*PostDB, error) {
 	if cfg == nil {
 		return nil, errors.New("nil configuration")
 	}
+
 	pgConn := pgdriver.NewConnector(
 		pgdriver.WithAddr(fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)),
 		pgdriver.WithDatabase(cfg.Db),
@@ -46,7 +48,7 @@ func InitDb(cfg *conf.DatabaseConfig) (*PostDb, error) {
 }
 
 // GetTransactionRef returns block hash, round and index of the transaction.
-func (db *PostDb) GetTransactionRef(txHash string) (*model.TransactionRef, error) {
+func (db *PostDB) GetTransactionRef(txHash string) (*model.TransactionRef, error) {
 	tx := new(model.TransactionRef)
 	err := db.Db.NewSelect().Model(tx).Where("eth_tx_hash = ? ", txHash).Scan(context.Background())
 	if err != nil {
@@ -56,9 +58,10 @@ func (db *PostDb) GetTransactionRef(txHash string) (*model.TransactionRef, error
 	return tx, nil
 }
 
-// GetTransaction returns ethereum transaction by hash.
-func (db *PostDb) GetTransaction(hash string) (*model.Transaction, error) {
+// GetTransaction queries ethereum transaction by hash.
+func (db *PostDB) GetTransaction(hash string) (*model.Transaction, error) {
 	tx := new(model.Transaction)
+
 	err := db.Db.NewSelect().Model(tx).Where("hash = ?", hash).Scan(context.Background())
 	if err != nil {
 		return nil, err
@@ -93,7 +96,7 @@ func (db *PostDb) upsert(value interface{}) error {
 }
 
 // Store stores data in db.
-func (db *PostDb) Store(value interface{}) error {
+func (db *PostDB) Store(value interface{}) error {
 	return db.upsert(value)
 }
 
@@ -165,7 +168,7 @@ func (db *PostDb) GetLatestBlockHash() (string, error) {
 }
 
 // GetContinuesIndexedRound returns latest continues indexed block round.
-func (db *PostDb) GetContinuesIndexedRound() (uint64, error) {
+func (db *PostDB) GetContinuesIndexedRound() (uint64, error) {
 	indexedRound := new(model.IndexedRoundWithTip)
 	err := db.Db.NewSelect().Model(indexedRound).Where("tip = ?", model.Continues).Scan(context.Background())
 	if err != nil {
@@ -176,7 +179,7 @@ func (db *PostDb) GetContinuesIndexedRound() (uint64, error) {
 }
 
 // GetLastRetainedRound returns the minimum round not pruned.
-func (db *PostDb) GetLastRetainedRound() (uint64, error) {
+func (db *PostDB) GetLastRetainedRound() (uint64, error) {
 	retainedRound := new(model.IndexedRoundWithTip)
 	err := db.Db.NewSelect().Model(retainedRound).Where("tip = ?", model.LastRetained).Scan(context.Background())
 	if err != nil {
@@ -198,7 +201,7 @@ func (db *PostDb) GetLatestBlockNumber() (uint64, error) {
 }
 
 // GetBlockByHash returns the block for the given hash.
-func (db *PostDb) GetBlockByHash(blockHash string) (*model.Block, error) {
+func (db *PostDB) GetBlockByHash(blockHash string) (*model.Block, error) {
 	blk := new(model.Block)
 	err := db.Db.NewSelect().Model(blk).Where("hash = ?", blockHash).Scan(context.Background())
 	if err != nil {
@@ -259,7 +262,7 @@ func (db *PostDb) GetBlockTransaction(blockHash string, txIndex int) (*model.Tra
 }
 
 // GetTransactionReceipt returns receipt by transaction hash.
-func (db *PostDb) GetTransactionReceipt(txHash string) (*model.Receipt, error) {
+func (db *PostDB) GetTransactionReceipt(txHash string) (*model.Receipt, error) {
 	receipt := new(model.Receipt)
 	err := db.Db.NewSelect().Model(receipt).Where("transaction_hash = ?", txHash).Scan(context.Background())
 	if err != nil {
@@ -270,7 +273,7 @@ func (db *PostDb) GetTransactionReceipt(txHash string) (*model.Receipt, error) {
 }
 
 // GetLogs return the logs by block hash and round.
-func (db *PostDb) GetLogs(blockHash string, startRound, endRound uint64) ([]*model.Log, error) {
+func (db *PostDB) GetLogs(blockHash string, startRound, endRound uint64) ([]*model.Log, error) {
 	logs := []*model.Log{}
 	err := db.Db.NewSelect().Model(&logs).
 		Where("block_hash = ? AND (round BETWEEN ? AND ?)", blockHash, startRound, endRound).

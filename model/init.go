@@ -5,6 +5,7 @@ import (
 	"github.com/uptrace/bun"
 )
 
+
 // CreateTables creates tables.
 func CreateTables(db *bun.DB) error {
 	var err error

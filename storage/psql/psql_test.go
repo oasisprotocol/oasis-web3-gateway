@@ -3,36 +3,62 @@ package psql
 import (
 	"log"
 	"math/big"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/starfishlabs/oasis-evm-web3-gateway/conf"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
+	"github.com/starfishlabs/oasis-evm-web3-gateway/tests"
 )
+
+var db *PostDB
+
+func TestMain(m *testing.M) {
+	var err error
+
+	tests.MustInitConfig()
+	db, err = InitDB(tests.TestsConfig.Database)
+	if err != nil {
+		log.Println(`It seems database failed to initialize. Do you have PostgreSQL running? If not, you can run
+docker run  -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=postgres  -p 5432:5432 -d postgres`)
+		log.Fatal("failed to initialize db:", err)
+	}
+
+	// Run tests.
+	code := m.Run()
+
+	if err = model.TruncateModel(db.DB); err != nil {
+		log.Fatal("failed to cleanup db:", err)
+	}
+
+	os.Exit(code)
+}
 
 func TestInitPostDb(t *testing.T) {
 	require := require.New(t)
-	cfg := conf.InitConfig("../../conf/server.yml")
-	db, err := InitDb(cfg.Database)
-	if err != nil {
-		log.Fatal("initialize db error:", err)
-	}
-	block1 := &model.BlockRef{
+
+	block1 := &model.Block{
 		Round: 1,
 		Hash:  "hello",
 	}
-	block2 := &model.BlockRef{
+	block2 := &model.Block{
 		Round: 2,
 		Hash:  "world",
 	}
-	block3 := &model.BlockRef{
-		Round: 1,
+	block3 := &model.Block{
+		Round: 3,
 		Hash:  "hello world",
 	}
-	db.Store(block1)
-	db.Store(block2)
-	db.Store(block3)
+	if err := db.Store(block1); err != nil {
+		log.Fatal("postdb store error:", err)
+	}
+	if err := db.Store(block2); err != nil {
+		log.Fatal("postdb store error:", err)
+	}
+	if err := db.Store(block3); err != nil {
+		log.Fatal("postdb store error:", err)
+	}
 	round, err := db.GetBlockRound(block1.Hash)
 	require.NoError(err)
 	require.EqualValues(1, round, "GetBlockRound should return expected round")
@@ -43,7 +69,7 @@ func TestInitPostDb(t *testing.T) {
 
 	hash, err = db.GetLatestBlockHash()
 	require.NoError(err)
-	require.EqualValues("world", hash, "GetLatestBlockHash should return expected hash")
+	require.EqualValues("hello world", hash, "GetLatestBlockHash should return expected hash")
 
 	tx1 := &model.TransactionRef{
 		EthTxHash: "hello",
@@ -52,13 +78,17 @@ func TestInitPostDb(t *testing.T) {
 		BlockHash: "abc123",
 	}
 	tx2 := &model.TransactionRef{
-		EthTxHash: "hello",
+		EthTxHash: "hello2",
 		Index:     1,
 		Round:     2,
 		BlockHash: "cde456",
 	}
-	db.Store(tx1)
-	db.Store(tx2)
+	if err = db.Store(tx1); err != nil {
+		log.Fatal("postdb store tx error:", err)
+	}
+	if err = db.Store(tx2); err != nil {
+		log.Fatal("postdb store tx error:", err)
+	}
 	txRef, err := db.GetTransactionRef(tx1.EthTxHash)
 	require.NoError(err)
 	require.EqualValues(1, txRef.Index)
@@ -118,9 +148,12 @@ func TestInitPostDb(t *testing.T) {
 		R:          big.NewInt(3).String(),
 		S:          big.NewInt(3).String(),
 	}
-	db.Store(legacyTx)
-	db.Store(accessListTx)
-	db.Store(dynamicFeeTx)
+	err = db.Store(legacyTx)
+	require.NoError(err, "unable to store legacy transaction")
+	err = db.Store(accessListTx)
+	require.NoError(err, "unable to store access list transaction")
+	err = db.Store(dynamicFeeTx)
+	require.NoError(err, "unable to store dynamic fee transaction")
 
 	tx, err := db.GetTransaction("hello")
 	require.NoError(err)
@@ -129,8 +162,9 @@ func TestInitPostDb(t *testing.T) {
 
 func TestUpdate(t *testing.T) {
 	require := require.New(t)
-	cfg := conf.InitConfig("../../conf/server.yml")
-	db, err := InitDb(cfg.Database)
+
+	db, err := InitDB(tests.TestsConfig.Database)
+	require.NoError(err, "initialize postdb")
 
 	require.NoError(err, "initialize db")
 
@@ -165,17 +199,17 @@ func TestUpdate(t *testing.T) {
 
 func TestDelete(t *testing.T) {
 	require := require.New(t)
-	cfg := conf.InitConfig("../../conf/server.yml")
-	db, err := InitDb(cfg.Database)
-	require.NoError(err, "initialize db")
+
+	db, err := InitDB(tests.TestsConfig.Database)
+	require.NoError(err, "initialize postdb")
 
 	require.NoError(db.Delete(new(model.BlockRef), 10), "delete")
 }
 
 func TestGetBlockHash(t *testing.T) {
 	require := require.New(t)
-	cfg := conf.InitConfig("../../conf/server.yml")
-	_, err := InitDb(cfg.Database)
+
+	_, err := InitDB(tests.TestsConfig.Database)
 	require.NoError(err, "initialize db")
 
 	// TODO: this fails as expected as the db doesn't contain the block.
@@ -187,8 +221,8 @@ func TestGetBlockHash(t *testing.T) {
 
 func TestGetTransactionRef(t *testing.T) {
 	require := require.New(t)
-	cfg := conf.InitConfig("../../conf/server.yml")
-	_, err := InitDb(cfg.Database)
+
+	_, err := InitDB(tests.TestsConfig.Database)
 	require.NoError(err, "initialize db")
 
 	// TODO: this fails as expected as the db doesn't contain the transaction.

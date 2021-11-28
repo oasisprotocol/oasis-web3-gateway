@@ -9,8 +9,7 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/knadh/koanf v1.3.2
 	github.com/oasisprotocol/oasis-core/go v0.2103.5
-	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.1.1-0.20211109100622-e6e6ec6d63e1
-	github.com/pkg/errors v0.9.1
+	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.1.1-0.20211112203128-552762d17fb1
 	github.com/rs/cors v1.7.0
 	github.com/spf13/cobra v1.2.1
 	github.com/stretchr/testify v1.7.0
