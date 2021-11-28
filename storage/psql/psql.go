@@ -11,6 +11,7 @@ import (
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/driver/pgdriver"
 	"reflect"
+	"strings"
 	"time"
 )
 
@@ -79,16 +80,14 @@ func (db *PostDb) Exist(value interface{}) (bool, error) {
 func (db *PostDb) upsert(value interface{}) error {
 	// PKs are required for ON CONFLICT DO UPDATE
 	typ := reflect.TypeOf(value)
-	pks := db.Db.Table(typ).PKs
-	b := ""
-	for i, f := range pks {
-		if i > 0 {
-			b += ","
-		}
-		b += f.Name
+	table := db.Db.Table(typ)
+	pks := make([]string, len(table.PKs))
+	for i, f := range table.PKs {
+		pks[i] = f.Name
 	}
+
 	_, err := db.Db.NewInsert().Model(value).
-		On(fmt.Sprintf("CONFLICT (%v) DO UPDATE", b)).Exec(context.Background())
+		On(fmt.Sprintf("CONFLICT (%v) DO UPDATE", strings.Join(pks, ","))).Exec(context.Background())
 
 	return err
 }
