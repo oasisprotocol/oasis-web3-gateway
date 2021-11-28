@@ -10,6 +10,7 @@ import (
 	"github.com/starfishlabs/oasis-evm-web3-gateway/conf"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/indexer"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/eth"
+	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/eth/filters"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/net"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/web3"
 )
@@ -40,6 +41,12 @@ func GetRPCAPIs(
 			Namespace: "eth",
 			Version:   "1.0",
 			Service:   eth.NewPublicAPI(ctx, client, logging.GetLogger("eth_rpc"), config.ChainID, backend),
+			Public:    true,
+		},
+		ethRpc.API{
+			Namespace: "eth",
+			Version:   "1.0",
+			Service:   filters.NewPublicAPI(ctx, client, logging.GetLogger("eth_rpc"), backend),
 			Public:    true,
 		},
 	)
