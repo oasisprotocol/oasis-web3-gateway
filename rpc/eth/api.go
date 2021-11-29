@@ -87,11 +87,13 @@ func (api *PublicAPI) roundParamFromBlockNum(blockNum ethrpc.BlockNumber) (uint6
 		var earliest uint64
 		clrBlk, err := api.client.GetLastRetainedBlock(api.ctx)
 		if err != nil {
-			return 0, fmt.Errorf("failed to get last retained block from client: %w", err)
+			api.Logger.Error("failed to get last retained block from client", "err", err)
+			return 0, ErrInternalQuery
 		}
 		ilrRound, err := api.backend.QueryLastRetainedRound()
 		if err != nil {
-			return 0, fmt.Errorf("failed to get last retained block from indexer: %w", err)
+			api.Logger.Error("failed to get last retained block from indexer", "err", err)
+			return 0, ErrInternalQuery
 		}
 		if clrBlk.Header.Round < ilrRound {
 			earliest = ilrRound
@@ -110,14 +112,12 @@ func (api *PublicAPI) GetBlockByNumber(blockNum ethrpc.BlockNumber, fullTx bool)
 
 	round, err := api.roundParamFromBlockNum(blockNum)
 	if err != nil {
-		err = fmt.Errorf("convert block number to round: %w", err)
-		api.Logger.Error("GetBlock failed", "number", blockNum, "err", err)
 		return nil, err
 	}
 
 	blk, err := api.backend.GetBlockByNumber(round)
 	if err != nil {
-		api.Logger.Error("GetBlock failed", "number", blockNum, "err", err)
+		api.Logger.Error("GetBlockByNumber failed", "number", blockNum, "round", round, "err", err)
 		// Block doesn't exist, by web3 spec an empty response should be returned, not an error.
 		return nil, ErrInternalQuery
 	}
@@ -131,13 +131,11 @@ func (api *PublicAPI) GetBlockTransactionCountByNumber(blockNum ethrpc.BlockNumb
 
 	round, err := api.roundParamFromBlockNum(blockNum)
 	if err != nil {
-		err = fmt.Errorf("convert block number to round: %w", err)
-		api.Logger.Error("GetBlock failed", "number", blockNum, "err", err)
 		return 0, err
 	}
 	n, err := api.backend.GetBlockTransactionCountByNumber(round)
 	if err != nil {
-		api.Logger.Error("Query failed", "number", blockNum, "err", err)
+		api.Logger.Error("GetBlockTransactionCountByNumber failed", "round", round, "number", blockNum, "err", err)
 		return 0, ErrInternalQuery
 	}
 
@@ -149,8 +147,6 @@ func (api *PublicAPI) GetStorageAt(address common.Address, position hexutil.Big,
 
 	round, err := api.roundParamFromBlockNum(blockNum)
 	if err != nil {
-		err = fmt.Errorf("convert block number to round: %w", err)
-		api.Logger.Error("GetBlock failed", "number", blockNum, "err", err)
 		return hexutil.Big{}, err
 	}
 	// EVM module takes index as H256, which needs leading zeros.
@@ -175,11 +171,11 @@ func (api *PublicAPI) GetBalance(address common.Address, blockNum ethrpc.BlockNu
 	ethmod := evm.NewV1(api.client)
 	round, err := api.roundParamFromBlockNum(blockNum)
 	if err != nil {
-		return nil, fmt.Errorf("convert block number to round: %w", err)
+		return nil, err
 	}
 	res, err := ethmod.Balance(api.ctx, round, address[:])
 	if err != nil {
-		api.Logger.Error("Get balance failed")
+		api.Logger.Error("GetBalance failed", "number", blockNum, "round", round, "err", err)
 		return nil, err
 	}
 
@@ -210,7 +206,7 @@ func (api *PublicAPI) GetBlockTransactionCountByHash(blockHash common.Hash) (hex
 
 	n, err := api.backend.GetBlockTransactionCountByHash(blockHash)
 	if err != nil {
-		api.Logger.Error("Query failed", "hash", blockHash, "err", err)
+		api.Logger.Error("GetBlockTransactionCountByHash failed", "hash", blockHash, "err", err)
 		return 0, ErrInternalQuery
 	}
 
@@ -225,7 +221,7 @@ func (api *PublicAPI) GetTransactionCount(ethAddr common.Address, blockNum ethrp
 
 	round, err := api.roundParamFromBlockNum(blockNum)
 	if err != nil {
-		return nil, fmt.Errorf("convert block number to round: %w", err)
+		return nil, err
 	}
 	nonce, err := accountsMod.Nonce(api.ctx, round, accountsAddr)
 	if err != nil {
@@ -240,8 +236,7 @@ func (api *PublicAPI) GetCode(address common.Address, blockNum ethrpc.BlockNumbe
 	ethmod := evm.NewV1(api.client)
 	round, err := api.roundParamFromBlockNum(blockNum)
 	if err != nil {
-		api.Logger.Error("GetBlock failed", "number", blockNum, "err", err)
-		return nil, fmt.Errorf("convert block number to round: %w", err)
+		return nil, err
 	}
 	res, err := ethmod.Code(api.ctx, round, address[:])
 	if err != nil {
@@ -298,8 +293,7 @@ func (api *PublicAPI) Call(args utils.TransactionArgs, blockNum ethrpc.BlockNumb
 	)
 	round, err := api.roundParamFromBlockNum(blockNum)
 	if err != nil {
-		api.Logger.Error("GetBlock failed", "number", blockNum, "err", err)
-		return nil, fmt.Errorf("convert block number to round: %w", err)
+		return nil, err
 	}
 
 	if args.To == nil {
@@ -397,8 +391,6 @@ func (api *PublicAPI) EstimateGas(args utils.TransactionArgs, blockNum *ethrpc.B
 		var err error
 		round, err = api.roundParamFromBlockNum(*blockNum)
 		if err != nil {
-			err = fmt.Errorf("convert block number to round: %w", err)
-			api.Logger.Error("Failed to EstimateGas", "err", err)
 			return 0, err
 		}
 	}
@@ -484,8 +476,6 @@ func (api *PublicAPI) GetTransactionByBlockNumberAndIndex(blockNum ethrpc.BlockN
 	api.Logger.Debug("eth_getTransactionByBlockNumberAndIndex", "number", blockNum, "index", index)
 	round, err := api.roundParamFromBlockNum(blockNum)
 	if err != nil {
-		err = fmt.Errorf("convert block number to round: %w", err)
-		api.Logger.Error("Failed to QueryBlockHash", "number", blockNum, "err", err)
 		return nil, err
 	}
 	blockHash, err := api.backend.QueryBlockHash(round)
@@ -526,14 +516,14 @@ func (api *PublicAPI) getStartEndRounds(filter filters.FilterCriteria) (uint64, 
 	if filter.FromBlock != nil {
 		round, err := api.roundParamFromBlockNum(ethrpc.BlockNumber(filter.FromBlock.Int64()))
 		if err != nil {
-			return 0, 0, fmt.Errorf("convert from block number to round: %w", err)
+			return 0, 0, err
 		}
 		start = round
 	}
 	if filter.ToBlock != nil {
 		round, err := api.roundParamFromBlockNum(ethrpc.BlockNumber(filter.ToBlock.Int64()))
 		if err != nil {
-			return 0, 0, fmt.Errorf("convert to block number to round: %w", err)
+			return 0, 0, err
 		}
 		end = round
 	}
@@ -568,7 +558,7 @@ func (api *PublicAPI) GetLogs(filter filters.FilterCriteria) ([]*ethtypes.Log, e
 func (api *PublicAPI) GetBlockHash(blockNum ethrpc.BlockNumber, _ bool) (common.Hash, error) {
 	round, err := api.roundParamFromBlockNum(blockNum)
 	if err != nil {
-		return [32]byte{}, fmt.Errorf("convert block number to round: %w", err)
+		return [32]byte{}, err
 	}
 	return api.backend.QueryBlockHash(round)
 }
