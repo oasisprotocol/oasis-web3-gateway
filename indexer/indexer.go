@@ -18,8 +18,6 @@ const (
 	pruningCheckInterval  = 60 * time.Second
 )
 
-const RoundLatest = client.RoundLatest
-
 var (
 	ErrGetBlockFailed        = errors.New("get block failed")
 	ErrGetTransactionsFailed = errors.New("get transactions failed")
@@ -63,7 +61,7 @@ func (s *Service) indexBlock(round uint64) error {
 
 // getRoundLatest returns the latest round.
 func (s *Service) getRoundLatest() (uint64, error) {
-	blk, err := s.client.GetBlock(s.ctx, RoundLatest)
+	blk, err := s.client.GetBlock(s.ctx, client.RoundLatest)
 	if err != nil {
 		return 0, err
 	}

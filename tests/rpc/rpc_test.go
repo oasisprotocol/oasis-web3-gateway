@@ -169,6 +169,25 @@ func TestEth_GetBlockByNumberAndGetBlockByHash(t *testing.T) {
 	require.Equal(t, number, blk3.Number())
 }
 
+func TestEth_GetBlockByNumberLatest(t *testing.T) {
+	ctx := context.Background()
+	ec := localClient()
+
+	// Explicitly query latest block number.
+	block, err := ec.BlockByNumber(ctx, nil)
+	require.NoError(t, err, "get latest block number")
+	require.Greater(t, block.NumberU64(), uint64(0))
+}
+
+func TestEth_GetBlockTransactionCountByNumberLatest(t *testing.T) {
+	ctx := context.Background()
+	ec := localClient()
+
+	// Explicitly query latest block number.
+	_, err := ec.PendingTransactionCount(ctx)
+	require.NoError(t, err, "get pending(=latest) transaction count")
+}
+
 func TestEth_BlockNumber(t *testing.T) {
 	ec := localClient()
 	ctx := context.Background()

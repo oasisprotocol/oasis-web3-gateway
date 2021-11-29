@@ -115,9 +115,9 @@ func (api *PublicAPI) GetBlockByNumber(blockNum ethrpc.BlockNumber, fullTx bool)
 		return nil, err
 	}
 
-	blk, err := api.backend.GetBlockByNumber(round)
+	blk, err := api.backend.GetBlockByRound(round)
 	if err != nil {
-		api.Logger.Error("GetBlockByNumber failed", "number", blockNum, "round", round, "err", err)
+		api.Logger.Error("GetBlockByRound failed", "number", blockNum, "round", round, "err", err)
 		// Block doesn't exist, by web3 spec an empty response should be returned, not an error.
 		return nil, ErrInternalQuery
 	}
@@ -133,9 +133,9 @@ func (api *PublicAPI) GetBlockTransactionCountByNumber(blockNum ethrpc.BlockNumb
 	if err != nil {
 		return 0, err
 	}
-	n, err := api.backend.GetBlockTransactionCountByNumber(round)
+	n, err := api.backend.GetBlockTransactionCountByRound(round)
 	if err != nil {
-		api.Logger.Error("GetBlockTransactionCountByNumber failed", "round", round, "number", blockNum, "err", err)
+		api.Logger.Error("GetBlockTransactionCountByRound failed", "round", round, "number", blockNum, "err", err)
 		return 0, ErrInternalQuery
 	}
 
