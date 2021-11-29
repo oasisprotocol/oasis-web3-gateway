@@ -95,7 +95,7 @@ func convertToEthFormat(
 	innerReceipts := []*model.Receipt{}
 	cumulativeGasUsed := uint64(0)
 	for idx, ethTx := range transactions {
-		r, s, v := ethTx.RawSignatureValues()
+		v, r, s := ethTx.RawSignatureValues()
 		signer := ethtypes.LatestSignerForChainID(ethTx.ChainId())
 		from, _ := signer.Sender(ethTx)
 		ethAccList := ethTx.AccessList()

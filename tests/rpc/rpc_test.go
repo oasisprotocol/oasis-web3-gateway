@@ -240,6 +240,8 @@ func TestEth_GetTransactionByHash(t *testing.T) {
 	tx2, _, err := ec.TransactionByHash(ctx, receipt.TxHash)
 	require.NoError(t, err)
 	require.NotNil(t, tx2)
+	// Ensure returned transaction hash equals the internally computed one by geth.
+	require.Equal(t, tx2.Hash(), receipt.TxHash)
 
 	// Ensure `input` field in response is correctly encoded.
 	rsp := make(map[string]interface{})
