@@ -237,10 +237,11 @@ func (p *psqlBackend) StoreBlockData(oasisBlock *block.Block, txResults []*clien
 
 		logs = Logs2EthLogs(oasisLogs, blockNum, bhash, ethTx.Hash(), uint32(txIndex))
 		// store logs
-		dbLogs := eth2DbLogs(logs)
-		if err = p.storage.Store(dbLogs); err != nil {
-			p.logger.Error("Failed to store logs", "height", blockNum, "index", txIndex, "logs", oasisLogs, "err", err)
-			continue
+		for _, log := range eth2DbLogs(logs) {
+			if err = p.storage.Store(log); err != nil {
+				p.logger.Error("Failed to store logs", "height", blockNum, "index", txIndex, "logs", oasisLogs, "err", err)
+				return err
+			}
 		}
 	}
 
