@@ -61,9 +61,9 @@ type QueryableBackend interface {
 
 // GetEthInfoBackend is a backend for handling ethereum data.
 type GetEthInfoBackend interface {
-	GetBlockByNumber(number uint64) (*model.Block, error)
+	GetBlockByRound(round uint64) (*model.Block, error)
 	GetBlockByHash(blockHash ethcommon.Hash) (*model.Block, error)
-	GetBlockTransactionCountByNumber(number uint64) (int, error)
+	GetBlockTransactionCountByRound(round uint64) (int, error)
 	GetBlockTransactionCountByHash(blockHash ethcommon.Hash) (int, error)
 	GetTransactionByBlockHashAndIndex(blockHash ethcommon.Hash, txIndex int) (*model.Transaction, error)
 	GetTransactionReceipt(txHash ethcommon.Hash) (map[string]interface{}, error)
@@ -164,7 +164,18 @@ func (p *psqlBackend) Prune(round uint64) error {
 	return nil
 }
 
-// QueryBlockRound returns block number by block hash.
+// blockNumberFromRound converts a round to a blocknumber.
+func (p *psqlBackend) blockNumberFromRound(round uint64) (number uint64, err error) {
+	switch round {
+	case client.RoundLatest:
+		number, err = p.BlockNumber()
+	default:
+		number = round
+	}
+	return
+}
+
+// QueryBlockRound returns block number for the provided hash.
 func (p *psqlBackend) QueryBlockRound(blockHash ethcommon.Hash) (uint64, error) {
 	round, err := p.storage.GetBlockRound(blockHash.String())
 	if err != nil {
@@ -175,12 +186,12 @@ func (p *psqlBackend) QueryBlockRound(blockHash ethcommon.Hash) (uint64, error) 
 	return round, nil
 }
 
-// QueryBlockHash returns block by block hash.
+// QueryBlockHash returns the block hash for the provided round.
 func (p *psqlBackend) QueryBlockHash(round uint64) (ethcommon.Hash, error) {
 	var blockHash string
 	var err error
 	switch round {
-	case RoundLatest:
+	case client.RoundLatest:
 		blockHash, err = p.storage.GetLatestBlockHash()
 	default:
 		blockHash, err = p.storage.GetBlockHash(round)
@@ -252,9 +263,13 @@ func (p *psqlBackend) QueryTransactionRef(hash string) (*model.TransactionRef, e
 	return p.storage.GetTransactionRef(hash)
 }
 
-// GetBlockByNumber returns a block by block number.
-func (p *psqlBackend) GetBlockByNumber(number uint64) (*model.Block, error) {
-	blk, err := p.storage.GetBlockByNumber(number)
+// GetBlockByRound returns a block for the provided round.
+func (p *psqlBackend) GetBlockByRound(round uint64) (*model.Block, error) {
+	blockNumber, err := p.blockNumberFromRound(round)
+	if err != nil {
+		return nil, err
+	}
+	blk, err := p.storage.GetBlockByNumber(blockNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -272,9 +287,13 @@ func (p *psqlBackend) GetBlockByHash(blockHash ethcommon.Hash) (*model.Block, er
 	return blk, nil
 }
 
-// GetBlockTransactionCountByNumber returns the count of block transactions by block number.
-func (p *psqlBackend) GetBlockTransactionCountByNumber(number uint64) (int, error) {
-	return p.storage.GetBlockTransactionCountByNumber(number)
+// GetBlockTransactionCountByRound returns the count of block transactions for the provided round.
+func (p *psqlBackend) GetBlockTransactionCountByRound(round uint64) (int, error) {
+	blockNumber, err := p.blockNumberFromRound(round)
+	if err != nil {
+		return 0, err
+	}
+	return p.storage.GetBlockTransactionCountByNumber(blockNumber)
 }
 
 // GetBlockTransactionCountByHash returns the count of block transactions by block hash.

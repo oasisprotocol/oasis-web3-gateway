@@ -319,6 +319,7 @@ func TestERC20(t *testing.T) {
 	receipt, err = waitTransaction(context.Background(), ec, signedTx.Hash())
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), receipt.Status)
+	require.NotEmpty(t, receipt.Logs, "ERC20-transfer receipt should contain the emitted log")
 
 	// Get balance of token receiver
 	balanceOfCall, err := testabi.Pack("balanceOf", common.Address{1})

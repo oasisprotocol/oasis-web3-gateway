@@ -61,6 +61,46 @@ func call(t *testing.T, method string, params interface{}) *Response {
 	return rpcRes
 }
 
+func submitTransaction(ctx context.Context, t *testing.T, to common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *types.Receipt {
+	ec := localClient()
+	chainID, err := ec.ChainID(context.Background())
+	require.NoError(t, err)
+
+	nonce, err := ec.NonceAt(context.Background(), oasisTesting.Dave.EthAddress, nil)
+	require.Nil(t, err, "get nonce failed")
+
+	// Create transaction
+	tx := types.NewTransaction(
+		nonce,
+		to,
+		amount,
+		gasLimit,
+		gasPrice,
+		data,
+	)
+	signer := types.LatestSignerForChainID(chainID)
+	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), daveKey)
+	require.Nil(t, err, "sign tx")
+
+	signedTx, err := tx.WithSignature(signer, signature)
+	require.Nil(t, err, "pack tx")
+
+	err = ec.SendTransaction(context.Background(), signedTx)
+	require.Nil(t, err, "send transaction failed")
+
+	receipt, err := waitTransaction(ctx, ec, signedTx.Hash())
+	require.NoError(t, err)
+
+	return receipt
+}
+
+// Submits a test transaction used in various tests.
+func submitTestTransaction(ctx context.Context, t *testing.T) *types.Receipt {
+	data := common.FromHex("0x7f7465737432000000000000000000000000000000000000000000000000000000600057")
+	to := common.BytesToAddress(common.FromHex("0x1122334455667788990011223344556677889900"))
+	return submitTransaction(ctx, t, to, big.NewInt(1), 3000003, big.NewInt(2), data)
+}
+
 func TestEth_GetBalance(t *testing.T) {
 	ec := localClient()
 	res, err := ec.BalanceAt(context.Background(), oasisTesting.Dave.EthAddress, nil)
@@ -116,34 +156,17 @@ func TestEth_GasPrice(t *testing.T) {
 
 // TestEth_SendRawTransaction post eth raw transaction with ethclient from go-ethereum.
 func TestEth_SendRawTransaction(t *testing.T) {
-	ec := localClient()
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
+	defer cancel()
 
-	chainID, err := ec.ChainID(context.Background())
-	require.NoError(t, err)
-
-	nonce, err := ec.NonceAt(context.Background(), oasisTesting.Dave.EthAddress, nil)
-	require.NoError(t, err)
-
-	// Create transaction
-	tx := types.NewTransaction(nonce, common.Address{1}, big.NewInt(1), 22000, big.NewInt(2), nil)
-	signer := types.LatestSignerForChainID(chainID)
-	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), daveKey)
-	require.NoError(t, err)
-
-	signedTx, err := tx.WithSignature(signer, signature)
-	require.NoError(t, err)
-
-	err = ec.SendTransaction(context.Background(), signedTx)
-	require.NoError(t, err)
-
-	_, err = waitTransaction(ctx, ec, signedTx.Hash())
-	require.NoError(t, err)
+	receipt := submitTransaction(ctx, t, common.Address{1}, big.NewInt(1), 22000, big.NewInt(2), nil)
+	require.EqualValues(t, 0, receipt.Status)
 }
 
 func TestEth_GetBlockByNumberAndGetBlockByHash(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
+	defer cancel()
 	ec := localClient()
-	ctx := context.Background()
 
 	number := big.NewInt(1)
 	blk1, err := ec.BlockByNumber(ctx, number)
@@ -169,9 +192,31 @@ func TestEth_GetBlockByNumberAndGetBlockByHash(t *testing.T) {
 	require.Equal(t, number, blk3.Number())
 }
 
-func TestEth_BlockNumber(t *testing.T) {
+func TestEth_GetBlockByNumberLatest(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
+	defer cancel()
 	ec := localClient()
-	ctx := context.Background()
+
+	// Explicitly query latest block number.
+	block, err := ec.BlockByNumber(ctx, nil)
+	require.NoError(t, err, "get latest block number")
+	require.Greater(t, block.NumberU64(), uint64(0))
+}
+
+func TestEth_GetBlockTransactionCountByNumberLatest(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
+	defer cancel()
+	ec := localClient()
+
+	// Explicitly query latest block number.
+	_, err := ec.PendingTransactionCount(ctx)
+	require.NoError(t, err, "get pending(=latest) transaction count")
+}
+
+func TestEth_BlockNumber(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
+	defer cancel()
+	ec := localClient()
 
 	ret, err := ec.BlockNumber(ctx)
 	require.NoError(t, err)
@@ -179,56 +224,82 @@ func TestEth_BlockNumber(t *testing.T) {
 }
 
 func TestEth_GetTransactionByHash(t *testing.T) {
-	ec := localClient()
-
-	chainID := big.NewInt(42262)
-	data := common.FromHex("0x7f7465737432000000000000000000000000000000000000000000000000000000600057")
-	to := common.BytesToAddress(common.FromHex("0x1122334455667788990011223344556677889900"))
-	nonce, err := ec.NonceAt(context.Background(), oasisTesting.Dave.EthAddress, nil)
-	require.Nil(t, err, "get nonce failed")
-
-	// Create transaction
-	tx := types.NewTransaction(
-		nonce,
-		to,
-		big.NewInt(1),
-		3000003,
-		big.NewInt(2),
-		data,
-	)
-	signer := types.LatestSignerForChainID(chainID)
-	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), daveKey)
-	require.Nil(t, err, "sign tx")
-
-	signedTx, err := tx.WithSignature(signer, signature)
-	require.Nil(t, err, "pack tx")
-
-	err = ec.SendTransaction(context.Background(), signedTx)
-	require.Nil(t, err, "send transaction failed")
-
 	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
 	defer cancel()
 
-	receipt, err := waitTransaction(ctx, ec, signedTx.Hash())
-	require.NoError(t, err)
+	ec := localClient()
 
+	// Submit test transaction.
+	input := "0x7f7465737432000000000000000000000000000000000000000000000000000000600057"
+	data := common.FromHex(input)
+	to := common.BytesToAddress(common.FromHex("0x1122334455667788990011223344556677889900"))
+	receipt := submitTransaction(ctx, t, to, big.NewInt(1), 3000003, big.NewInt(2), data)
+	require.EqualValues(t, 1, receipt.Status)
+	require.NotNil(t, receipt)
+
+	tx2, _, err := ec.TransactionByHash(ctx, receipt.TxHash)
+	require.NoError(t, err)
+	require.NotNil(t, tx2)
+	// Ensure returned transaction hash equals the internally computed one by geth.
+	require.Equal(t, tx2.Hash(), receipt.TxHash)
+
+	// Ensure `input` field in response is correctly encoded.
+	rsp := make(map[string]interface{})
+	rawRsp := call(t, "eth_getTransactionByHash", []string{receipt.TxHash.Hex()})
+	require.NoError(t, json.Unmarshal(rawRsp.Result, &rsp))
+	require.Equal(t, input, rsp["input"], "getTransactionByHash 'input' response should be correct")
+}
+
+func TestEth_GetBlockByHashRawResponses(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
+	defer cancel()
+
+	// Submit test transaction.
+	receipt := submitTestTransaction(ctx, t)
+	require.EqualValues(t, 1, receipt.Status)
+	require.NotNil(t, receipt)
+
+	// GetBlockByHash(fullTx=false).
+	rsp := make(map[string]interface{})
+	rawRsp := call(t, "eth_getBlockByHash", []interface{}{receipt.BlockHash.Hex(), false})
+	require.NoError(t, json.Unmarshal(rawRsp.Result, &rsp))
+
+	transactions := rsp["transactions"].([]interface{})
+	// There should be one transaction in response.
+	require.EqualValues(t, 1, len(transactions))
+	// The transaction should be a hash.
+	require.IsType(t, "string", transactions[0], "getBlockByHash(fullTx=false) should only return transaction hashes")
+
+	// GetBlockByHash(fullTx=true).
+	rawRsp = call(t, "eth_getBlockByHash", []interface{}{receipt.BlockHash.Hex(), true})
+	require.NoError(t, json.Unmarshal(rawRsp.Result, &rsp))
+
+	transactions = rsp["transactions"].([]interface{})
+	// There should be one transaction in response.
+	require.EqualValues(t, 1, len(transactions))
+	// The transaction should be an object.
+	require.IsType(t, make(map[string]interface{}), transactions[0], "getBlockByHash(fullTx=true) should only return full transaction objects")
+
+	// The transaction in getBlockByHash should match transaction obtained by getTransactionByHash.
+	txRsp := make(map[string]interface{})
+	rawRsp = call(t, "eth_getTransactionByHash", []string{receipt.TxHash.Hex()})
+	require.NoError(t, json.Unmarshal(rawRsp.Result, &txRsp))
+	require.EqualValues(t, transactions[0], txRsp, "getBlockByHash.transaction should match getTransactionByHash response")
+}
+
+func TestEth_GetTransactionReceiptRawResponses(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
+	defer cancel()
+
+	// Submit test transaction.
+	receipt := submitTestTransaction(ctx, t)
 	require.Equal(t, uint64(1), receipt.Status)
 	require.NotNil(t, receipt)
 
-	// go-ethereum's Transaction struct always computes transaction hash on-the-fly
-	// instead of simply returning the hash from TransactionBy* API responses.
-	// To overcome this, we perform getTransactionByHash query with raw HTTP
-	// client and use the tx's hash from that response.
-	// For details, see https://github.com/starfishlabs/oasis-evm-web3-gateway/issues/72
-	rpcRes := call(t, "eth_getTransactionByHash", []string{receipt.TxHash.Hex()})
+	// GetTransactionReceipt.
+	rsp := make(map[string]interface{})
+	rawRsp := call(t, "eth_getTransactionReceipt", []interface{}{receipt.TxHash.Hex()})
+	require.NoError(t, json.Unmarshal(rawRsp.Result, &rsp))
 
-	tx2 := make(map[string]interface{})
-	rpcErr := json.Unmarshal(rpcRes.Result, &tx2)
-	require.NoError(t, rpcErr)
-	require.NotNil(t, tx2)
-	require.Equal(t, signedTx.Hash(), common.HexToHash(tx2["hash"].(string)))
-
-	tx3, _, err := ec.TransactionByHash(ctx, receipt.TxHash)
-	require.NoError(t, err)
-	require.NotNil(t, tx3)
+	require.Nil(t, rsp["contractAddress"], "contract address should be nil")
 }
