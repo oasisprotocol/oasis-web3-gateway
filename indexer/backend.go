@@ -186,7 +186,7 @@ func (p *psqlBackend) QueryBlockRound(blockHash ethcommon.Hash) (uint64, error) 
 	return round, nil
 }
 
-// QueryBlockHash returns the block has for the provided round.
+// QueryBlockHash returns the block hash for the provided round.
 func (p *psqlBackend) QueryBlockHash(round uint64) (ethcommon.Hash, error) {
 	var blockHash string
 	var err error
