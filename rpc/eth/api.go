@@ -41,6 +41,7 @@ var (
 	ErrTransactionReceiptNotFound = errors.New("transaction receipt not found")
 	ErrIndexOutOfRange            = errors.New("index out of range")
 	ErrMalformedTransaction       = errors.New("malformed transaction")
+	ErrMalformedBlockNumber       = errors.New("malformed blocknumber")
 
 	// estimateGasSigSpec is a dummy signature spec used by the estimate gas method, as
 	// otherwise transactions without signature would be underestimated.
@@ -102,6 +103,11 @@ func (api *PublicAPI) roundParamFromBlockNum(blockNum ethrpc.BlockNumber) (uint6
 		}
 		return earliest, nil
 	default:
+		if int64(blockNum) < 0 {
+			api.Logger.Error("malformed block number", "number", blockNum)
+			return 0, ErrMalformedBlockNumber
+		}
+
 		return uint64(blockNum), nil
 	}
 }
