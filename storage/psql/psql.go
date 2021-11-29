@@ -194,7 +194,7 @@ func (db *PostDB) GetLatestBlockNumber() (uint64, error) {
 // GetBlockByHash returns the block for the given hash.
 func (db *PostDB) GetBlockByHash(blockHash string) (*model.Block, error) {
 	blk := new(model.Block)
-	err := db.DB.Model(blk).Where("hash=?", blockHash).Select()
+	err := db.DB.Model(blk).Where("hash=?", blockHash).Relation("Transactions").Select()
 	if err != nil {
 		return nil, err
 	}
@@ -205,7 +205,7 @@ func (db *PostDB) GetBlockByHash(blockHash string) (*model.Block, error) {
 // GetBlockByNumber returns the block for the given round.
 func (db *PostDB) GetBlockByNumber(round uint64) (*model.Block, error) {
 	blk := new(model.Block)
-	err := db.DB.Model(blk).Where("round=?", round).Select()
+	err := db.DB.Model(blk).Where("round=?", round).Relation("Transactions").Select()
 	if err != nil {
 		return nil, err
 	}
@@ -216,7 +216,7 @@ func (db *PostDB) GetBlockByNumber(round uint64) (*model.Block, error) {
 // GetBlockTransactionCountByNumber returns the count of transactions in block by block number.
 func (db *PostDB) GetBlockTransactionCountByNumber(round uint64) (int, error) {
 	blk := new(model.Block)
-	err := db.DB.Model(blk).Where("round=?", round).Select()
+	err := db.DB.Model(blk).Where("round=?", round).Relation("Transactions").Select()
 	if err != nil {
 		return 0, err
 	}
@@ -227,7 +227,7 @@ func (db *PostDB) GetBlockTransactionCountByNumber(round uint64) (int, error) {
 // GetBlockTransactionCountByHash returns the count of transactions in block by block hash.
 func (db *PostDB) GetBlockTransactionCountByHash(blockHash string) (int, error) {
 	blk := new(model.Block)
-	err := db.DB.Model(blk).Where("hash=?", blockHash).Select()
+	err := db.DB.Model(blk).Where("hash=?", blockHash).Relation("Transactions").Select()
 	if err != nil {
 		return 0, err
 	}
@@ -238,7 +238,7 @@ func (db *PostDB) GetBlockTransactionCountByHash(blockHash string) (int, error) 
 // GetBlockTransaction returns transaction by bock hash and transaction index.
 func (db *PostDB) GetBlockTransaction(blockHash string, txIndex int) (*model.Transaction, error) {
 	blk := new(model.Block)
-	err := db.DB.Model(blk).Where("hash=?", blockHash).Select()
+	err := db.DB.Model(blk).Where("hash=?", blockHash).Relation("Transactions").Select()
 	if err != nil {
 		return nil, err
 	}
