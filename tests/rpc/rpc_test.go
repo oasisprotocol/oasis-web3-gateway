@@ -234,20 +234,7 @@ func TestEth_GetTransactionByHash(t *testing.T) {
 	require.Equal(t, uint64(1), receipt.Status)
 	require.NotNil(t, receipt)
 
-	// go-ethereum's Transaction struct always computes transaction hash on-the-fly
-	// instead of simply returning the hash from TransactionBy* API responses.
-	// To overcome this, we perform getTransactionByHash query with raw HTTP
-	// client and use the tx's hash from that response.
-	// For details, see https://github.com/starfishlabs/oasis-evm-web3-gateway/issues/72
-	rpcRes := call(t, "eth_getTransactionByHash", []string{receipt.TxHash.Hex()})
-
-	tx2 := make(map[string]interface{})
-	rpcErr := json.Unmarshal(rpcRes.Result, &tx2)
-	require.NoError(t, rpcErr)
-	require.NotNil(t, tx2)
-	require.Equal(t, signedTx.Hash(), common.HexToHash(tx2["hash"].(string)))
-
-	tx3, _, err := ec.TransactionByHash(ctx, receipt.TxHash)
+	tx2, _, err := ec.TransactionByHash(ctx, receipt.TxHash)
 	require.NoError(t, err)
-	require.NotNil(t, tx3)
+	require.NotNil(t, tx2)
 }
