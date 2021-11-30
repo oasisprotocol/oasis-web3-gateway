@@ -11,6 +11,7 @@ import (
 	"github.com/starfishlabs/oasis-evm-web3-gateway/indexer"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/eth"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/net"
+	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/txpool"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/web3"
 )
 
@@ -40,6 +41,12 @@ func GetRPCAPIs(
 			Namespace: "eth",
 			Version:   "1.0",
 			Service:   eth.NewPublicAPI(ctx, client, logging.GetLogger("eth_rpc"), config.ChainID, backend),
+			Public:    true,
+		},
+		ethRpc.API{
+			Namespace: "txpool",
+			Version:   "1.0",
+			Service:   txpool.NewPublicAPI(),
 			Public:    true,
 		},
 	)
