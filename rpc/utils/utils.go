@@ -23,7 +23,7 @@ func NewRPCTransaction(dbTx *model.Transaction) (*RPCTransaction, error) {
 	r, _ := new(big.Int).SetString(dbTx.R, 10)
 	s, _ := new(big.Int).SetString(dbTx.S, 10)
 
-	var accesses ethtypes.AccessList
+	accesses := ethtypes.AccessList{}
 	for _, item := range dbTx.AccessList {
 		var access ethtypes.AccessTuple
 		access.Address = common.HexToAddress(item.Address)
