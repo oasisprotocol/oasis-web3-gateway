@@ -8,17 +8,8 @@ type Storage interface {
 	// Store stores data.
 	Store(value interface{}) error
 
-	// BulkStore stores a set of data.
-	BulkStore(values []interface{}) error
-
 	// Update updates record.
 	Update(value interface{}) error
-
-	// BulkUpdate stores a set of data.
-	BulkUpdate(values []interface{}) error
-
-	// Exist returns whether the record exists.
-	Exist(value interface{}) (bool, error)
 
 	// Delete deletes all records with round less than the given round.
 	Delete(table interface{}, round uint64) error

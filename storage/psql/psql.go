@@ -15,12 +15,11 @@ import (
 	"time"
 )
 
-
-type PostDb struct {
-	Db *bun.DB
+type PostDB struct {
+	DB *bun.DB
 }
 
-// InitDb creates postgresql db instance.
+// InitDB creates postgresql db instance.
 func InitDB(cfg *conf.DatabaseConfig) (*PostDB, error) {
 	if cfg == nil {
 		return nil, errors.New("nil configuration")
@@ -44,13 +43,13 @@ func InitDB(cfg *conf.DatabaseConfig) (*PostDB, error) {
 		return nil, err
 	}
 
-	return &PostDb{Db: db}, nil
+	return &PostDB{DB: db}, nil
 }
 
 // GetTransactionRef returns block hash, round and index of the transaction.
 func (db *PostDB) GetTransactionRef(txHash string) (*model.TransactionRef, error) {
 	tx := new(model.TransactionRef)
-	err := db.Db.NewSelect().Model(tx).Where("eth_tx_hash = ? ", txHash).Scan(context.Background())
+	err := db.DB.NewSelect().Model(tx).Where("eth_tx_hash = ? ", txHash).Scan(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -61,8 +60,7 @@ func (db *PostDB) GetTransactionRef(txHash string) (*model.TransactionRef, error
 // GetTransaction queries ethereum transaction by hash.
 func (db *PostDB) GetTransaction(hash string) (*model.Transaction, error) {
 	tx := new(model.Transaction)
-
-	err := db.Db.NewSelect().Model(tx).Where("hash = ?", hash).Scan(context.Background())
+	err := db.DB.NewSelect().Model(tx).Where("hash = ?", hash).Scan(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -70,29 +68,34 @@ func (db *PostDB) GetTransaction(hash string) (*model.Transaction, error) {
 	return tx, nil
 }
 
-// Exist returns whether the record exists.
-func (db *PostDb) Exist(value interface{}) (bool, error) {
-	count, err := db.Db.NewSelect().Model(value).WherePK().Count(context.Background())
-	if err != nil {
-		return false, err
-	}
-	return count > 0, nil
-}
-
 // upsert updates record when PK conflicts, otherwise inserts.
-func (db *PostDb) upsert(value interface{}) error {
+func (db *PostDB) upsertSingle(value interface{}) error {
 	// PKs are required for ON CONFLICT DO UPDATE
 	typ := reflect.TypeOf(value)
-	table := db.Db.Table(typ)
+	table := db.DB.Table(typ)
 	pks := make([]string, len(table.PKs))
 	for i, f := range table.PKs {
 		pks[i] = f.Name
 	}
 
-	_, err := db.Db.NewInsert().Model(value).
+	_, err := db.DB.NewInsert().Model(value).
 		On(fmt.Sprintf("CONFLICT (%v) DO UPDATE", strings.Join(pks, ","))).Exec(context.Background())
 
 	return err
+}
+
+//  upsert updates record when PK conflicts, otherwise inserts.
+func (db *PostDB) upsert(value interface{}) (err error) {
+	switch values := value.(type) {
+	case []interface{}:
+		for v := range values {
+			err = db.upsertSingle(v)
+		}
+	case interface{}:
+		err = db.upsertSingle(value)
+	}
+
+	return
 }
 
 // Store stores data in db.
@@ -100,44 +103,21 @@ func (db *PostDB) Store(value interface{}) error {
 	return db.upsert(value)
 }
 
-// BulkStore stores a set of data.
-func (db *PostDb) BulkStore(values []interface{}) error {
-	for _, v := range values {
-		if err := db.upsert(v); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 // Update updates record.
-func (db *PostDb) Update(value interface{}) error {
-	_, err := db.Db.NewUpdate().Model(value).WherePK().Exec(context.Background())
-	return err
-}
-
-// BulkUpdate updates a set of data.
-func (db *PostDb) BulkUpdate(values []interface{}) error {
-	for _, v := range values {
-		if err := db.Update(v); err != nil {
-			return err
-		}
-	}
-
-	return nil
+func (db *PostDB) Update(value interface{}) error {
+	return db.upsert(value)
 }
 
 // Delete deletes all records with round less than the given round.
-func (db *PostDb) Delete(table interface{}, round uint64) error {
-	_, err := db.Db.NewDelete().Model(table).Where("round < ?", round).Exec(context.Background())
+func (db *PostDB) Delete(table interface{}, round uint64) error {
+	_, err := db.DB.NewDelete().Model(table).Where("round < ?", round).Exec(context.Background())
 	return err
 }
 
 // GetBlockRound returns block round by block hash.
-func (db *PostDb) GetBlockRound(hash string) (uint64, error) {
+func (db *PostDB) GetBlockRound(hash string) (uint64, error) {
 	block := new(model.BlockRef)
-	err := db.Db.NewSelect().Model(block).Where("hash = ?", hash).Scan(context.Background())
+	err := db.DB.NewSelect().Model(block).Where("hash = ?", hash).Scan(context.Background())
 	if err != nil {
 		return 0, err
 	}
@@ -146,9 +126,9 @@ func (db *PostDb) GetBlockRound(hash string) (uint64, error) {
 }
 
 // GetBlockHash returns block hash by block round.
-func (db *PostDb) GetBlockHash(round uint64) (string, error) {
+func (db *PostDB) GetBlockHash(round uint64) (string, error) {
 	block := new(model.BlockRef)
-	err := db.Db.NewSelect().Model(block).Where("round = ?", round).Scan(context.Background())
+	err := db.DB.NewSelect().Model(block).Where("round = ?", round).Scan(context.Background())
 	if err != nil {
 		return "", err
 	}
@@ -157,9 +137,9 @@ func (db *PostDb) GetBlockHash(round uint64) (string, error) {
 }
 
 // GetLatestBlockHash returns for the block hash of the latest round.
-func (db *PostDb) GetLatestBlockHash() (string, error) {
+func (db *PostDB) GetLatestBlockHash() (string, error) {
 	block := new(model.BlockRef)
-	err := db.Db.NewSelect().Model(block).Order("round DESC").Limit(1).Scan(context.Background())
+	err := db.DB.NewSelect().Model(block).Order("round DESC").Limit(1).Scan(context.Background())
 	if err != nil {
 		return "", err
 	}
@@ -170,7 +150,7 @@ func (db *PostDb) GetLatestBlockHash() (string, error) {
 // GetContinuesIndexedRound returns latest continues indexed block round.
 func (db *PostDB) GetContinuesIndexedRound() (uint64, error) {
 	indexedRound := new(model.IndexedRoundWithTip)
-	err := db.Db.NewSelect().Model(indexedRound).Where("tip = ?", model.Continues).Scan(context.Background())
+	err := db.DB.NewSelect().Model(indexedRound).Where("tip = ?", model.Continues).Scan(context.Background())
 	if err != nil {
 		return 0, err
 	}
@@ -181,7 +161,7 @@ func (db *PostDB) GetContinuesIndexedRound() (uint64, error) {
 // GetLastRetainedRound returns the minimum round not pruned.
 func (db *PostDB) GetLastRetainedRound() (uint64, error) {
 	retainedRound := new(model.IndexedRoundWithTip)
-	err := db.Db.NewSelect().Model(retainedRound).Where("tip = ?", model.LastRetained).Scan(context.Background())
+	err := db.DB.NewSelect().Model(retainedRound).Where("tip = ?", model.LastRetained).Scan(context.Background())
 	if err != nil {
 		return 0, err
 	}
@@ -190,9 +170,9 @@ func (db *PostDB) GetLastRetainedRound() (uint64, error) {
 }
 
 // GetLatestBlockNumber returns the latest block number.
-func (db *PostDb) GetLatestBlockNumber() (uint64, error) {
+func (db *PostDB) GetLatestBlockNumber() (uint64, error) {
 	block := new(model.Block)
-	err := db.Db.NewSelect().Model(block).Order("round DESC").Limit(1).Scan(context.Background())
+	err := db.DB.NewSelect().Model(block).Order("round DESC").Limit(1).Scan(context.Background())
 	if err != nil {
 		return 0, err
 	}
@@ -203,7 +183,7 @@ func (db *PostDb) GetLatestBlockNumber() (uint64, error) {
 // GetBlockByHash returns the block for the given hash.
 func (db *PostDB) GetBlockByHash(blockHash string) (*model.Block, error) {
 	blk := new(model.Block)
-	err := db.Db.NewSelect().Model(blk).Where("hash = ?", blockHash).Scan(context.Background())
+	err := db.DB.NewSelect().Model(blk).Where("hash = ?", blockHash).Scan(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -212,9 +192,9 @@ func (db *PostDB) GetBlockByHash(blockHash string) (*model.Block, error) {
 }
 
 // GetBlockByNumber returns the block for the given round.
-func (db *PostDb) GetBlockByNumber(round uint64) (*model.Block, error) {
+func (db *PostDB) GetBlockByNumber(round uint64) (*model.Block, error) {
 	block := new(model.Block)
-	err := db.Db.NewSelect().Model(block).Where("round = ?", round).Scan(context.Background())
+	err := db.DB.NewSelect().Model(block).Where("round = ?", round).Scan(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -223,9 +203,9 @@ func (db *PostDb) GetBlockByNumber(round uint64) (*model.Block, error) {
 }
 
 // GetBlockTransactionCountByNumber returns the count of transactions in block by block number.
-func (db *PostDb) GetBlockTransactionCountByNumber(round uint64) (int, error) {
+func (db *PostDB) GetBlockTransactionCountByNumber(round uint64) (int, error) {
 	block := new(model.Block)
-	err := db.Db.NewSelect().Model(block).Where("round = ?", round).Scan(context.Background())
+	err := db.DB.NewSelect().Model(block).Where("round = ?", round).Scan(context.Background())
 	if err != nil {
 		return 0, err
 	}
@@ -234,9 +214,9 @@ func (db *PostDb) GetBlockTransactionCountByNumber(round uint64) (int, error) {
 }
 
 // GetBlockTransactionCountByHash returns the count of transactions in block by block hash.
-func (db *PostDb) GetBlockTransactionCountByHash(blockHash string) (int, error) {
+func (db *PostDB) GetBlockTransactionCountByHash(blockHash string) (int, error) {
 	block := new(model.Block)
-	err := db.Db.NewSelect().Model(block).Where("hash = ?", blockHash).Scan(context.Background())
+	err := db.DB.NewSelect().Model(block).Where("hash = ?", blockHash).Scan(context.Background())
 	if err != nil {
 		return 0, err
 	}
@@ -245,9 +225,9 @@ func (db *PostDb) GetBlockTransactionCountByHash(blockHash string) (int, error) 
 }
 
 // GetBlockTransaction returns transaction by bock hash and transaction index.
-func (db *PostDb) GetBlockTransaction(blockHash string, txIndex int) (*model.Transaction, error) {
+func (db *PostDB) GetBlockTransaction(blockHash string, txIndex int) (*model.Transaction, error) {
 	block := new(model.Block)
-	err := db.Db.NewSelect().Model(block).Where("hash = ?", blockHash).Scan(context.Background())
+	err := db.DB.NewSelect().Model(block).Where("hash = ?", blockHash).Scan(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -264,7 +244,7 @@ func (db *PostDb) GetBlockTransaction(blockHash string, txIndex int) (*model.Tra
 // GetTransactionReceipt returns receipt by transaction hash.
 func (db *PostDB) GetTransactionReceipt(txHash string) (*model.Receipt, error) {
 	receipt := new(model.Receipt)
-	err := db.Db.NewSelect().Model(receipt).Where("transaction_hash = ?", txHash).Scan(context.Background())
+	err := db.DB.NewSelect().Model(receipt).Where("transaction_hash = ?", txHash).Scan(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -275,7 +255,7 @@ func (db *PostDB) GetTransactionReceipt(txHash string) (*model.Receipt, error) {
 // GetLogs return the logs by block hash and round.
 func (db *PostDB) GetLogs(blockHash string, startRound, endRound uint64) ([]*model.Log, error) {
 	logs := []*model.Log{}
-	err := db.Db.NewSelect().Model(&logs).
+	err := db.DB.NewSelect().Model(&logs).
 		Where("block_hash = ? AND (round BETWEEN ? AND ?)", blockHash, startRound, endRound).
 		Scan(context.Background())
 	if err != nil {
