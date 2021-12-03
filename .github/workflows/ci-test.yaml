@@ -33,7 +33,8 @@ jobs:
       OASIS_CORE_VERSION: 21.3.6
       OASIS_NODE: ${{ github.workspace }}/oasis_core/oasis-node
       OASIS_NET_RUNNER: ${{ github.workspace }}/oasis_core/oasis-net-runner
-      OASIS_EMERALD_VERSION: 5.0.0
+      OASIS_EMERALD_VERSION: 6.0.0-rc
+      GATEWAY__CHAIN_ID: 42261
       OASIS_EMERALD_PARATIME: ${{ github.workspace }}/oasis_core/emerald-paratime
       OASIS_NODE_DATADIR: /tmp/eth-runtime-test
     steps:

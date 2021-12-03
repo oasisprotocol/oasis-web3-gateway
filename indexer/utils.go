@@ -226,12 +226,12 @@ func (p *psqlBackend) StoreBlockData(oasisBlock *block.Block, txResults []*clien
 		resEvents := item.Events
 		for eventIndex, event := range resEvents {
 			if event.Code == 1 {
-				log := &Log{}
-				if err = cbor.Unmarshal(event.Value, log); err != nil {
+				var logs []*Log
+				if err = cbor.Unmarshal(event.Value, &logs); err != nil {
 					p.logger.Error("Failed to unmarshal event value", "index", eventIndex)
 					return err
 				}
-				oasisLogs = append(oasisLogs, log)
+				oasisLogs = append(oasisLogs, logs...)
 			}
 		}
 
