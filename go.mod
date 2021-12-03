@@ -9,11 +9,10 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
 	github.com/knadh/koanf v1.3.2
-	github.com/oasisprotocol/oasis-core/go v0.2103.5
-	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.1.1-0.20211112203128-552762d17fb1
+	github.com/oasisprotocol/oasis-core/go v0.2103.6
+	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.1.1-0.20211203131800-7bc6c485ad2f
 	github.com/rs/cors v1.7.0
 	github.com/spf13/cobra v1.2.1
 	github.com/stretchr/testify v1.7.0
-	github.com/tendermint/tendermint v0.34.9 // indirect
 	google.golang.org/grpc v1.41.0
 )

@@ -2,11 +2,14 @@ package rpc
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/starfishlabs/oasis-evm-web3-gateway/tests"
 )
 
 func TestMain(m *testing.M) {
@@ -28,7 +31,6 @@ func TestNet_Version(t *testing.T) {
 	var res string
 	err := json.Unmarshal(rpcRes.Result, &res)
 
-	// 42262 is the default network id
 	require.NoError(t, err)
-	require.Equal(t, "42262", res)
+	require.Equal(t, fmt.Sprintf("%v", tests.TestsConfig.Gateway.ChainID), res)
 }

@@ -19,6 +19,8 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	oasisTesting "github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing"
 	"github.com/stretchr/testify/require"
+
+	"github.com/starfishlabs/oasis-evm-web3-gateway/tests"
 )
 
 // Dave's private key for signing Ethereum transactions derived from the seed "oasis-runtime-sdk/test-keys: dave".
@@ -143,7 +145,7 @@ func TestEth_ChainID(t *testing.T) {
 	require.Nil(t, err, "get chainid")
 
 	t.Logf("chain id: %v", id)
-	require.Equal(t, big.NewInt(42262), id)
+	require.Equal(t, big.NewInt(int64(tests.TestsConfig.Gateway.ChainID)), id)
 }
 
 func TestEth_GasPrice(t *testing.T) {
