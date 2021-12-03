@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -302,4 +303,13 @@ func TestEth_GetTransactionReceiptRawResponses(t *testing.T) {
 	require.NoError(t, json.Unmarshal(rawRsp.Result, &rsp))
 
 	require.Nil(t, rsp["contractAddress"], "contract address should be nil")
+}
+
+func TestEth_GetLogsWithoutBlockhash(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
+	defer cancel()
+
+	ec := localClient()
+	_, err := ec.FilterLogs(ctx, ethereum.FilterQuery{FromBlock: big.NewInt(1), ToBlock: big.NewInt(10)})
+	require.NoError(t, err, "getLogs without explicit block hash")
 }

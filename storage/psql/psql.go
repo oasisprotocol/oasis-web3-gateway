@@ -263,10 +263,10 @@ func (db *PostDB) GetTransactionReceipt(txHash string) (*model.Receipt, error) {
 }
 
 // GetLogs return the logs by block hash and round.
-func (db *PostDB) GetLogs(blockHash string, startRound, endRound uint64) ([]*model.Log, error) {
+func (db *PostDB) GetLogs(startRound, endRound uint64) ([]*model.Log, error) {
 	logs := []*model.Log{}
 	err := db.DB.Model(&logs).
-		Where("block_hash=? AND (round BETWEEN ? AND ?)", blockHash, startRound, endRound).Select()
+		Where("(round BETWEEN ? AND ?)", startRound, endRound).Select()
 	if err != nil {
 		return nil, err
 	}
