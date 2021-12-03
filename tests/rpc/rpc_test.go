@@ -8,6 +8,7 @@ import (
 	"log"
 	"math/big"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -314,4 +315,47 @@ func TestEth_GetLogsWithoutBlockhash(t *testing.T) {
 	ec := localClient()
 	_, err := ec.FilterLogs(ctx, ethereum.FilterQuery{FromBlock: big.NewInt(1), ToBlock: big.NewInt(10)})
 	require.NoError(t, err, "getLogs without explicit block hash")
+}
+
+func TestEth_GetLogsMultiple(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
+	defer cancel()
+	ec := localClient()
+
+	code := common.FromHex(strings.TrimSpace(evmEventsTestCompiledHex))
+
+	chainID, err := ec.ChainID(context.Background())
+	require.NoError(t, err, "get chainid")
+
+	nonce, err := ec.NonceAt(context.Background(), oasisTesting.Dave.EthAddress, nil)
+	require.NoError(t, err, "get nonce failed")
+
+	// Create transaction
+	tx := types.NewTx(&types.LegacyTx{
+		Nonce:    nonce,
+		Value:    big.NewInt(0),
+		Gas:      1000000,
+		GasPrice: big.NewInt(2),
+		Data:     code,
+	})
+	signer := types.LatestSignerForChainID(chainID)
+	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), daveKey)
+	require.NoError(t, err, "sign tx")
+
+	signedTx, err := tx.WithSignature(signer, signature)
+	require.NoError(t, err, "pack tx")
+
+	err = ec.SendTransaction(context.Background(), signedTx)
+	require.NoError(t, err, "send transaction failed")
+
+	receipt, err := waitTransaction(ctx, ec, signedTx.Hash())
+	require.NoError(t, err)
+
+	t.Logf("Contract address: %s", receipt.ContractAddress)
+
+	// Ensure successful contract deploy.
+	require.Equal(t, uint64(1), receipt.Status)
+
+	// Check emitted logs.
+	require.Len(t, receipt.Logs, 3, "3 logs expected")
 }
