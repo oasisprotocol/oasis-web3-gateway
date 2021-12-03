@@ -549,9 +549,9 @@ func (api *PublicAPI) GetLogs(filter filters.FilterCriteria) ([]*ethtypes.Log, e
 	// TODO: filter addresses and topics
 
 	ethLogs := []*ethtypes.Log{}
-	dbLogs, err := api.backend.GetLogs(*filter.BlockHash, startRoundInclusive, endRoundInclusive)
+	dbLogs, err := api.backend.GetLogs(startRoundInclusive, endRoundInclusive)
 	if err != nil {
-		return ethLogs, nil
+		return ethLogs, ErrInternalQuery
 	}
 	ethLogs = utils.DB2EthLogs(dbLogs)
 
