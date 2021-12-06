@@ -228,13 +228,13 @@ func (p *psqlBackend) StoreBlockData(oasisBlock *block.Block, txResults []*clien
 			if event.Code == 1 {
 				var logs []*Log
 				if err = cbor.Unmarshal(event.Value, &logs); err != nil {
-					p.logger.Error("Failed to unmarshal event value, trying legacy format next", "index", eventIndex, "err", err)
+					p.logger.Debug("Failed to unmarshal event value, trying legacy format next", "index", eventIndex, "err", err)
 
 					// Emerald events value format changed in https://github.com/oasisprotocol/oasis-sdk/pull/675.
 					// Try the legacy format in case the new format unmarshalling failed.
 					var log *Log
 					if lerr := cbor.Unmarshal(event.Value, &log); err != nil {
-						p.logger.Error("Failed to unmarshal legacy event value", "index", eventIndex, "legacy_err", lerr)
+						p.logger.Error("Failed to unmarshal event value", "index", eventIndex, "legacy_err", lerr, "err", err)
 						// The legacy fallback failed, likely the event not in legacy format, return the original unmarshal error.
 						return err
 					}
