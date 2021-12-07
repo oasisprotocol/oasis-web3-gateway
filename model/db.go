@@ -2,15 +2,15 @@ package model
 
 // BlockRef represents the relationship between block round and block hash.
 type BlockRef struct {
-	Hash  string `pg:",pk"`
+	Hash  string `bun:",pk"`
 	Round uint64
 }
 
 // TransactionRef represents the relationship between ethereum tx and oasis tx.
 type TransactionRef struct {
-	EthTxHash string `pg:",pk"`
-	Index     uint32 `pg:",use_zero"`
-	Round     uint64 `pg:",use_zero"`
+	EthTxHash string `bun:",pk"`
+	Index     uint32
+	Round     uint64
 	BlockHash string
 }
 
@@ -27,7 +27,7 @@ const Continues string = "continues"
 const LastRetained string = "lastRetain"
 
 type IndexedRoundWithTip struct {
-	Tip   string `pg:",pk"`
+	Tip   string `bun:",pk"`
 	Round uint64
 }
 
@@ -35,18 +35,18 @@ type AccessList []AccessTuple
 
 // Transaction is ethereum transaction.
 type Transaction struct {
-	Hash       string `pg:",pk"`
-	Type       uint8  `pg:",use_zero"`
-	Status     uint   `pg:",use_zero"` // tx/receipt status
+	Hash       string `bun:",pk"`
+	Type       uint8
+	Status     uint // tx/receipt status
 	ChainID    string
 	BlockHash  string
-	Round      uint64 `pg:",use_zero"`
-	Index      uint32 `pg:",use_zero"`
-	Gas        uint64 `pg:",use_zero"`
+	Round      uint64
+	Index      uint32
+	Gas        uint64
 	GasPrice   string
 	GasTipCap  string
 	GasFeeCap  string
-	Nonce      uint64 `pg:",use_zero"`
+	Nonce      uint64
 	FromAddr   string
 	ToAddr     string
 	Value      string
@@ -57,11 +57,11 @@ type Transaction struct {
 
 // Block represents ethereum block.
 type Block struct {
-	Hash         string `pg:",pk"`
-	Round        uint64 `pg:",use_zero"`
+	Hash         string `bun:",pk"`
+	Round        uint64
 	Header       *Header
 	Uncles       []*Header
-	Transactions []*Transaction `pg:"rel:has-many"`
+	Transactions []*Transaction
 }
 
 // Header represents ethereum block header.
@@ -75,12 +75,12 @@ type Header struct {
 	Bloom       string
 	Difficulty  string
 	Number      string
-	GasLimit    uint64 `pg:",use_zero"`
-	GasUsed     uint64 `pg:",use_zero"`
-	Time        uint64 `pg:",use_zero"`
+	GasLimit    uint64
+	GasUsed     uint64
+	Time        uint64
 	Extra       string
 	MixDigest   string
-	Nonce       uint64 `pg:",use_zero"`
+	Nonce       uint64
 	BaseFee     string
 }
 
@@ -89,25 +89,25 @@ type Log struct {
 	Address   string
 	Topics    []string
 	Data      string
-	Round     uint64 `pg:",use_zero"` // BlockNumber
+	Round     uint64 // BlockNumber
 	BlockHash string
-	TxHash    string `pg:",pk"`
-	TxIndex   uint   `pg:",use_zero"`
-	Index     uint   `pg:",pk,use_zero"`
+	TxHash    string `bun:",pk"`
+	TxIndex   uint
+	Index     uint `bun:",pk,allowzero"`
 	Removed   bool
 }
 
 type Receipt struct {
-	Status            uint   `pg:",use_zero"`
-	CumulativeGasUsed uint64 `pg:",use_zero"`
+	Status            uint
+	CumulativeGasUsed uint64
 	LogsBloom         string
 	Logs              []*Log
-	TransactionHash   string `pg:",pk"`
+	TransactionHash   string `bun:",pk"`
 	BlockHash         string
-	GasUsed           uint64 `pg:",use_zero"`
-	Type              uint   `pg:",use_zero"`
-	Round             uint64 `pg:",use_zero"` // BlockNumber
-	TransactionIndex  uint64 `pg:",use_zero"`
+	GasUsed           uint64
+	Type              uint
+	Round             uint64 // BlockNumber
+	TransactionIndex  uint64
 	FromAddr          string
 	ToAddr            string
 	ContractAddress   string

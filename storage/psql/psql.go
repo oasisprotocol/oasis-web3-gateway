@@ -33,6 +33,7 @@ func InitDB(cfg *conf.DatabaseConfig) (*PostDB, error) {
 		pgdriver.WithDatabase(cfg.DB),
 		pgdriver.WithUser(cfg.User),
 		pgdriver.WithPassword(cfg.Password),
+		pgdriver.WithTLSConfig(nil),
 		pgdriver.WithDialTimeout(time.Duration(cfg.DialTimeout)*time.Second),
 		pgdriver.WithReadTimeout(time.Duration(cfg.ReadTimeout)*time.Second),
 		pgdriver.WithWriteTimeout(time.Duration(cfg.WriteTimeout)*time.Second))
