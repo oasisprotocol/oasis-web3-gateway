@@ -30,7 +30,7 @@ func CreateTables(db *bun.DB) error {
 
 // TruncateModel clears any DB records.
 func TruncateModel(db *bun.DB) error {
-	for m := range tables {
+	for _, m := range tables {
 		if _, err := db.NewDropTable().Model(m).IfExists().Exec(context.Background()); err != nil {
 			return err
 		}
