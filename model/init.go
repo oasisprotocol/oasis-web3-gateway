@@ -1,26 +1,26 @@
 package model
 
 import (
-	"github.com/go-pg/pg/v10"
-	"github.com/go-pg/pg/v10/orm"
+	"context"
+
+	"github.com/uptrace/bun"
 )
 
-var models = []interface{}{
-	new(AccessTuple),
+var tables = []interface{}{
 	new(Block),
 	new(BlockRef),
-	new(Header),
-	new(TransactionRef),
 	new(Transaction),
+	new(TransactionRef),
 	new(IndexedRoundWithTip),
-	new(Log),
 	new(Receipt),
+	new(Log),
 }
 
-// InitModel initializes db models.
-func InitModel(db *pg.DB) error {
-	for _, m := range models {
-		if err := db.Model(m).CreateTable(&orm.CreateTableOptions{IfNotExists: true}); err != nil {
+// CreateTables creates tables.
+func CreateTables(db *bun.DB) error {
+	for _, tb := range tables {
+		_, err := db.NewCreateTable().Model(tb).IfNotExists().Exec(context.Background())
+		if err != nil {
 			return err
 		}
 	}
@@ -29,12 +29,9 @@ func InitModel(db *pg.DB) error {
 }
 
 // TruncateModel clears any DB records.
-func TruncateModel(db *pg.DB) error {
-	for _, m := range models {
-		if err := db.Model(m).DropTable(&orm.DropTableOptions{
-			IfExists: true,
-			Cascade:  true,
-		}); err != nil {
+func TruncateModel(db *bun.DB) error {
+	for m := range tables {
+		if _, err := db.NewDropTable().Model(m).IfExists().Exec(context.Background()); err != nil {
 			return err
 		}
 	}
