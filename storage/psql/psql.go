@@ -261,7 +261,7 @@ func (db *PostDB) GetBlockTransaction(blockHash string, txIndex int) (*model.Tra
 // GetTransactionReceipt returns receipt by transaction hash.
 func (db *PostDB) GetTransactionReceipt(txHash string) (*model.Receipt, error) {
 	receipt := new(model.Receipt)
-	if err := db.DB.Model(receipt).Where("transaction_hash=?", txHash).Select(); err != nil {
+	if err := db.DB.Model(receipt).Where("transaction_hash=?", txHash).Relation("Logs").Select(); err != nil {
 		return nil, err
 	}
 

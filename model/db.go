@@ -101,7 +101,7 @@ type Receipt struct {
 	Status            uint   `pg:",use_zero"`
 	CumulativeGasUsed uint64 `pg:",use_zero"`
 	LogsBloom         string
-	Logs              []*Log
+	Logs              []*Log `pg:"rel:has-many,join_fk:tx_hash"`
 	TransactionHash   string `pg:",pk"`
 	BlockHash         string
 	GasUsed           uint64 `pg:",use_zero"`
