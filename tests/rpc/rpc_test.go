@@ -3,12 +3,14 @@ package rpc
 import (
 	"bytes"
 	"context"
+	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
 	"log"
 	"math/big"
 	"net/http"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -18,14 +20,10 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	oasisTesting "github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing"
 	"github.com/stretchr/testify/require"
 
 	"github.com/starfishlabs/oasis-evm-web3-gateway/tests"
 )
-
-// Dave's private key for signing Ethereum transactions derived from the seed "oasis-runtime-sdk/test-keys: dave".
-var daveKey, _ = crypto.HexToECDSA("c0e43d8755f201b715fd5a9ce0034c568442543ae0a0ee1aec2985ffe40edb99")
 
 func createRequest(method string, params interface{}) Request {
 	return Request{
@@ -70,7 +68,7 @@ func submitTransaction(ctx context.Context, t *testing.T, to common.Address, amo
 	chainID, err := ec.ChainID(context.Background())
 	require.NoError(t, err)
 
-	nonce, err := ec.NonceAt(context.Background(), oasisTesting.Dave.EthAddress, nil)
+	nonce, err := ec.NonceAt(context.Background(), tests.TestKey1.EthAddress, nil)
 	require.Nil(t, err, "get nonce failed")
 
 	// Create transaction
@@ -83,7 +81,7 @@ func submitTransaction(ctx context.Context, t *testing.T, to common.Address, amo
 		data,
 	)
 	signer := types.LatestSignerForChainID(chainID)
-	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), daveKey)
+	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), tests.TestKey1.Private)
 	require.Nil(t, err, "sign tx")
 
 	signedTx, err := tx.WithSignature(signer, signature)
@@ -107,10 +105,10 @@ func submitTestTransaction(ctx context.Context, t *testing.T) *types.Receipt {
 
 func TestEth_GetBalance(t *testing.T) {
 	ec := localClient()
-	res, err := ec.BalanceAt(context.Background(), oasisTesting.Dave.EthAddress, nil)
+	res, err := ec.BalanceAt(context.Background(), tests.TestKey1.EthAddress, nil)
 	require.NoError(t, err)
 
-	t.Logf("Got balance %s for %x\n", res.String(), oasisTesting.Dave.EthAddress)
+	t.Logf("Got balance %s for %x\n", res.String(), tests.TestKey1.EthAddress)
 
 	require.Greater(t, res.Uint64(), big.NewInt(0).Uint64())
 }
@@ -126,7 +124,7 @@ func getNonce(t *testing.T, from string) hexutil.Uint64 {
 }
 
 func TestEth_GetTransactionCount(t *testing.T) {
-	getNonce(t, fmt.Sprintf("0x%x", oasisTesting.Dave.EthAddress))
+	getNonce(t, fmt.Sprintf("%s", tests.TestKey1.EthAddress))
 }
 
 func localClient() *ethclient.Client {
@@ -327,35 +325,51 @@ func TestEth_GetLogsMultiple(t *testing.T) {
 	chainID, err := ec.ChainID(context.Background())
 	require.NoError(t, err, "get chainid")
 
-	nonce, err := ec.NonceAt(context.Background(), oasisTesting.Dave.EthAddress, nil)
-	require.NoError(t, err, "get nonce failed")
-
-	// Create transaction
-	tx := types.NewTx(&types.LegacyTx{
-		Nonce:    nonce,
-		Value:    big.NewInt(0),
-		Gas:      1000000,
-		GasPrice: big.NewInt(2),
-		Data:     code,
-	})
 	signer := types.LatestSignerForChainID(chainID)
-	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), daveKey)
-	require.NoError(t, err, "sign tx")
 
-	signedTx, err := tx.WithSignature(signer, signature)
-	require.NoError(t, err, "pack tx")
+	wg := sync.WaitGroup{}
+	wg.Add(3)
+	submitTx := func(t *testing.T, privKey *ecdsa.PrivateKey, address common.Address) {
+		defer wg.Done()
 
-	err = ec.SendTransaction(context.Background(), signedTx)
-	require.NoError(t, err, "send transaction failed")
+		nonce, err := ec.NonceAt(ctx, address, nil)
+		require.NoError(t, err, "get nonce failed")
 
-	receipt, err := waitTransaction(ctx, ec, signedTx.Hash())
-	require.NoError(t, err)
+		// Create transaction
+		tx := types.NewTx(&types.LegacyTx{
+			Nonce:    nonce,
+			Value:    big.NewInt(0),
+			Gas:      1000000,
+			GasPrice: big.NewInt(2),
+			Data:     code,
+		})
+		signature, err := crypto.Sign(signer.Hash(tx).Bytes(), privKey)
+		require.NoError(t, err, "sign tx")
 
-	t.Logf("Contract address: %s", receipt.ContractAddress)
+		signedTx, err := tx.WithSignature(signer, signature)
+		require.NoError(t, err, "pack tx")
 
-	// Ensure successful contract deploy.
-	require.Equal(t, uint64(1), receipt.Status)
+		err = ec.SendTransaction(context.Background(), signedTx)
+		require.NoError(t, err, "send transaction failed")
 
-	// Check emitted logs.
-	require.Len(t, receipt.Logs, 3, "3 logs expected")
+		receipt, err := waitTransaction(ctx, ec, signedTx.Hash())
+		require.NoError(t, err)
+
+		t.Logf("Contract address: %s", receipt.ContractAddress)
+		t.Logf("Transaction block: %d", receipt.BlockNumber)
+
+		// Ensure successful contract deploy.
+		require.Equal(t, uint64(1), receipt.Status)
+
+		// Check emitted logs.
+		require.Len(t, receipt.Logs, 3, "3 logs expected")
+	}
+
+	// Submit transactions in parallel so the transactions (likely) get processed
+	// in the same block to test receipt logs.
+	go submitTx(t, tests.TestKey1.Private, tests.TestKey1.EthAddress)
+	go submitTx(t, tests.TestKey2.Private, tests.TestKey2.EthAddress)
+	go submitTx(t, tests.TestKey3.Private, tests.TestKey3.EthAddress)
+
+	wg.Wait()
 }
