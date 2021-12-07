@@ -161,6 +161,9 @@ func (db *PostDB) GetContinuesIndexedRound() (uint64, error) {
 		Where("tip=?", model.Continues).
 		Select()
 	if err != nil {
+		if errors.Is(err, pg.ErrNoRows) {
+			return 0, nil
+		}
 		return 0, err
 	}
 
@@ -174,6 +177,9 @@ func (db *PostDB) GetLastRetainedRound() (uint64, error) {
 		Where("tip=?", model.LastRetained).
 		Select()
 	if err != nil {
+		if errors.Is(err, pg.ErrNoRows) {
+			return 0, nil
+		}
 		return 0, err
 	}
 

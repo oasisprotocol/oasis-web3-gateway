@@ -50,7 +50,7 @@ type QueryableBackend interface {
 	QueryTransactionRef(ethTxHash string) (*model.TransactionRef, error)
 
 	// QueryLastIndexedRound query continues indexed block round.
-	QueryLastIndexedRound() uint64
+	QueryLastIndexedRound() (uint64, error)
 
 	// QueryLastRetainedRound query the minimum round not pruned.
 	QueryLastRetainedRound() (uint64, error)
@@ -218,16 +218,16 @@ func (p *psqlBackend) storeIndexedRound(round uint64) error {
 }
 
 // QueryLastIndexedRound returns the last indexed round.
-func (p *psqlBackend) QueryLastIndexedRound() uint64 {
+func (p *psqlBackend) QueryLastIndexedRound() (uint64, error) {
 	p.indexedRoundMutex.Lock()
 	indexedRound, err := p.storage.GetContinuesIndexedRound()
 	if err != nil {
 		p.indexedRoundMutex.Unlock()
-		return 0
+		return 0, err
 	}
 	p.indexedRoundMutex.Unlock()
 
-	return indexedRound
+	return indexedRound, nil
 }
 
 // storeLastRetainedRound stores the last retained round.
