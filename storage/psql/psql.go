@@ -11,6 +11,7 @@ import (
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/driver/pgdriver"
 	"reflect"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -33,10 +34,16 @@ func InitDB(cfg *conf.DatabaseConfig) (*PostDB, error) {
 		pgdriver.WithDialTimeout(time.Duration(cfg.DialTimeout)*time.Second),
 		pgdriver.WithReadTimeout(time.Duration(cfg.ReadTimeout)*time.Second),
 		pgdriver.WithWriteTimeout(time.Duration(cfg.WriteTimeout)*time.Second))
+
 	// open
 	sqlDB := sql.OpenDB(pgConn)
+	maxOpenConns := 4 * runtime.GOMAXPROCS(0)
+	sqlDB.SetMaxOpenConns(maxOpenConns)
+	sqlDB.SetMaxIdleConns(maxOpenConns)
+
 	// create db
 	db := bun.NewDB(sqlDB, pgdialect.New())
+
 	// create tables
 	err := model.CreateTables(db)
 	if err != nil {
