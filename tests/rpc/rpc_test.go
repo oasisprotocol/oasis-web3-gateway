@@ -373,3 +373,18 @@ func TestEth_GetLogsMultiple(t *testing.T) {
 
 	wg.Wait()
 }
+
+func TestEth_GetLogsInvalid(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
+	defer cancel()
+	ec := localClient()
+
+	_, err := ec.FilterLogs(ctx, ethereum.FilterQuery{FromBlock: big.NewInt(100), ToBlock: big.NewInt(300)})
+	require.Error(t, err, "querying logs for more than 100 rounds is not allowed")
+
+	_, err = ec.FilterLogs(ctx, ethereum.FilterQuery{FromBlock: big.NewInt(200), ToBlock: big.NewInt(100)})
+	require.Error(t, err, "query with invalid round parameters should fail")
+
+	_, err = ec.FilterLogs(ctx, ethereum.FilterQuery{FromBlock: big.NewInt(200), ToBlock: big.NewInt(250)})
+	require.NoError(t, err, "valid query should work")
+}
