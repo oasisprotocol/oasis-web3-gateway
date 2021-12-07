@@ -264,14 +264,14 @@ func (p *psqlBackend) StoreBlockData(oasisBlock *block.Block, txResults []*clien
 
 	// Store txs
 	for _, tx := range txs {
-		if err := p.storage.Store(tx); err != nil {
+		if err = p.storage.Store(tx); err != nil {
 			return err
 		}
 	}
 
 	// Store receipts
 	for _, receipt := range receipts {
-		if err := p.storage.Store(receipt); err != nil {
+		if err = p.storage.Store(receipt); err != nil {
 			return err
 		}
 	}

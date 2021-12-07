@@ -16,5 +16,7 @@ require (
 	github.com/uptrace/bun v1.0.17
 	github.com/uptrace/bun/dialect/pgdialect v1.0.17
 	github.com/uptrace/bun/driver/pgdriver v1.0.17
+	golang.org/x/net v0.0.0-20211015210444-4f30a5c0130f // indirect
+	golang.org/x/sys v0.0.0-20211019181941-9d821ace8654 // indirect
 	google.golang.org/grpc v1.41.0
 )
