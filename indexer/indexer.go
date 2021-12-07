@@ -78,7 +78,13 @@ func (s *Service) pruningWorker() {
 		case <-s.ctx.Done():
 			return
 		case <-time.After(pruningCheckInterval):
-			lastIndexed := s.backend.QueryLastIndexedRound()
+			lastIndexed, err := s.backend.QueryLastIndexedRound()
+			if err != nil {
+				s.Logger.Error("failed to query last indexed round",
+					"err", err,
+				)
+				continue
+			}
 
 			if lastIndexed > s.pruningStep {
 				round := lastIndexed - s.pruningStep
@@ -112,7 +118,13 @@ func (s *Service) indexingWorker() {
 			continue
 		}
 
-		lastIndexed := s.backend.QueryLastIndexedRound()
+		lastIndexed, err := s.backend.QueryLastIndexedRound()
+		if err != nil {
+			s.Logger.Error("failed to query last indexed round",
+				"err", err,
+			)
+			continue
+		}
 		if latest < lastIndexed {
 			panic("This is a new chain, please clear the db first!")
 		}
