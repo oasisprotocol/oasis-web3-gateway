@@ -1005,10 +1005,10 @@ github.com/oasisprotocol/curve25519-voi v0.0.0-20210716083614-f38f8e8b0b84 h1:VG
 github.com/oasisprotocol/curve25519-voi v0.0.0-20210716083614-f38f8e8b0b84/go.mod h1:TLJifjWF6eotcfzDjKZsDqWJ+73Uvj/N85MvVyrvynM=
 github.com/oasisprotocol/deoxysii v0.0.0-20200527154044-851aec403956 h1:etZXZf8f2xLJFivW4tTg87nSV3KLszQ7oYot3UNcmF0=
 github.com/oasisprotocol/deoxysii v0.0.0-20200527154044-851aec403956/go.mod h1:cE5EgXTIhq5oAVdZ7LZd1FjTRLALPEzv93CWzBtDkyI=
-github.com/oasisprotocol/oasis-core/go v0.2103.5 h1:SNxBarM++blf2DVT1MbZgOvyPL+lw7d/ecoSqf1KlpA=
-github.com/oasisprotocol/oasis-core/go v0.2103.5/go.mod h1:X8I4m5T7qlEmFR0nLTE9Fwm6HKIuVlrZ8BBmBIxkCKk=
-github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.1.1-0.20211112203128-552762d17fb1 h1:JaxayXfPeSOYpC0ZRRbYtPiwQBujhDaykH72AwQEKIQ=
-github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.1.1-0.20211112203128-552762d17fb1/go.mod h1:hEKtwXHKUVH+/fL/jlYqa8FyTVzp4lLmi/PtsiAlDb4=
+github.com/oasisprotocol/oasis-core/go v0.2103.6 h1:w6XhwnEOTAgDxAxz8FxOh36+EafH7NM233R68uUISJo=
+github.com/oasisprotocol/oasis-core/go v0.2103.6/go.mod h1:X8I4m5T7qlEmFR0nLTE9Fwm6HKIuVlrZ8BBmBIxkCKk=
+github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.1.1-0.20211203131800-7bc6c485ad2f h1:GHp7+atjrZJp+5puCMPEUev+WCtOiVMJOoo0fVLUv8M=
+github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.1.1-0.20211203131800-7bc6c485ad2f/go.mod h1:8tqnqV4mQ6TrlX9JOzu3Y8ybZeSkJzocO3UxImCjI60=
 github.com/oklog/oklog v0.3.2/go.mod h1:FCV+B7mhrz4o+ueLpx+KqkyXRGMWOYEvfiXtdGtbWGs=
 github.com/oklog/run v1.0.0 h1:Ru7dDtJNOyC66gQ5dQmaCa0qIsAUFY3sFpK1Xk8igrw=
 github.com/oklog/run v1.0.0/go.mod h1:dlhp/R75TPv97u0XWUtDeV/lRKWPKSdTuV0TZvrmrQA=

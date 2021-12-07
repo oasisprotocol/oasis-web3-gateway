@@ -30,6 +30,23 @@ var evmSolTestCompiledHex string
 //go:embed contracts/evm_erc20_test_compiled.hex
 var evmERC20TestCompiledHex string
 
+/*
+pragma solidity ^0.8.3;
+
+contract Events {
+    event Log(address indexed sender, string message);
+    event AnotherLog();
+
+    constructor() {
+        emit Log(msg.sender, "Hello World!");
+        emit Log(msg.sender, "Hello EVM!");
+        emit AnotherLog();
+    }
+}
+*/
+//go:embed contracts/evm_events_test_compiled.hex
+var evmEventsTestCompiledHex string
+
 func waitTransaction(ctx context.Context, ec *ethclient.Client, txhash common.Hash) (*types.Receipt, error) {
 	queryTicker := time.NewTicker(time.Second)
 	defer queryTicker.Stop()

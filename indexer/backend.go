@@ -68,7 +68,7 @@ type GetEthInfoBackend interface {
 	GetTransactionByBlockHashAndIndex(blockHash ethcommon.Hash, txIndex int) (*model.Transaction, error)
 	GetTransactionReceipt(txHash ethcommon.Hash) (map[string]interface{}, error)
 	BlockNumber() (uint64, error)
-	GetLogs(blockHash ethcommon.Hash, startRound, endRound uint64) ([]*model.Log, error)
+	GetLogs(startRound, endRound uint64) ([]*model.Log, error)
 }
 
 // Backend is the indexer backend interface.
@@ -370,8 +370,8 @@ func (p *psqlBackend) BlockNumber() (uint64, error) {
 }
 
 // GetLogs returns logs from db.
-func (p *psqlBackend) GetLogs(blockHash ethcommon.Hash, startRound, endRound uint64) ([]*model.Log, error) {
-	return p.storage.GetLogs(blockHash.String(), startRound, endRound)
+func (p *psqlBackend) GetLogs(startRound, endRound uint64) ([]*model.Log, error) {
+	return p.storage.GetLogs(startRound, endRound)
 }
 
 // Close closes postgresql backend.
