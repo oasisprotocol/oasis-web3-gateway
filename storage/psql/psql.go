@@ -27,7 +27,7 @@ func InitDB(cfg *conf.DatabaseConfig) (*PostDB, error) {
 
 	pgConn := pgdriver.NewConnector(
 		pgdriver.WithAddr(fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)),
-		pgdriver.WithDatabase(cfg.Db),
+		pgdriver.WithDatabase(cfg.DB),
 		pgdriver.WithUser(cfg.User),
 		pgdriver.WithPassword(cfg.Password),
 		pgdriver.WithDialTimeout(time.Duration(cfg.DialTimeout)*time.Second),

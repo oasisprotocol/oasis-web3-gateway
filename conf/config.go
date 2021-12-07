@@ -73,7 +73,7 @@ func (cfg *LogConfig) Validate() error {
 type DatabaseConfig struct {
 	Host         string `koanf:"host"`
 	Port         int    `koanf:"port"`
-	Db           string `koanf:"db"`
+	DB           string `koanf:"db"`
 	User         string `koanf:"user"`
 	Password     string `koanf:"password"`
 	DialTimeout  int    `koanf:"dial_timeout"`
