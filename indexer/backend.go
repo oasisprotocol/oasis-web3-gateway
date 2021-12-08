@@ -1,6 +1,7 @@
 package indexer
 
 import (
+	"database/sql"
 	"encoding/hex"
 	"errors"
 	"sync"
@@ -223,9 +224,11 @@ func (p *psqlBackend) QueryLastIndexedRound() (uint64, error) {
 	indexedRound, err := p.storage.GetContinuesIndexedRound()
 	if err != nil {
 		p.indexedRoundMutex.Unlock()
+		if err == sql.ErrNoRows {
+			return 0, nil
+		}
 		return 0, err
 	}
-	p.indexedRoundMutex.Unlock()
 
 	return indexedRound, nil
 }

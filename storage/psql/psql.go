@@ -80,16 +80,25 @@ func (db *PostDB) GetTransaction(hash string) (*model.Transaction, error) {
 
 // upsert updates record when PK conflicts, otherwise inserts.
 func (db *PostDB) upsertSingle(value interface{}) error {
-	// PKs are required for ON CONFLICT DO UPDATE
-	typ := reflect.TypeOf(value)
-	table := db.DB.Table(typ)
-	pks := make([]string, len(table.PKs))
-	for i, f := range table.PKs {
-		pks[i] = f.Name
+	exists, err := db.DB.NewSelect().Model(value).Exists(context.Background())
+	if err != nil && err != sql.ErrNoRows {
+		return err
 	}
-
-	_, err := db.DB.NewInsert().Model(value).
-		On(fmt.Sprintf("CONFLICT (%v) DO UPDATE", strings.Join(pks, ","))).Exec(context.Background())
+	if exists {
+		// PKs are required for ON CONFLICT DO UPDATE
+		typ := reflect.TypeOf(value)
+		table := db.DB.Table(typ)
+		pks := make([]string, len(table.PKs))
+		for i, f := range table.PKs {
+			pks[i] = f.Name
+		}
+		_, err = db.DB.NewInsert().
+			Model(value).
+			On(fmt.Sprintf("CONFLICT (%v) DO UPDATE", strings.Join(pks, ","))).
+			Exec(context.Background())
+	} else {
+		_, err = db.DB.NewInsert().Model(value).Exec(context.Background())
+	}
 
 	return err
 }
