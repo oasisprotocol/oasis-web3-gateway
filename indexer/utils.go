@@ -51,7 +51,7 @@ func Logs2EthLogs(logs []*Log, round uint64, blockHash, txHash common.Hash, txIn
 func convertToEthFormat(
 	block *block.Block,
 	transactions ethtypes.Transactions,
-	ethLogs []*ethtypes.Log,
+	logsBloom ethtypes.Bloom,
 	txsStatus []uint8,
 	results []types.CallResult,
 	gas uint64,
@@ -60,8 +60,7 @@ func convertToEthFormat(
 	bhash := common.HexToHash(encoded.Hex()).String()
 	bprehash := block.Header.PreviousHash.Hex()
 	bshash := block.Header.StateRoot.Hex()
-	bloom := ethtypes.BytesToBloom(ethtypes.LogsBloom(ethLogs))
-	bloomData, _ := bloom.MarshalText()
+	bloomData, _ := logsBloom.MarshalText()
 	baseFee := big.NewInt(10)
 	number := big.NewInt(0)
 	number.SetUint64(block.Header.Round)
@@ -146,7 +145,6 @@ func convertToEthFormat(
 			Status:            uint(txsStatus[idx]),
 			CumulativeGasUsed: cumulativeGasUsed,
 			LogsBloom:         hex.EncodeToString(bloomData),
-			Logs:              eth2DbLogs(ethLogs),
 			TransactionHash:   ethTx.Hash().Hex(),
 			BlockHash:         bhash,
 			GasUsed:           ethTx.Gas(),
@@ -244,25 +242,18 @@ func (p *psqlBackend) StoreBlockData(oasisBlock *block.Block, txResults []*clien
 				oasisLogs = append(oasisLogs, logs...)
 			}
 		}
-
-		logs = Logs2EthLogs(oasisLogs, blockNum, bhash, ethTx.Hash(), uint32(txIndex))
-		// store logs
-		for _, log := range eth2DbLogs(logs) {
-			if err = p.storage.Store(log); err != nil {
-				p.logger.Error("Failed to store logs", "height", blockNum, "index", txIndex, "logs", oasisLogs, "err", err)
-				return err
-			}
-		}
+		logs = append(logs, Logs2EthLogs(oasisLogs, blockNum, bhash, ethTx.Hash(), uint32(txIndex))...)
 	}
 
-	// Get convert block, transactions and receipts
-	blk, txs, receipts, err := convertToEthFormat(oasisBlock, ethTxs, logs, txsStatus, results, gasUsed)
+	// Get convert block, transactions and receipts.
+	logsBloom := ethtypes.BytesToBloom(ethtypes.LogsBloom(logs))
+	blk, txs, receipts, err := convertToEthFormat(oasisBlock, ethTxs, logsBloom, txsStatus, results, gasUsed)
 	if err != nil {
 		p.logger.Debug("Failed to ConvertToEthBlock", "height", blockNum, "err", err)
 		return err
 	}
 
-	// Store txs
+	// Store txs.
 	for _, tx := range txs {
 		err = p.storage.Store(tx)
 		if err != nil {
@@ -270,7 +261,7 @@ func (p *psqlBackend) StoreBlockData(oasisBlock *block.Block, txResults []*clien
 		}
 	}
 
-	// Store receipts
+	// Store receipts.
 	for _, receipt := range receipts {
 		err = p.storage.Store(receipt)
 		if err != nil {
@@ -278,7 +269,15 @@ func (p *psqlBackend) StoreBlockData(oasisBlock *block.Block, txResults []*clien
 		}
 	}
 
-	// Store block
+	// Store logs.
+	for _, log := range eth2DbLogs(logs) {
+		if err = p.storage.Store(log); err != nil {
+			p.logger.Error("Failed to store logs", "height", blockNum, "log", log, "err", err)
+			return err
+		}
+	}
+
+	// Store block.
 	err = p.storage.Store(blk)
 	if err != nil {
 		return err
