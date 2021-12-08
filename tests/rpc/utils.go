@@ -14,6 +14,7 @@ import (
 
 	cmnEth "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/go-pg/pg/v10"
 	"github.com/oasisprotocol/oasis-core/go/common"
 	cmnGrpc "github.com/oasisprotocol/oasis-core/go/common/grpc"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
@@ -241,7 +242,7 @@ func InitialDeposit(rc client.RuntimeClient, amount uint64, to types.Address) er
 
 // Shutdown stops web3 gateway.
 func Shutdown() error {
-	if err := model.TruncateModel(db.DB); err != nil {
+	if err := model.TruncateModel(db.DB.(*pg.DB)); err != nil {
 		return fmt.Errorf("db cleanup failed: %w", err)
 	}
 

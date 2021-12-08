@@ -6,6 +6,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/go-pg/pg/v10"
 	"github.com/stretchr/testify/require"
 
 	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
@@ -28,7 +29,7 @@ docker run  -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_
 	// Run tests.
 	code := m.Run()
 
-	if err = model.TruncateModel(db.DB); err != nil {
+	if err = model.TruncateModel(db.DB.(*pg.DB)); err != nil {
 		log.Fatal("failed to cleanup db:", err)
 	}
 
@@ -50,13 +51,13 @@ func TestInitPostDb(t *testing.T) {
 		Round: 3,
 		Hash:  "hello world",
 	}
-	if err := db.Store(block1); err != nil {
+	if err := db.Upsert(block1); err != nil {
 		log.Fatal("postdb store error:", err)
 	}
-	if err := db.Store(block2); err != nil {
+	if err := db.Upsert(block2); err != nil {
 		log.Fatal("postdb store error:", err)
 	}
-	if err := db.Store(block3); err != nil {
+	if err := db.Upsert(block3); err != nil {
 		log.Fatal("postdb store error:", err)
 	}
 	round, err := db.GetBlockRound(block1.Hash)
@@ -83,10 +84,10 @@ func TestInitPostDb(t *testing.T) {
 		Round:     2,
 		BlockHash: "cde456",
 	}
-	if err = db.Store(tx1); err != nil {
+	if err = db.Upsert(tx1); err != nil {
 		log.Fatal("postdb store tx error:", err)
 	}
-	if err = db.Store(tx2); err != nil {
+	if err = db.Upsert(tx2); err != nil {
 		log.Fatal("postdb store tx error:", err)
 	}
 	txRef, err := db.GetTransactionRef(tx1.EthTxHash)
@@ -148,11 +149,11 @@ func TestInitPostDb(t *testing.T) {
 		R:          big.NewInt(3).String(),
 		S:          big.NewInt(3).String(),
 	}
-	err = db.Store(legacyTx)
+	err = db.Upsert(legacyTx)
 	require.NoError(err, "unable to store legacy transaction")
-	err = db.Store(accessListTx)
+	err = db.Upsert(accessListTx)
 	require.NoError(err, "unable to store access list transaction")
-	err = db.Store(dynamicFeeTx)
+	err = db.Upsert(dynamicFeeTx)
 	require.NoError(err, "unable to store dynamic fee transaction")
 
 	tx, err := db.GetTransaction("hello")
@@ -160,7 +161,7 @@ func TestInitPostDb(t *testing.T) {
 	require.EqualValues(tx, legacyTx, "GetTransaction should return expected transaction")
 }
 
-func TestUpdate(t *testing.T) {
+func TestUpsert(t *testing.T) {
 	require := require.New(t)
 
 	db, err := InitDB(tests.TestsConfig.Database)
@@ -172,7 +173,7 @@ func TestUpdate(t *testing.T) {
 		Tip:   model.Continues,
 		Round: 1,
 	}
-	require.NoError(db.Update(ir1), "update")
+	require.NoError(db.Upsert(ir1), "update")
 
 	r1, err := db.GetContinuesIndexedRound()
 	require.NoError(err, "GetContinuesIndexedRound")
@@ -182,7 +183,7 @@ func TestUpdate(t *testing.T) {
 		Tip:   model.Continues,
 		Round: 2,
 	}
-	require.NoError(db.Update(ir2), "update")
+	require.NoError(db.Upsert(ir2), "update")
 	r2, err := db.GetContinuesIndexedRound()
 	require.NoError(err, "GetContinuesIndexedRound")
 	require.EqualValues(2, r2)
@@ -191,7 +192,7 @@ func TestUpdate(t *testing.T) {
 		Tip:   model.Continues,
 		Round: 3,
 	}
-	require.NoError(db.Update(ir3), "update")
+	require.NoError(db.Upsert(ir3), "update")
 	r3, err := db.GetContinuesIndexedRound()
 	require.NoError(err, "GetContinuesIndexedRound")
 	require.EqualValues(3, r3)

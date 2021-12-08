@@ -1,10 +1,10 @@
 package indexer
 
 import (
+	"context"
 	"database/sql"
 	"encoding/hex"
 	"errors"
-	"sync"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -37,7 +37,7 @@ type Result struct {
 type Results map[uint64][]Result
 
 // BackendFactory is the indexer backend factory interface.
-type BackendFactory func(runtimeID common.Namespace, storage storage.Storage) (Backend, error)
+type BackendFactory func(ctx context.Context, runtimeID common.Namespace, storage storage.Storage) (Backend, error)
 
 // QueryableBackend is the read-only indexer backend interface.
 type QueryableBackend interface {
@@ -95,10 +95,11 @@ type Backend interface {
 }
 
 type psqlBackend struct {
-	runtimeID         common.Namespace
-	logger            *logging.Logger
-	storage           storage.Storage
-	indexedRoundMutex *sync.Mutex
+	ctx context.Context
+
+	runtimeID common.Namespace
+	logger    *logging.Logger
+	storage   storage.Storage
 }
 
 // Index indexes oasis block.
@@ -111,7 +112,7 @@ func (p *psqlBackend) Index(oasisBlock *block.Block, txResults []*client.Transac
 		Round: oasisBlock.Header.Round,
 		Hash:  blockHash.String(),
 	}
-	if err := p.storage.Store(blockRef); err != nil {
+	if err := p.storage.Upsert(blockRef); err != nil {
 		return err
 	}
 
@@ -207,21 +208,16 @@ func (p *psqlBackend) QueryBlockHash(round uint64) (ethcommon.Hash, error) {
 
 // storeIndexedRound stores indexed round.
 func (p *psqlBackend) storeIndexedRound(round uint64) error {
-	p.indexedRoundMutex.Lock()
-	defer p.indexedRoundMutex.Unlock()
-
 	r := &model.IndexedRoundWithTip{
 		Tip:   model.Continues,
 		Round: round,
 	}
 
-	return p.storage.Update(r)
+	return p.storage.Upsert(r)
 }
 
 // QueryLastIndexedRound returns the last indexed round.
 func (p *psqlBackend) QueryLastIndexedRound() (uint64, error) {
-	p.indexedRoundMutex.Lock()
-	defer p.indexedRoundMutex.Unlock()
 	indexedRound, err := p.storage.GetContinuesIndexedRound()
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -240,7 +236,7 @@ func (p *psqlBackend) storeLastRetainedRound(round uint64) error {
 		Round: round,
 	}
 
-	return p.storage.Update(r)
+	return p.storage.Upsert(r)
 }
 
 // QueryLastRetainedRound returns the last retained round.
@@ -383,12 +379,12 @@ func (p *psqlBackend) Close() {
 }
 
 // newPsqlBackend creates a Backend.
-func newPsqlBackend(runtimeID common.Namespace, storage storage.Storage) (Backend, error) {
+func newPsqlBackend(ctx context.Context, runtimeID common.Namespace, storage storage.Storage) (Backend, error) {
 	b := &psqlBackend{
-		runtimeID:         runtimeID,
-		logger:            logging.GetLogger("indexer"),
-		storage:           storage,
-		indexedRoundMutex: new(sync.Mutex),
+		ctx:       ctx,
+		runtimeID: runtimeID,
+		logger:    logging.GetLogger("indexer"),
+		storage:   storage,
 	}
 	b.logger.Info("New psql backend")
 

@@ -13,6 +13,7 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 
 	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
+	"github.com/starfishlabs/oasis-evm-web3-gateway/storage"
 )
 
 var (
@@ -253,37 +254,34 @@ func (p *psqlBackend) StoreBlockData(oasisBlock *block.Block, txResults []*clien
 		return err
 	}
 
-	// Store txs.
-	for _, tx := range txs {
-		err = p.storage.Store(tx)
-		if err != nil {
-			return err
+	return p.storage.RunInTransaction(p.ctx, func(s storage.Storage) error {
+		// Store txs.
+		for _, tx := range txs {
+			err = s.Upsert(tx)
+			if err != nil {
+				return err
+			}
 		}
-	}
 
-	// Store receipts.
-	for _, receipt := range receipts {
-		err = p.storage.Store(receipt)
-		if err != nil {
-			return err
+		// Store receipts.
+		for _, receipt := range receipts {
+			err = s.Upsert(receipt)
+			if err != nil {
+				return err
+			}
 		}
-	}
 
-	// Store logs.
-	for _, log := range eth2DbLogs(logs) {
-		if err = p.storage.Store(log); err != nil {
-			p.logger.Error("Failed to store logs", "height", blockNum, "log", log, "err", err)
-			return err
+		// Store logs.
+		for _, log := range eth2DbLogs(logs) {
+			if err = s.Upsert(log); err != nil {
+				p.logger.Error("Failed to store logs", "height", blockNum, "log", log, "err", err)
+				return err
+			}
 		}
-	}
 
-	// Store block.
-	err = p.storage.Store(blk)
-	if err != nil {
-		return err
-	}
-
-	return nil
+		// Store block.
+		return s.Upsert(blk)
+	})
 }
 
 // eth2DbLogs converts ethereum log to model log.

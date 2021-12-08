@@ -1,15 +1,14 @@
 package storage
 
 import (
+	"context"
+
 	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
 )
 
 type Storage interface {
-	// Store stores data.
-	Store(value interface{}) error
-
-	// Update updates record.
-	Update(value interface{}) error
+	// Upsert upserts a record.
+	Upsert(value interface{}) error
 
 	// Delete deletes all records with round less than the given round.
 	Delete(table interface{}, round uint64) error
@@ -56,5 +55,11 @@ type Storage interface {
 	// GetTransactionReceipt returns the receipt of the transaction.
 	GetTransactionReceipt(txHash string) (*model.Receipt, error)
 
+	// GetLogs returns all logs between start and end rounds.
 	GetLogs(startRound, endRound uint64) ([]*model.Log, error)
+
+	// RunInTransaction runs a function in a transaction. If function
+	// returns an error transaction is rolled back, otherwise transaction
+	// is committed.
+	RunInTransaction(ctx context.Context, fn func(Storage) error) error
 }
