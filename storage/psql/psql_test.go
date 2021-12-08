@@ -37,7 +37,8 @@ docker run  -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_
 
 func TestInitPostDb(t *testing.T) {
 	require := require.New(t)
-
+	db, err := InitDB(tests.TestsConfig.Database)
+	require.NoError(err, "initialize db")
 	block1 := &model.Block{
 		Round: 1,
 		Hash:  "hello",
@@ -164,10 +165,7 @@ func TestUpdate(t *testing.T) {
 	require := require.New(t)
 
 	db, err := InitDB(tests.TestsConfig.Database)
-	require.NoError(err, "initialize postdb")
-
 	require.NoError(err, "initialize db")
-
 	ir1 := &model.IndexedRoundWithTip{
 		Tip:   model.Continues,
 		Round: 1,
