@@ -81,7 +81,7 @@ func convertToEthFormat(
 		ReceiptHash: ethtypes.EmptyRootHash.Hex(),
 		Bloom:       string(bloomData),
 		Difficulty:  big.NewInt(0).String(),
-		Number:      number.String(),
+		Number:      number.Uint64(),
 		GasLimit:    uint64(defaultGasLimit),
 		GasUsed:     gas,
 		Time:        uint64(block.Header.Timestamp),

@@ -60,21 +60,22 @@ type Block struct {
 	Hash         string `bun:",pk"`
 	Round        uint64
 	Header       *Header
-	Uncles       []*Header
-	Transactions []*Transaction
+	Uncles       []*Header      `bun:"rel:has-many,join:hash=nephew_hash"`
+	Transactions []*Transaction `bun:"rel:has-many,join:hash=block_hash"`
 }
 
 // Header represents ethereum block header.
 type Header struct {
 	ParentHash  string
 	UncleHash   string
+	NephewHash  string // for Block.Uncles later
 	Coinbase    string
 	Root        string
 	TxHash      string
 	ReceiptHash string
 	Bloom       string
 	Difficulty  string
-	Number      string
+	Number      uint64
 	GasLimit    uint64
 	GasUsed     uint64
 	Time        uint64
@@ -101,7 +102,7 @@ type Receipt struct {
 	Status            uint
 	CumulativeGasUsed uint64
 	LogsBloom         string
-	Logs              []*Log
+	Logs              []*Log `bun:"rel:has-many,join:transaction_hash=tx_hash"`
 	TransactionHash   string `bun:",pk"`
 	BlockHash         string
 	GasUsed           uint64
