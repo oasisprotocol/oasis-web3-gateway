@@ -7,8 +7,10 @@ import (
 )
 
 var tables = []interface{}{
+	new(AccessTuple),
 	new(Block),
 	new(BlockRef),
+	new(Header),
 	new(Transaction),
 	new(TransactionRef),
 	new(IndexedRoundWithTip),
@@ -30,8 +32,8 @@ func CreateTables(db *bun.DB) error {
 
 // TruncateModel clears any DB records.
 func TruncateModel(db *bun.DB) error {
-	for _, m := range tables {
-		if _, err := db.NewDropTable().Model(m).IfExists().Exec(context.Background()); err != nil {
+	for _, tb := range tables {
+		if _, err := db.NewDropTable().Model(tb).IfExists().Exec(context.Background()); err != nil {
 			return err
 		}
 	}
