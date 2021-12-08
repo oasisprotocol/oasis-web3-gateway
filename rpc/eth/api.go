@@ -23,6 +23,7 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/evm"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 
+	"github.com/starfishlabs/oasis-evm-web3-gateway/conf"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/indexer"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/utils"
@@ -42,21 +43,25 @@ var (
 	ErrIndexOutOfRange            = errors.New("index out of range")
 	ErrMalformedTransaction       = errors.New("malformed transaction")
 	ErrMalformedBlockNumber       = errors.New("malformed blocknumber")
+	ErrInvalidRequest             = errors.New("invalid request")
 
 	// estimateGasSigSpec is a dummy signature spec used by the estimate gas method, as
 	// otherwise transactions without signature would be underestimated.
 	estimateGasSigSpec = estimateGasDummySigSpec()
 )
 
-const revertErrorPrefix = "reverted: "
+const (
+	revertErrorPrefix = "reverted: "
+)
 
 // PublicAPI is the eth_ prefixed set of APIs in the Web3 JSON-RPC spec.
 type PublicAPI struct {
-	ctx     context.Context
-	client  client.RuntimeClient
-	backend indexer.Backend
-	chainID uint32
-	Logger  *logging.Logger
+	ctx          context.Context
+	client       client.RuntimeClient
+	backend      indexer.Backend
+	chainID      uint32
+	Logger       *logging.Logger
+	methodLimits *conf.MethodLimits
 }
 
 // NewPublicAPI creates an instance of the public ETH Web3 API.
@@ -66,13 +71,15 @@ func NewPublicAPI(
 	logger *logging.Logger,
 	chainID uint32,
 	backend indexer.Backend,
+	methodLimits *conf.MethodLimits,
 ) *PublicAPI {
 	return &PublicAPI{
-		ctx:     ctx,
-		client:  client,
-		chainID: chainID,
-		Logger:  logger,
-		backend: backend,
+		ctx:          ctx,
+		client:       client,
+		chainID:      chainID,
+		Logger:       logger,
+		backend:      backend,
+		methodLimits: methodLimits,
 	}
 }
 
@@ -544,6 +551,14 @@ func (api *PublicAPI) GetLogs(filter filters.FilterCriteria) ([]*ethtypes.Log, e
 	startRoundInclusive, endRoundInclusive, err := api.getStartEndRounds(filter)
 	if err != nil {
 		return nil, fmt.Errorf("error getting start and end rounds: %w", err)
+	}
+
+	if endRoundInclusive < startRoundInclusive {
+		return nil, fmt.Errorf("%w: end round greater than start round", ErrInvalidRequest)
+	}
+
+	if limit := api.methodLimits.GetLogsMaxRounds; limit != 0 && endRoundInclusive-startRoundInclusive > limit {
+		return nil, fmt.Errorf("%w: max allowed of rounds in logs query is: %d", ErrInvalidRequest, limit)
 	}
 
 	// TODO: filter addresses and topics
