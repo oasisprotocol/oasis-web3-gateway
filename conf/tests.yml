@@ -23,3 +23,5 @@ gateway:
   ws:
     host: "localhost"
     port: 8546
+  method_limits:
+    get_logs_max_rounds: 100

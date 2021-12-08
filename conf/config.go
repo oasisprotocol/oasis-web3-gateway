@@ -100,6 +100,9 @@ type GatewayConfig struct {
 
 	// ChainID defines the Ethereum network chain id.
 	ChainID uint32 `koanf:"chain_id"`
+
+	// MethodLimits is the gateway method limits config.
+	MethodLimits *MethodLimits `koanf:"method_limits"`
 }
 
 // Validate validates the gateway configuration.
@@ -151,6 +154,12 @@ type GatewayWSConfig struct {
 	// Timeouts allows for customization of the timeout values used by the HTTP RPC
 	// interface.
 	Timeouts *HTTPTimeouts `koanf:"timeouts"`
+}
+
+// MethodLimits are the configured gateway method limits.
+type MethodLimits struct {
+	// GetLogsMaxRounds is the maximum number of rounds to query for in a get logs query.
+	GetLogsMaxRounds uint64 `koanf:"get_logs_max_rounds"`
 }
 
 // InitConfig initializes configuration from file.

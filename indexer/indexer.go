@@ -199,12 +199,13 @@ func New(
 	enablePruning bool,
 	pruningStep uint64,
 ) (*Service, Backend, error) {
-	backend, err := backendFactory(runtimeID, storage)
+	ctx, cancelCtx := context.WithCancel(context.Background())
+
+	backend, err := backendFactory(ctx, runtimeID, storage)
 	if err != nil {
+		cancelCtx()
 		return nil, nil, err
 	}
-
-	ctx, cancelCtx := context.WithCancel(context.Background())
 
 	s := &Service{
 		BaseBackgroundService: *service.NewBaseBackgroundService("gateway/indexer"),

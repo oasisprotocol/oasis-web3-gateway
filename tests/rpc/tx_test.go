@@ -14,8 +14,9 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	oasisTesting "github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing"
 	"github.com/stretchr/testify/require"
+
+	"github.com/starfishlabs/oasis-evm-web3-gateway/tests"
 )
 
 const ethTimeout = 15 * time.Second
@@ -77,7 +78,7 @@ func testContractCreation(t *testing.T, value *big.Int) uint64 {
 	chainID, err := ec.ChainID(context.Background())
 	require.Nil(t, err, "get chainid")
 
-	nonce, err := ec.NonceAt(context.Background(), oasisTesting.Dave.EthAddress, nil)
+	nonce, err := ec.NonceAt(context.Background(), tests.TestKey1.EthAddress, nil)
 	require.Nil(t, err, "get nonce failed")
 
 	// Create transaction
@@ -89,7 +90,7 @@ func testContractCreation(t *testing.T, value *big.Int) uint64 {
 		Data:     code,
 	})
 	signer := types.LatestSignerForChainID(chainID)
-	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), daveKey)
+	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), tests.TestKey1.Private)
 	require.Nil(t, err, "sign tx")
 
 	signedTx, err := tx.WithSignature(signer, signature)
@@ -126,12 +127,12 @@ func TestEth_EstimateGas(t *testing.T) {
 	chainID, err := ec.ChainID(context.Background())
 	require.Nil(t, err, "get chainid")
 
-	nonce, err := ec.NonceAt(context.Background(), oasisTesting.Dave.EthAddress, nil)
+	nonce, err := ec.NonceAt(context.Background(), tests.TestKey1.EthAddress, nil)
 	require.Nil(t, err, "get nonce failed")
 
 	// Build call args for estimate gas
 	msg := ethereum.CallMsg{
-		From:  oasisTesting.Dave.EthAddress,
+		From:  tests.TestKey1.EthAddress,
 		Value: big.NewInt(0),
 		Data:  code,
 	}
@@ -142,7 +143,7 @@ func TestEth_EstimateGas(t *testing.T) {
 	// Create transaction
 	tx := types.NewContractCreation(nonce, big.NewInt(0), gas, big.NewInt(2), code)
 	signer := types.LatestSignerForChainID(chainID)
-	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), daveKey)
+	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), tests.TestKey1.Private)
 	require.Nil(t, err, "sign tx")
 
 	signedTx, err := tx.WithSignature(signer, signature)
@@ -166,14 +167,14 @@ func TestEth_GetCode(t *testing.T) {
 	chainID, err := ec.ChainID(context.Background())
 	require.Nil(t, err, "get chainid")
 
-	nonce, err := ec.NonceAt(context.Background(), oasisTesting.Dave.EthAddress, nil)
+	nonce, err := ec.NonceAt(context.Background(), tests.TestKey1.EthAddress, nil)
 	require.Nil(t, err, "get nonce failed")
 	t.Logf("got nonce: %v", nonce)
 
 	// Create transaction
 	tx := types.NewContractCreation(nonce, big.NewInt(0), 500000, big.NewInt(2), code)
 	signer := types.LatestSignerForChainID(chainID)
-	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), daveKey)
+	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), tests.TestKey1.Private)
 	require.Nil(t, err, "sign tx")
 
 	signedTx, err := tx.WithSignature(signer, signature)
@@ -229,14 +230,14 @@ func TestEth_Call(t *testing.T) {
 	chainID, err := ec.ChainID(context.Background())
 	require.Nil(t, err, "get chainid")
 
-	nonce, err := ec.NonceAt(context.Background(), oasisTesting.Dave.EthAddress, nil)
+	nonce, err := ec.NonceAt(context.Background(), tests.TestKey1.EthAddress, nil)
 	require.Nil(t, err, "get nonce failed")
 	t.Logf("got nonce: %v", nonce)
 
 	// Create transaction
 	tx := types.NewContractCreation(nonce, big.NewInt(0), 500000, big.NewInt(2), code)
 	signer := types.LatestSignerForChainID(chainID)
-	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), daveKey)
+	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), tests.TestKey1.Private)
 	require.Nil(t, err, "sign tx")
 
 	signedTx, err := tx.WithSignature(signer, signature)
@@ -292,13 +293,13 @@ func TestERC20(t *testing.T) {
 	chainID, err := ec.ChainID(context.Background())
 	require.Nil(t, err, "get chainid")
 
-	nonce, err := ec.NonceAt(context.Background(), oasisTesting.Dave.EthAddress, nil)
+	nonce, err := ec.NonceAt(context.Background(), tests.TestKey1.EthAddress, nil)
 	require.Nil(t, err, "get nonce failed")
 
 	// Deploy ERC20 contract
 	tx := types.NewContractCreation(nonce, big.NewInt(0), 1000000, big.NewInt(2), code)
 	signer := types.LatestSignerForChainID(chainID)
-	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), daveKey)
+	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), tests.TestKey1.Private)
 	require.Nil(t, err, "sign tx")
 
 	signedTx, err := tx.WithSignature(signer, signature)
@@ -317,7 +318,7 @@ func TestERC20(t *testing.T) {
 	t.Logf("ERC20 address: %s", tokenAddr.Hex())
 
 	// Make transfer token transaction
-	nonce, err = ec.NonceAt(context.Background(), oasisTesting.Dave.EthAddress, nil)
+	nonce, err = ec.NonceAt(context.Background(), tests.TestKey1.EthAddress, nil)
 	require.Nil(t, err, "get nonce failed")
 	transferCall, err := testabi.Pack("transfer", common.Address{1}, big.NewInt(10))
 	if err != nil {
@@ -326,7 +327,7 @@ func TestERC20(t *testing.T) {
 
 	tx = types.NewTransaction(nonce, tokenAddr, big.NewInt(0), 1000000, big.NewInt(2), transferCall)
 	signer = types.LatestSignerForChainID(chainID)
-	signature, err = crypto.Sign(signer.Hash(tx).Bytes(), daveKey)
+	signature, err = crypto.Sign(signer.Hash(tx).Bytes(), tests.TestKey1.Private)
 	require.Nil(t, err, "sign tx")
 	signedTx, err = tx.WithSignature(signer, signature)
 	require.Nil(t, err, "pack tx")

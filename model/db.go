@@ -60,7 +60,6 @@ type Block struct {
 	Hash         string `bun:",pk"`
 	Round        uint64
 	Header       *Header
-	Uncles       []*Header      `bun:"rel:has-many,join:hash=nephew_hash"`
 	Transactions []*Transaction `bun:"rel:has-many,join:hash=block_hash"`
 }
 
@@ -68,7 +67,6 @@ type Block struct {
 type Header struct {
 	ParentHash  string
 	UncleHash   string
-	NephewHash  string // for Block.Uncles later
 	Coinbase    string
 	Root        string
 	TxHash      string

@@ -38,5 +38,19 @@ mv "$FIXTURE_FILE.tmp" "$FIXTURE_FILE"
 jq ".runtimes[1].version = {major:"$(emerald_ver 1)", minor:"$(emerald_ver 2)", patch:"$(emerald_ver 3)"}" "$FIXTURE_FILE" >"$FIXTURE_FILE.tmp"
 mv "$FIXTURE_FILE.tmp" "$FIXTURE_FILE"
 
+# Bump the batch size (default=1).
+jq '.runtimes[1].txn_scheduler.max_batch_size=20' "$FIXTURE_FILE" >"$FIXTURE_FILE.tmp"
+mv "$FIXTURE_FILE.tmp" "$FIXTURE_FILE"
+
+jq '.runtimes[1].txn_scheduler.max_batch_size_bytes=1048576' "$FIXTURE_FILE" >"$FIXTURE_FILE.tmp"
+mv "$FIXTURE_FILE.tmp" "$FIXTURE_FILE"
+
+jq '.runtimes[1].txn_scheduler.propose_batch_timeout=2' "$FIXTURE_FILE" >"$FIXTURE_FILE.tmp"
+mv "$FIXTURE_FILE.tmp" "$FIXTURE_FILE"
+
+# Use a batch timeout of 1 second.
+jq '.runtimes[1].txn_scheduler.batch_flush_timeout=1000000000' "$FIXTURE_FILE" >"$FIXTURE_FILE.tmp"
+mv "$FIXTURE_FILE.tmp" "$FIXTURE_FILE"
+
 # Run oasis-node.
 ${OASIS_NET_RUNNER} --fixture.file "$FIXTURE_FILE" --basedir "${OASIS_NODE_DATADIR}" --basedir.no_temp_dir

@@ -14,6 +14,7 @@ import (
 
 	cmnEth "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/go-pg/pg/v10"
 	"github.com/oasisprotocol/oasis-core/go/common"
 	cmnGrpc "github.com/oasisprotocol/oasis-core/go/common/grpc"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
@@ -91,7 +92,14 @@ func Setup() error {
 		return fmt.Errorf("failed connecting to oasis-node: %w", err)
 	}
 
-	if err = InitialDeposit(rc, 1000000000000); err != nil {
+	// Fund test accounts.
+	if err = InitialDeposit(rc, 1000000000000, tests.TestKey1.OasisAddress); err != nil {
+		return fmt.Errorf("initial deposit failed: %w", err)
+	}
+	if err = InitialDeposit(rc, 1000000000000, tests.TestKey2.OasisAddress); err != nil {
+		return fmt.Errorf("initial deposit failed: %w", err)
+	}
+	if err = InitialDeposit(rc, 1000000000000, tests.TestKey3.OasisAddress); err != nil {
 		return fmt.Errorf("initial deposit failed: %w", err)
 	}
 
@@ -160,7 +168,7 @@ func waitForDepositEvent(ch <-chan *client.BlockEvents, from types.Address, nonc
 	}
 }
 
-func InitialDeposit(rc client.RuntimeClient, amount uint64) error {
+func InitialDeposit(rc client.RuntimeClient, amount uint64, to types.Address) error {
 	if amount == 0 {
 		return fmt.Errorf("no deposit amount provided")
 	}
@@ -169,8 +177,6 @@ func InitialDeposit(rc client.RuntimeClient, amount uint64) error {
 	}
 
 	signer := oasisTesting.Alice.Signer
-	// Corresponds to Dave's address 0x90adE3B7065fa715c7a150313877dF1d33e777D5.
-	to := oasisTesting.Dave.Address
 	extraGas := uint64(0)
 	flag.Parse()
 
@@ -225,18 +231,18 @@ func InitialDeposit(rc client.RuntimeClient, amount uint64) error {
 		return err
 	}
 
-	if err = waitForDepositEvent(acCh, oasisTesting.Alice.Address, nonce, oasisTesting.Dave.Address, ba); err != nil {
+	if err = waitForDepositEvent(acCh, oasisTesting.Alice.Address, nonce, to, ba); err != nil {
 		return fmt.Errorf("ensuring alice deposit runtime event: %w", err)
 	}
 
-	fmt.Printf("Successfully deposited %d tokens from %s to %s (eth address %x)\n", amount, oasisTesting.Alice.Address, to, oasisTesting.Dave.EthAddress)
+	fmt.Printf("Successfully deposited %d tokens from %s to %s\n", amount, oasisTesting.Alice.Address, to)
 
 	return nil
 }
 
 // Shutdown stops web3 gateway.
 func Shutdown() error {
-	if err := model.TruncateModel(db.DB); err != nil {
+	if err := model.TruncateModel(db.DB.(*pg.DB)); err != nil {
 		return fmt.Errorf("db cleanup failed: %w", err)
 	}
 

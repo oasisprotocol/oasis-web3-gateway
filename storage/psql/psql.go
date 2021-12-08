@@ -118,12 +118,7 @@ func (db *PostDB) upsert(value interface{}) (err error) {
 }
 
 // Store stores data in db.
-func (db *PostDB) Store(value interface{}) error {
-	return db.upsert(value)
-}
-
-// Update updates record.
-func (db *PostDB) Update(value interface{}) error {
+func (db *PostDB) Upsert(value interface{}) error {
 	return db.upsert(value)
 }
 
@@ -282,4 +277,19 @@ func (db *PostDB) GetLogs(startRound, endRound uint64) ([]*model.Log, error) {
 	}
 
 	return logs, nil
+}
+
+func transactionStorage(t *pg.Tx) storage.Storage {
+	db := PostDB{t}
+	return &db
+}
+
+// RunInTransaction runs a function in a transaction. If function
+// returns an error transaction is rolled back, otherwise transaction
+// is committed.
+func (db *PostDB) RunInTransaction(ctx context.Context, fn func(storage.Storage) error) error {
+	return db.DB.RunInTransaction(ctx, func(t *pg.Tx) error {
+		db := transactionStorage(t)
+		return fn(db)
+	})
 }
