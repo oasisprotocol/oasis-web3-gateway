@@ -39,26 +39,26 @@ func TestInitPostDb(t *testing.T) {
 	require := require.New(t)
 	db, err := InitDB(tests.TestsConfig.Database)
 	require.NoError(err, "initialize db")
-	block1 := &model.Block{
+	block1 := &model.BlockRef{
 		Round: 1,
 		Hash:  "hello",
 	}
-	block2 := &model.Block{
+	block2 := &model.BlockRef{
 		Round: 2,
 		Hash:  "world",
 	}
-	block3 := &model.Block{
+	block3 := &model.BlockRef{
 		Round: 3,
 		Hash:  "hello world",
 	}
 	if err = db.Store(block1); err != nil {
-		log.Fatal("postdb store error:", err)
+		log.Fatal("store error:", err)
 	}
 	if err = db.Store(block2); err != nil {
-		log.Fatal("postdb store error:", err)
+		log.Fatal("store error:", err)
 	}
 	if err = db.Store(block3); err != nil {
-		log.Fatal("postdb store error:", err)
+		log.Fatal("store error:", err)
 	}
 	round, err := db.GetBlockRound(block1.Hash)
 	require.NoError(err)
