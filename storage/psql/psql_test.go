@@ -51,13 +51,13 @@ func TestInitPostDb(t *testing.T) {
 		Round: 3,
 		Hash:  "hello world",
 	}
-	if err := db.Store(block1); err != nil {
+	if err = db.Store(block1); err != nil {
 		log.Fatal("postdb store error:", err)
 	}
-	if err := db.Store(block2); err != nil {
+	if err = db.Store(block2); err != nil {
 		log.Fatal("postdb store error:", err)
 	}
-	if err := db.Store(block3); err != nil {
+	if err = db.Store(block3); err != nil {
 		log.Fatal("postdb store error:", err)
 	}
 	round, err := db.GetBlockRound(block1.Hash)
