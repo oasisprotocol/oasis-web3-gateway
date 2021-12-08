@@ -27,15 +27,9 @@ const (
 	BlocksSubscription
 	// LastSubscription keeps track of the last index.
 	LastIndexSubscription
-	// Transactions entering the pending state.
-	// Note: there is no pending transaction in web3gateway.
-	PendingTransactionsSubscription
 )
 
 const (
-	// txChanSize is the size of channel listening to NewTxsEvent.
-	// The number is referenced from the size of tx pool.
-	txChanSize = 4096
 	// chainEvChanSize is the size of channel listening to ChainEvent.
 	chainEvChanSize = 10
 )
@@ -58,13 +52,11 @@ type EventSystem struct {
 	backend SubscribeBackend
 
 	// Subscriptions
-	txsSub   event.Subscription // Subscription for new transaction event
 	chainSub event.Subscription // Subscription for new chain event
 
 	// Channels
 	install   chan *subscription // install filter for event notification
 	uninstall chan *subscription // remove filter for event notification
-	txsCh     chan NewTxsEvent   // Channel to receive new transactions event
 	chainCh   chan ChainEvent    // Channel to receive new chain event
 }
 
@@ -79,15 +71,13 @@ func NewEventSystem(backend SubscribeBackend) *EventSystem {
 		backend:   backend,
 		install:   make(chan *subscription),
 		uninstall: make(chan *subscription),
-		txsCh:     make(chan NewTxsEvent, txChanSize),
 		chainCh:   make(chan ChainEvent, chainEvChanSize),
 	}
 
-	m.txsSub = m.backend.SubscribeNewTxsEvent(m.txsCh)
 	m.chainSub = m.backend.SubscribeChainEvent(m.chainCh)
 
 	// Make sure none of the subscriptions are empty
-	if m.txsSub == nil || m.chainSub == nil {
+	if m.chainSub == nil {
 		log.Crit("Subscribe for event system failed")
 	}
 
@@ -262,16 +252,6 @@ func (es *EventSystem) handleLogs(filters filterIndex, ev ChainEvent) {
 	}
 }
 
-func (es *EventSystem) handleTxsEvent(filters filterIndex, ev NewTxsEvent) {
-	hashes := make([]common.Hash, 0, len(ev.Txs))
-	for _, tx := range ev.Txs {
-		hashes = append(hashes, common.HexToHash(tx.Hash))
-	}
-	for _, f := range filters[PendingTransactionsSubscription] {
-		f.hashes <- hashes
-	}
-}
-
 func (es *EventSystem) handleChainEvent(filters filterIndex, ev ChainEvent) {
 	for _, f := range filters[BlocksSubscription] {
 		header := utils.DB2EthHeader(ev.Block)
@@ -283,7 +263,6 @@ func (es *EventSystem) handleChainEvent(filters filterIndex, ev ChainEvent) {
 func (es *EventSystem) eventLoop() {
 	// Ensure all subscriptions get cleaned up
 	defer func() {
-		es.txsSub.Unsubscribe()
 		es.chainSub.Unsubscribe()
 	}()
 
@@ -294,10 +273,6 @@ func (es *EventSystem) eventLoop() {
 
 	for {
 		select {
-		case ev := <-es.txsCh:
-			// Note: there is no pending transaction in web3gateway,
-			// so the program should not go there.
-			es.handleTxsEvent(index, ev)
 		case ev := <-es.chainCh:
 			es.handleLogs(index, ev)
 			es.handleChainEvent(index, ev)
@@ -309,8 +284,6 @@ func (es *EventSystem) eventLoop() {
 			delete(index[f.typ], f.id)
 			close(f.err)
 		// System stopped
-		case <-es.txsSub.Err():
-			return
 		case <-es.chainSub.Err():
 			return
 		}

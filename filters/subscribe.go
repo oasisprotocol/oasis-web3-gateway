@@ -11,7 +11,6 @@ import (
 type Subscribe struct {
 	err     chan error
 	errOnce sync.Once
-	txCh    chan<- NewTxsEvent
 	chainCh chan<- ChainEvent
 	storage storage.Storage
 }
@@ -34,24 +33,11 @@ func NewSubscribeBackend(storage storage.Storage) (SubscribeBackend, error) {
 	return sb, nil
 }
 
-func (s *Subscribe) SubscribeNewTxsEvent(ch chan<- NewTxsEvent) event.Subscription {
-	s.txCh = ch
-	return s
-}
-
 func (s *Subscribe) SubscribeChainEvent(ch chan<- ChainEvent) event.Subscription {
 	s.chainCh = ch
 	return s
 }
 
-func (s *Subscribe) TxChan() chan<- NewTxsEvent {
-	return s.txCh
-}
-
 func (s *Subscribe) ChainChan() chan<- ChainEvent {
 	return s.chainCh
-}
-
-func (s *Subscribe) ChainDB() storage.Storage {
-	return s.storage
 }
