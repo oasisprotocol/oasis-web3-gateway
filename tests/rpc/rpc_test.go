@@ -205,6 +205,17 @@ func TestEth_GetBlockByNumberLatest(t *testing.T) {
 	require.Greater(t, block.NumberU64(), uint64(0))
 }
 
+func TestEth_GetBlockByNumberEarliest(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
+	defer cancel()
+	ec := localClient()
+
+	// Explicitly query latest block number.
+	block, err := ec.BlockByNumber(ctx, big.NewInt(0))
+	require.NoError(t, err, "get latest block number")
+	require.Equal(t, block.NumberU64(), uint64(0))
+}
+
 func TestEth_GetBlockTransactionCountByNumberLatest(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
 	defer cancel()

@@ -2,9 +2,14 @@ package storage
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
 )
+
+// ErrNoRoundsIndexed is the error returned by last indexed round when no rounds
+// are indexed.
+var ErrNoRoundsIndexed = fmt.Errorf("no rounds indexed")
 
 type Storage interface {
 	// Upsert upserts a record.
@@ -25,8 +30,8 @@ type Storage interface {
 	// GetTransactionRef returns block hash, round and index of the transaction.
 	GetTransactionRef(ethTxHash string) (*model.TransactionRef, error)
 
-	// GetContinuesIndexedRound query continues indexed block round.
-	GetContinuesIndexedRound() (uint64, error)
+	// GetLastIndexedRound query the last indexed round.
+	GetLastIndexedRound() (uint64, error)
 
 	// GetLastRetainedRound query the minimum round not pruned.
 	GetLastRetainedRound() (uint64, error)

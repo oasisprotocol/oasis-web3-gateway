@@ -175,8 +175,8 @@ func TestUpsert(t *testing.T) {
 	}
 	require.NoError(db.Upsert(ir1), "update")
 
-	r1, err := db.GetContinuesIndexedRound()
-	require.NoError(err, "GetContinuesIndexedRound")
+	r1, err := db.GetLastIndexedRound()
+	require.NoError(err, "GetLastIndexedRound")
 	require.EqualValues(1, r1)
 
 	ir2 := &model.IndexedRoundWithTip{
@@ -184,8 +184,8 @@ func TestUpsert(t *testing.T) {
 		Round: 2,
 	}
 	require.NoError(db.Upsert(ir2), "update")
-	r2, err := db.GetContinuesIndexedRound()
-	require.NoError(err, "GetContinuesIndexedRound")
+	r2, err := db.GetLastIndexedRound()
+	require.NoError(err, "GetLastIndexedRound")
 	require.EqualValues(2, r2)
 
 	ir3 := &model.IndexedRoundWithTip{
@@ -193,8 +193,8 @@ func TestUpsert(t *testing.T) {
 		Round: 3,
 	}
 	require.NoError(db.Upsert(ir3), "update")
-	r3, err := db.GetContinuesIndexedRound()
-	require.NoError(err, "GetContinuesIndexedRound")
+	r3, err := db.GetLastIndexedRound()
+	require.NoError(err, "GetLastIndexedRound")
 	require.EqualValues(3, r3)
 }
 

@@ -118,19 +118,31 @@ func (s *Service) indexingWorker() {
 			continue
 		}
 
+		var startAt uint64
+		// Get last indexed round.
 		lastIndexed, err := s.backend.QueryLastIndexedRound()
-		if err != nil {
+		switch {
+		case errors.Is(err, storage.ErrNoRoundsIndexed):
+			// No rounds indexed, start at 0.
+			startAt = 0
+		case err != nil:
 			s.Logger.Error("failed to query last indexed round",
 				"err", err,
 			)
 			continue
-		}
-		if latest < lastIndexed {
-			panic("This is a new chain, please clear the db first!")
+		default:
+			if latest < lastIndexed {
+				panic("This is a new chain, please clear the db first!")
+			}
+			// Latest round already indexed.
+			if latest == lastIndexed {
+				time.Sleep(storageRetryTimeout)
+				continue
+			}
+			startAt = lastIndexed + 1
 		}
 
-		// Adjust the last indexed round such that it is at least equal to or greater than the last
-		// retained round reported by the node as there is no way to request earlier rounds.
+		// Get last retained round on the node.
 		lastRetainedBlock, err := s.client.GetLastRetainedBlock(s.ctx)
 		if err != nil {
 			time.Sleep(storageRequestTimeout)
@@ -139,16 +151,12 @@ func (s *Service) indexingWorker() {
 			)
 			continue
 		}
-		if lastIndexed < lastRetainedBlock.Header.Round {
-			lastIndexed = lastRetainedBlock.Header.Round - 1
+		// Adjust startAt round in case node pruned missing rounds.
+		if lastRetainedBlock.Header.Round > startAt {
+			startAt = lastRetainedBlock.Header.Round
 		}
 
-		if latest == lastIndexed {
-			time.Sleep(storageRetryTimeout)
-			continue
-		}
-
-		for round := lastIndexed + 1; round <= latest; round++ {
+		for round := startAt; round <= latest; round++ {
 			select {
 			case <-s.ctx.Done():
 				return
