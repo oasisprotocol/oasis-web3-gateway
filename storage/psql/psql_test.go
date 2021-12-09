@@ -6,11 +6,12 @@ import (
 	"os"
 	"testing"
 
-	"github.com/go-pg/pg/v10"
 	"github.com/stretchr/testify/require"
 
 	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/tests"
+
+	"github.com/uptrace/bun"
 )
 
 var db *PostDB
@@ -29,7 +30,7 @@ docker run  -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_
 	// Run tests.
 	code := m.Run()
 
-	if err = model.TruncateModel(db.DB.(*pg.DB)); err != nil {
+	if err = model.TruncateModel(db.DB.(*bun.DB)); err != nil {
 		log.Fatal("failed to cleanup db:", err)
 	}
 
@@ -52,13 +53,13 @@ func TestInitPostDb(t *testing.T) {
 		Round: 3,
 		Hash:  "hello world",
 	}
-	if err = db.Store(block1); err != nil {
+	if err = db.Upsert(block1); err != nil {
 		log.Fatal("store error:", err)
 	}
-	if err = db.Store(block2); err != nil {
+	if err = db.Upsert(block2); err != nil {
 		log.Fatal("store error:", err)
 	}
-	if err = db.Store(block3); err != nil {
+	if err = db.Upsert(block3); err != nil {
 		log.Fatal("store error:", err)
 	}
 	round, err := db.GetBlockRound(block1.Hash)
