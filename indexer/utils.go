@@ -172,7 +172,6 @@ func convertToEthFormat(
 		Hash:         bhash,
 		Round:        number.Uint64(),
 		Header:       innerHeader,
-		Uncles:       []*model.Header{},
 		Transactions: innerTxs,
 	}
 

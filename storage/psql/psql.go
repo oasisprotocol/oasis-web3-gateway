@@ -5,9 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"reflect"
+	"github.com/starfishlabs/oasis-evm-web3-gateway/storage"
 	"runtime"
-	"strings"
 	"time"
 
 	"github.com/starfishlabs/oasis-evm-web3-gateway/conf"
@@ -19,7 +18,7 @@ import (
 )
 
 type PostDB struct {
-	DB *bun.DB
+	DB bun.IDB
 }
 
 // InitDB creates postgresql db instance.
@@ -86,16 +85,18 @@ func (db *PostDB) upsertSingle(value interface{}) error {
 	}
 	if exists {
 		// PKs are required for ON CONFLICT DO UPDATE
-		typ := reflect.TypeOf(value)
-		table := db.DB.Table(typ)
-		pks := make([]string, len(table.PKs))
-		for i, f := range table.PKs {
-			pks[i] = f.Name
-		}
-		_, err = db.DB.NewInsert().
-			Model(value).
-			On(fmt.Sprintf("CONFLICT (%v) DO UPDATE", strings.Join(pks, ","))).
-			Exec(context.Background())
+		//typ := reflect.TypeOf(value)
+		//table := db.DB.Table(typ)
+		//pks := make([]string, len(table.PKs))
+		//for i, f := range table.PKs {
+		//	pks[i] = f.Name
+		//}
+		//_, err = db.DB.NewInsert().
+		//	Model(value).
+		//	On(fmt.Sprintf("CONFLICT (%v) DO UPDATE", strings.Join(pks, ","))).
+		//	Exec(context.Background())
+
+		_, err = db.DB.NewUpdate().Model(value).Exec(context.Background())
 	} else {
 		_, err = db.DB.NewInsert().Model(value).Exec(context.Background())
 	}
@@ -279,7 +280,7 @@ func (db *PostDB) GetLogs(startRound, endRound uint64) ([]*model.Log, error) {
 	return logs, nil
 }
 
-func transactionStorage(t *pg.Tx) storage.Storage {
+func transactionStorage(t *bun.Tx) storage.Storage {
 	db := PostDB{t}
 	return &db
 }
@@ -288,8 +289,12 @@ func transactionStorage(t *pg.Tx) storage.Storage {
 // returns an error transaction is rolled back, otherwise transaction
 // is committed.
 func (db *PostDB) RunInTransaction(ctx context.Context, fn func(storage.Storage) error) error {
-	return db.DB.RunInTransaction(ctx, func(t *pg.Tx) error {
-		db := transactionStorage(t)
+	bdb, ok := db.DB.(*bun.DB)
+	if !ok {
+		return fmt.Errorf("already in a transaction")
+	}
+	return bdb.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		db := transactionStorage(&tx)
 		return fn(db)
 	})
 }
