@@ -12,11 +12,13 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/spf13/cobra"
+	"github.com/uptrace/bun"
 	"google.golang.org/grpc"
 
 	"github.com/starfishlabs/oasis-evm-web3-gateway/conf"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/indexer"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/log"
+	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/server"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/storage/psql"
@@ -25,16 +27,30 @@ import (
 var (
 	// Path to the configuration file.
 	configFile string
+	// Allow unsafe operations.
+	allowUnsafe bool
+
 	// Oasis-web3-gateway root command.
 	rootCmd = &cobra.Command{
 		Use:   "oasis-evm-web3-gateway",
 		Short: "oasis-evm-web3-gateway",
 		RunE:  exec,
 	}
+
+	// Truncate DB.
+	truncateCmd = &cobra.Command{
+		Use:   "truncate-db",
+		Short: "truncate-db",
+		RunE:  truncateExec,
+	}
 )
 
 func init() {
 	rootCmd.Flags().StringVar(&configFile, "config", "./conf/server.yml", "path to the config.yml file")
+
+	truncateCmd.Flags().StringVar(&configFile, "config", "./conf/server.yml", "path to the config.yml file")
+	truncateCmd.Flags().BoolVar(&allowUnsafe, "unsafe", false, "allow destructive unsafe operations")
+	rootCmd.AddCommand(truncateCmd)
 }
 
 func main() {
@@ -46,6 +62,40 @@ func exec(cmd *cobra.Command, args []string) error {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+	return nil
+}
+
+func truncateExec(cmd *cobra.Command, args []string) error {
+	ctx := context.Background()
+	// Initialize server config
+	cfg, err := conf.InitConfig(configFile)
+	if err != nil {
+		return err
+	}
+	// Initialize logging.
+	if err = log.InitLogging(cfg); err != nil {
+		return err
+	}
+	logger := logging.GetLogger("truncate-db")
+
+	if !allowUnsafe {
+		logger.Error("unsafe commands not allowed, ensure `--unsafe` is set")
+		return fmt.Errorf("unsafe not allowed")
+	}
+
+	// Initialize db.
+	db, err := psql.InitDB(ctx, cfg.Database)
+	if err != nil {
+		logger.Error("failed to initialize db", "err", err)
+		return err
+	}
+	if err := model.TruncateModel(ctx, db.DB.(*bun.DB)); err != nil {
+		logger.Error("failed to truncate db model", "err", err)
+		return err
+	}
+
+	logger.Info("model truncated!")
+
 	return nil
 }
 
