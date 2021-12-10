@@ -14,6 +14,7 @@ import (
 
 	cmnEth "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/oasisprotocol/oasis-core/go/common"
 	cmnGrpc "github.com/oasisprotocol/oasis-core/go/common/grpc"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
@@ -65,6 +66,22 @@ var (
 	db *psql.PostDB
 	w3 *server.Web3Gateway
 )
+
+func localClient(t *testing.T, ws bool) *ethclient.Client {
+	var url string
+	var err error
+	switch ws {
+	case true:
+		url, err = w3.GetWSEndpoint()
+	case false:
+		url, err = w3.GetHTTPEndpoint()
+	}
+	require.NoError(t, err, "local client url")
+	c, err := ethclient.Dial(url)
+	require.NoError(t, err, "local client dial")
+
+	return c
+}
 
 // Setup spins up web3 gateway.
 func Setup() error {

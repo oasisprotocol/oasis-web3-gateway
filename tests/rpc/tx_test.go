@@ -70,7 +70,7 @@ func waitTransaction(ctx context.Context, ec *ethclient.Client, txhash common.Ha
 }
 
 func testContractCreation(t *testing.T, value *big.Int) uint64 {
-	ec := localClient()
+	ec := localClient(t, false)
 
 	t.Logf("compiled contract: %s", evmSolTestCompiledHex)
 	code := common.FromHex(strings.TrimSpace(evmSolTestCompiledHex))
@@ -121,7 +121,7 @@ func TestContractFailCreation(t *testing.T) {
 }
 
 func TestEth_EstimateGas(t *testing.T) {
-	ec := localClient()
+	ec := localClient(t, false)
 	code := common.FromHex(strings.TrimSpace(evmSolTestCompiledHex))
 
 	chainID, err := ec.ChainID(context.Background())
@@ -160,7 +160,7 @@ func TestEth_EstimateGas(t *testing.T) {
 }
 
 func TestEth_GetCode(t *testing.T) {
-	ec := localClient()
+	ec := localClient(t, false)
 
 	code := common.FromHex(strings.TrimSpace(evmSolTestCompiledHex))
 
@@ -223,7 +223,7 @@ func TestEth_Call(t *testing.T) {
 	`
 	testabi, _ := abi.JSON(strings.NewReader(abidata))
 
-	ec := localClient()
+	ec := localClient(t, false)
 
 	code := common.FromHex(strings.TrimSpace(evmSolTestCompiledHex))
 
@@ -286,7 +286,7 @@ func TestEth_Call(t *testing.T) {
 func TestERC20(t *testing.T) {
 	testabi, _ := abi.JSON(strings.NewReader(erc20abi))
 
-	ec := localClient()
+	ec := localClient(t, false)
 
 	code := common.FromHex(strings.TrimSpace(evmERC20TestCompiledHex))
 

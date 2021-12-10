@@ -19,7 +19,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/require"
 
 	"github.com/starfishlabs/oasis-evm-web3-gateway/tests"
@@ -64,7 +63,7 @@ func call(t *testing.T, method string, params interface{}) *Response {
 }
 
 func submitTransaction(ctx context.Context, t *testing.T, to common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *types.Receipt {
-	ec := localClient()
+	ec := localClient(t, false)
 	chainID, err := ec.ChainID(context.Background())
 	require.NoError(t, err)
 
@@ -104,7 +103,7 @@ func submitTestTransaction(ctx context.Context, t *testing.T) *types.Receipt {
 }
 
 func TestEth_GetBalance(t *testing.T) {
-	ec := localClient()
+	ec := localClient(t, false)
 	res, err := ec.BalanceAt(context.Background(), tests.TestKey1.EthAddress, nil)
 	require.NoError(t, err)
 
@@ -127,18 +126,8 @@ func TestEth_GetTransactionCount(t *testing.T) {
 	getNonce(t, fmt.Sprintf("%s", tests.TestKey1.EthAddress))
 }
 
-func localClient() *ethclient.Client {
-	url, err := w3.GetHTTPEndpoint()
-	if err != nil {
-		return nil
-	}
-
-	c, _ := ethclient.Dial(url)
-	return c
-}
-
 func TestEth_ChainID(t *testing.T) {
-	ec := localClient()
+	ec := localClient(t, false)
 
 	id, err := ec.ChainID(context.Background())
 	require.Nil(t, err, "get chainid")
@@ -148,7 +137,7 @@ func TestEth_ChainID(t *testing.T) {
 }
 
 func TestEth_GasPrice(t *testing.T) {
-	ec := localClient()
+	ec := localClient(t, false)
 
 	price, err := ec.SuggestGasPrice(context.Background())
 	require.Nil(t, err, "get gasPrice")
@@ -168,7 +157,7 @@ func TestEth_SendRawTransaction(t *testing.T) {
 func TestEth_GetBlockByNumberAndGetBlockByHash(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
 	defer cancel()
-	ec := localClient()
+	ec := localClient(t, false)
 
 	number := big.NewInt(1)
 	blk1, err := ec.BlockByNumber(ctx, number)
@@ -209,7 +198,7 @@ func TestEth_GetBlockByNumberAndGetBlockByHash(t *testing.T) {
 func TestEth_GetBlockByNumberLatest(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
 	defer cancel()
-	ec := localClient()
+	ec := localClient(t, false)
 
 	// Explicitly query latest block number.
 	block, err := ec.BlockByNumber(ctx, nil)
@@ -220,7 +209,7 @@ func TestEth_GetBlockByNumberLatest(t *testing.T) {
 func TestEth_GetBlockByNumberEarliest(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
 	defer cancel()
-	ec := localClient()
+	ec := localClient(t, false)
 
 	// Explicitly query latest block number.
 	block, err := ec.BlockByNumber(ctx, big.NewInt(0))
@@ -231,7 +220,7 @@ func TestEth_GetBlockByNumberEarliest(t *testing.T) {
 func TestEth_GetBlockTransactionCountByNumberLatest(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
 	defer cancel()
-	ec := localClient()
+	ec := localClient(t, false)
 
 	// Explicitly query latest block number.
 	_, err := ec.PendingTransactionCount(ctx)
@@ -241,7 +230,7 @@ func TestEth_GetBlockTransactionCountByNumberLatest(t *testing.T) {
 func TestEth_BlockNumber(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
 	defer cancel()
-	ec := localClient()
+	ec := localClient(t, false)
 
 	ret, err := ec.BlockNumber(ctx)
 	require.NoError(t, err)
@@ -252,7 +241,7 @@ func TestEth_GetTransactionByHash(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
 	defer cancel()
 
-	ec := localClient()
+	ec := localClient(t, false)
 
 	// Submit test transaction.
 	input := "0x7f7465737432000000000000000000000000000000000000000000000000000000600057"
@@ -343,7 +332,7 @@ func TestEth_GetLogsWithoutBlockhash(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
 	defer cancel()
 
-	ec := localClient()
+	ec := localClient(t, false)
 	_, err := ec.FilterLogs(ctx, ethereum.FilterQuery{FromBlock: big.NewInt(1), ToBlock: big.NewInt(10)})
 	require.NoError(t, err, "getLogs without explicit block hash")
 }
@@ -351,7 +340,7 @@ func TestEth_GetLogsWithoutBlockhash(t *testing.T) {
 func TestEth_GetLogsMultiple(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
 	defer cancel()
-	ec := localClient()
+	ec := localClient(t, false)
 
 	code := common.FromHex(strings.TrimSpace(evmEventsTestCompiledHex))
 
@@ -410,7 +399,7 @@ func TestEth_GetLogsMultiple(t *testing.T) {
 func TestEth_GetLogsInvalid(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
 	defer cancel()
-	ec := localClient()
+	ec := localClient(t, false)
 
 	_, err := ec.FilterLogs(ctx, ethereum.FilterQuery{FromBlock: big.NewInt(100), ToBlock: big.NewInt(300)})
 	require.Error(t, err, "querying logs for more than 100 rounds is not allowed")
