@@ -153,11 +153,14 @@ func (db *PostDB) GetLatestBlockHash() (string, error) {
 	return block.Hash, nil
 }
 
-// GetContinuesIndexedRound returns latest continues indexed block round.
-func (db *PostDB) GetContinuesIndexedRound() (uint64, error) {
+// GetLastIndexedRound returns latest indexed block round.
+func (db *PostDB) GetLastIndexedRound() (uint64, error) {
 	indexedRound := new(model.IndexedRoundWithTip)
 	err := db.DB.NewSelect().Model(indexedRound).Where("tip = ?", model.Continues).Scan(context.Background())
 	if err != nil {
+		if errors.Is(err, pg.ErrNoRows) {
+			return 0, storage.ErrNoRoundsIndexed
+		}
 		return 0, err
 	}
 

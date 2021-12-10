@@ -2,7 +2,6 @@ package indexer
 
 import (
 	"context"
-	"database/sql"
 	"encoding/hex"
 	"errors"
 
@@ -218,11 +217,8 @@ func (p *psqlBackend) storeIndexedRound(round uint64) error {
 
 // QueryLastIndexedRound returns the last indexed round.
 func (p *psqlBackend) QueryLastIndexedRound() (uint64, error) {
-	indexedRound, err := p.storage.GetContinuesIndexedRound()
+	indexedRound, err := p.storage.GetLastIndexedRound()
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return 0, nil
-		}
 		return 0, err
 	}
 
