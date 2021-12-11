@@ -3,6 +3,7 @@ package eth
 import (
 	"context"
 	"crypto/sha512"
+	"database/sql"
 	"errors"
 	"fmt"
 	"math/big"
@@ -15,7 +16,6 @@ import (
 	"github.com/ethereum/go-ethereum/eth/filters"
 	"github.com/ethereum/go-ethereum/rlp"
 	ethrpc "github.com/ethereum/go-ethereum/rpc"
-	"github.com/go-pg/pg/v10"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/secp256k1"
@@ -85,7 +85,7 @@ func handleStorageError(logger *logging.Logger, err error) error {
 	if err == nil {
 		return nil
 	}
-	if errors.Is(err, pg.ErrNoRows) {
+	if errors.Is(err, sql.ErrNoRows) {
 		// By web3 spec an empty response should be returned if the queried block, transaction
 		// is not existing.
 		logger.Debug("no results found", "err", err)

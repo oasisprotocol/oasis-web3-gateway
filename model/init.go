@@ -19,9 +19,9 @@ var tables = []interface{}{
 }
 
 // CreateTables creates tables.
-func CreateTables(db *bun.DB) error {
+func CreateTables(ctx context.Context, db *bun.DB) error {
 	for _, tb := range tables {
-		_, err := db.NewCreateTable().Model(tb).IfNotExists().Exec(context.Background())
+		_, err := db.NewCreateTable().Model(tb).IfNotExists().Exec(ctx)
 		if err != nil {
 			return err
 		}
@@ -31,9 +31,9 @@ func CreateTables(db *bun.DB) error {
 }
 
 // TruncateModel clears any DB records.
-func TruncateModel(db *bun.DB) error {
+func TruncateModel(ctx context.Context, db *bun.DB) error {
 	for _, tb := range tables {
-		if _, err := db.NewDropTable().Model(tb).IfExists().Exec(context.Background()); err != nil {
+		if _, err := db.NewDropTable().Model(tb).IfExists().Exec(ctx); err != nil {
 			return err
 		}
 	}

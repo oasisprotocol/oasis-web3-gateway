@@ -32,6 +32,7 @@ type wsConfig struct {
 
 // httpServer handle http connection and rpc requests.
 type httpServer struct {
+	ctx      context.Context
 	logger   *logging.Logger
 	timeouts rpc.HTTPTimeouts
 
@@ -51,8 +52,8 @@ type httpServer struct {
 	port     int
 }
 
-func newHTTPServer(logger *logging.Logger, timeouts rpc.HTTPTimeouts) *httpServer {
-	h := &httpServer{logger: logger, timeouts: timeouts}
+func newHTTPServer(ctx context.Context, logger *logging.Logger, timeouts rpc.HTTPTimeouts) *httpServer {
+	h := &httpServer{ctx: ctx, logger: logger, timeouts: timeouts}
 	return h
 }
 
@@ -132,7 +133,7 @@ func validatePrefix(what, path string) error {
 
 // stop shuts down the HTTP server.
 func (h *httpServer) stop() {
-	if err := h.server.Shutdown(context.Background()); err != nil {
+	if err := h.server.Shutdown(h.ctx); err != nil {
 		h.logger.Error("Error while shutting down HTTP server: %w", err)
 	}
 	h.logger.Info("HTTP server stopped", "endpoint", h.endpoint)

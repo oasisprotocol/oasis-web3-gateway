@@ -50,6 +50,7 @@ func exec(cmd *cobra.Command, args []string) error {
 }
 
 func runRoot() error {
+	ctx := context.Background()
 	// Initialize server config
 	cfg, err := conf.InitConfig(configFile)
 	if err != nil {
@@ -82,7 +83,7 @@ func runRoot() error {
 	rc := client.New(conn, runtimeID)
 
 	// Initialize db
-	db, err := psql.InitDB(cfg.Database)
+	db, err := psql.InitDB(ctx, cfg.Database)
 	if err != nil {
 		logger.Error("failed to initialize db", "err", err)
 		return err
@@ -90,7 +91,7 @@ func runRoot() error {
 
 	// Create Indexer
 	f := indexer.NewPsqlBackend()
-	indx, backend, err := indexer.New(f, rc, runtimeID, db, cfg.EnablePruning, cfg.PruningStep)
+	indx, backend, err := indexer.New(ctx, f, rc, runtimeID, db, cfg.EnablePruning, cfg.PruningStep)
 	if err != nil {
 		logger.Error("failed to create indexer", err)
 		return err
@@ -98,12 +99,12 @@ func runRoot() error {
 	indx.Start()
 
 	// Create web3 gateway instance
-	w3, err := server.New(cfg.Gateway)
+	w3, err := server.New(ctx, cfg.Gateway)
 	if err != nil {
 		logger.Error("failed to create web3", err)
 		return err
 	}
-	w3.RegisterAPIs(rpc.GetRPCAPIs(context.Background(), rc, backend, cfg.Gateway))
+	w3.RegisterAPIs(rpc.GetRPCAPIs(ctx, rc, backend, cfg.Gateway))
 
 	svr := server.Server{
 		Config: cfg,
