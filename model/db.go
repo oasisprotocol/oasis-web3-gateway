@@ -1,5 +1,17 @@
 package model
 
+import (
+	"context"
+
+	"github.com/uptrace/bun"
+)
+
+var (
+	_ bun.AfterCreateTableHook = (*Transaction)(nil)
+	_ bun.AfterCreateTableHook = (*Block)(nil)
+	_ bun.AfterCreateTableHook = (*Log)(nil)
+)
+
 // BlockRef represents the relationship between block round and block hash.
 type BlockRef struct {
 	Hash  string `bun:",pk"`
@@ -55,12 +67,41 @@ type Transaction struct {
 	V, R, S    string
 }
 
+func (*Transaction) AfterCreateTable(ctx context.Context, query *bun.CreateTableQuery) error {
+	_, err := query.DB().NewCreateIndex().
+		Model((*Transaction)(nil)).
+		Index("transaction_on_block_hash").
+		Column("block_hash").
+		Exec(ctx)
+	if err != nil {
+		return err
+	}
+
+	_, err = query.DB().NewCreateIndex().
+		Model((*Transaction)(nil)).
+		Index("transaction_on_round").
+		Column("round").
+		Exec(ctx)
+
+	return err
+}
+
 // Block represents ethereum block.
 type Block struct {
 	Hash         string `bun:",pk"`
 	Round        uint64
 	Header       *Header
 	Transactions []*Transaction `bun:"rel:has-many,join:hash=block_hash"`
+}
+
+func (*Block) AfterCreateTable(ctx context.Context, query *bun.CreateTableQuery) error {
+	_, err := query.DB().NewCreateIndex().
+		Model((*Block)(nil)).
+		Index("block_on_round").
+		Column("round").
+		Exec(ctx)
+
+	return err
 }
 
 // Header represents ethereum block header.
@@ -94,6 +135,25 @@ type Log struct {
 	TxIndex   uint
 	Index     uint `bun:",pk,allowzero"`
 	Removed   bool
+}
+
+func (*Log) AfterCreateTable(ctx context.Context, query *bun.CreateTableQuery) error {
+	_, err := query.DB().NewCreateIndex().
+		Model((*Log)(nil)).
+		Index("log_on_block_hash").
+		Column("block_hash").
+		Exec(ctx)
+	if err != nil {
+		return err
+	}
+
+	_, err = query.DB().NewCreateIndex().
+		Model((*Log)(nil)).
+		Index("log_on_round").
+		Column("round").
+		Exec(ctx)
+
+	return err
 }
 
 type Receipt struct {
