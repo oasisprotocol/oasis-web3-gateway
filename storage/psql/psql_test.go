@@ -40,8 +40,8 @@ docker run  -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_
 
 func TestInitPostDb(t *testing.T) {
 	require := require.New(t)
+	var err error
 	ctx := context.Background()
-	db, err := InitDB(ctx, tests.TestsConfig.Database)
 	require.NoError(err, "initialize db")
 	block1 := &model.BlockRef{
 		Round: 1,
@@ -167,8 +167,8 @@ func TestInitPostDb(t *testing.T) {
 
 func TestUpsert(t *testing.T) {
 	require := require.New(t)
+	var err error
 	ctx := context.Background()
-	db, err := InitDB(ctx, tests.TestsConfig.Database)
 	require.NoError(err, "initialize db")
 	ir1 := &model.IndexedRoundWithTip{
 		Tip:   model.Continues,
@@ -201,8 +201,8 @@ func TestUpsert(t *testing.T) {
 
 func TestDelete(t *testing.T) {
 	require := require.New(t)
+	var err error
 	ctx := context.Background()
-	db, err := InitDB(ctx, tests.TestsConfig.Database)
 	require.NoError(err, "initialize postdb")
 
 	require.NoError(db.Delete(ctx, new(model.BlockRef), 10), "delete")
@@ -210,8 +210,7 @@ func TestDelete(t *testing.T) {
 
 func TestGetBlockHash(t *testing.T) {
 	require := require.New(t)
-	ctx := context.Background()
-	_, err := InitDB(ctx, tests.TestsConfig.Database)
+	var err error
 	require.NoError(err, "initialize db")
 
 	// TODO: this fails as expected as the db doesn't contain the block.
@@ -223,8 +222,7 @@ func TestGetBlockHash(t *testing.T) {
 
 func TestGetTransactionRef(t *testing.T) {
 	require := require.New(t)
-	ctx := context.Background()
-	_, err := InitDB(ctx, tests.TestsConfig.Database)
+	var err error
 	require.NoError(err, "initialize db")
 
 	// TODO: this fails as expected as the db doesn't contain the transaction.
