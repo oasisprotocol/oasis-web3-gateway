@@ -41,7 +41,10 @@ func InitDB(cfg *conf.DatabaseConfig) (*PostDB, error) {
 
 	// open
 	sqlDB := sql.OpenDB(pgConn)
-	maxOpenConns := 4 * runtime.GOMAXPROCS(0)
+	maxOpenConns := cfg.MaxOpenConns
+	if maxOpenConns == 0 {
+		maxOpenConns = 4 * runtime.GOMAXPROCS(0)
+	}
 	sqlDB.SetMaxOpenConns(maxOpenConns)
 	sqlDB.SetMaxIdleConns(maxOpenConns)
 

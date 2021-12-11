@@ -79,6 +79,7 @@ type DatabaseConfig struct {
 	DialTimeout  int    `koanf:"dial_timeout"`
 	ReadTimeout  int    `koanf:"read_timeout"`
 	WriteTimeout int    `koanf:"write_timeout"`
+	MaxOpenConns int    `koanf:"max_open_conns"`
 }
 
 // Validate validates the database configuration.
