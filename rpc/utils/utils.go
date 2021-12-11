@@ -13,7 +13,7 @@ import (
 )
 
 // NewRPCTransaction returns a transaction that will serialize to the RPC representation.
-func NewRPCTransaction(dbTx *model.Transaction) (*RPCTransaction, error) {
+func NewRPCTransaction(dbTx *model.Transaction) *RPCTransaction {
 	gasPrice, _ := new(big.Int).SetString(dbTx.GasPrice, 10)
 	gasFee, _ := new(big.Int).SetString(dbTx.GasFeeCap, 10)
 	gasTip, _ := new(big.Int).SetString(dbTx.GasTipCap, 10)
@@ -67,7 +67,7 @@ func NewRPCTransaction(dbTx *model.Transaction) (*RPCTransaction, error) {
 		resTx.To = &to
 	}
 
-	return resTx, nil
+	return resTx
 }
 
 // ConvertToEthBlock converts block in db to rpc response format of a block.
@@ -76,7 +76,7 @@ func ConvertToEthBlock(block *model.Block, fullTx bool) map[string]interface{} {
 	diff, _ := v1.SetString(block.Header.Difficulty, 10)
 	transactions := []interface{}{}
 	for _, dbTx := range block.Transactions {
-		tx, _ := NewRPCTransaction(dbTx)
+		tx := NewRPCTransaction(dbTx)
 		if fullTx {
 			transactions = append(transactions, tx)
 		} else {

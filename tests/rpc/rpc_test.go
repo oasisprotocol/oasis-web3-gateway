@@ -192,6 +192,18 @@ func TestEth_GetBlockByNumberAndGetBlockByHash(t *testing.T) {
 	blk3, err := ec.BlockByHash(ctx, common.HexToHash(blk2["hash"].(string)))
 	require.NoError(t, err)
 	require.Equal(t, number, blk3.Number())
+
+	// Test non existing block by number.
+	blk, err := ec.BlockByNumber(ctx, big.NewInt(100_000_000))
+	require.Nil(t, blk, "nonexistent block")
+	// go-ethereum returns an ethereum.NotFound error for an empty response.
+	require.EqualError(t, err, ethereum.NotFound.Error(), "block not found")
+
+	// Test non existing block by hash.
+	blk, err = ec.BlockByHash(ctx, common.Hash{})
+	require.Nil(t, blk, "nonexistent block")
+	// go-ethereum returns an ethereum.NotFound error for an empty response.
+	require.EqualError(t, err, ethereum.NotFound.Error(), "block not found")
 }
 
 func TestEth_GetBlockByNumberLatest(t *testing.T) {
@@ -261,6 +273,12 @@ func TestEth_GetTransactionByHash(t *testing.T) {
 	rawRsp := call(t, "eth_getTransactionByHash", []string{receipt.TxHash.Hex()})
 	require.NoError(t, json.Unmarshal(rawRsp.Result, &rsp))
 	require.Equal(t, input, rsp["input"], "getTransactionByHash 'input' response should be correct")
+
+	// Test nonexistent transaction.
+	tx, _, err := ec.TransactionByHash(ctx, common.Hash{})
+	require.Nil(t, tx, "nonexistent transaction")
+	// go-ethereum returns an ethereum.NotFound error for an empty response.
+	require.EqualError(t, err, ethereum.NotFound.Error(), "nonexistent transaction")
 }
 
 func TestEth_GetBlockByHashRawResponses(t *testing.T) {
@@ -313,8 +331,12 @@ func TestEth_GetTransactionReceiptRawResponses(t *testing.T) {
 	rsp := make(map[string]interface{})
 	rawRsp := call(t, "eth_getTransactionReceipt", []interface{}{receipt.TxHash.Hex()})
 	require.NoError(t, json.Unmarshal(rawRsp.Result, &rsp))
-
 	require.Nil(t, rsp["contractAddress"], "contract address should be nil")
+
+	// Non existing transaction receipt.
+	rawRsp = call(t, "eth_getTransactionReceipt", []interface{}{common.Hash{}})
+	require.NoError(t, json.Unmarshal(rawRsp.Result, &rsp))
+	require.Empty(t, rsp, "nonexistent receipt should be empty")
 }
 
 func TestEth_GetLogsWithoutBlockhash(t *testing.T) {
