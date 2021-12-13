@@ -13,6 +13,14 @@ import (
 	"github.com/starfishlabs/oasis-evm-web3-gateway/storage"
 )
 
+// HealthCheck is the health checker interface.
+type HealthCheck interface {
+	// Health checks the health of the service.
+	//
+	// This method should return quickly and should avoid performing any blocking operations.
+	Health() error
+}
+
 type Server struct {
 	Config *conf.Config
 	Web3   *Web3Gateway
@@ -44,6 +52,8 @@ type Web3Gateway struct {
 	rpcAPIs []rpc.API   // List of APIs currently provided by the node
 	http    *httpServer //
 	ws      *httpServer //
+
+	healthChecks []HealthCheck
 }
 
 const (
@@ -187,7 +197,7 @@ func (srv *Web3Gateway) startRPC() error {
 		if err := srv.http.setListenAddr(srv.config.HTTP.Host, srv.config.HTTP.Port); err != nil {
 			return err
 		}
-		if err := srv.http.enableRPC(srv.rpcAPIs, config); err != nil {
+		if err := srv.http.enableRPC(srv.rpcAPIs, srv.healthChecks, config); err != nil {
 			return err
 		}
 	}
@@ -232,6 +242,17 @@ func (srv *Web3Gateway) RegisterAPIs(apis []rpc.API) {
 		panic("can't register APIs on running/stopped server")
 	}
 	srv.rpcAPIs = append(srv.rpcAPIs, apis...)
+}
+
+// RegisterHealthChecks registers the health checks for the /health endpoint.
+func (srv *Web3Gateway) RegisterHealthChecks(checks []HealthCheck) {
+	srv.lock.Lock()
+	defer srv.lock.Unlock()
+
+	if srv.state != initializingState {
+		panic("can't register APIs on running/stopped server")
+	}
+	srv.healthChecks = append(srv.healthChecks, checks...)
 }
 
 // GetHTTPEndpoint returns the address of HTTP endpoint.

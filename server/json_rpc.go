@@ -65,6 +65,24 @@ func (h *httpServer) setListenAddr(host string, port int) error {
 	return nil
 }
 
+// healthCheckHTTP is the HTTP health check endpoint handler.
+func healthCheckHandler(healthChecks []HealthCheck) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.NotFound(w, r)
+			return
+		}
+
+		for _, h := range healthChecks {
+			if err := h.Health(); err != nil {
+				w.WriteHeader(http.StatusServiceUnavailable)
+				return
+			}
+		}
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
 // start starts the HTTP server if it is enabled and not already running.
 func (h *httpServer) start() error {
 	if h.endpoint == "" {
@@ -140,7 +158,7 @@ func (h *httpServer) stop() {
 }
 
 // enableRPC turns on JSON-RPC over HTTP on the server.
-func (h *httpServer) enableRPC(apis []rpc.API, config httpConfig) error {
+func (h *httpServer) enableRPC(apis []rpc.API, healthChecks []HealthCheck, config httpConfig) error {
 	// Create RPC server and handler.
 	srv := rpc.NewServer()
 	if err := RegisterApis(apis, config.Modules, srv, false); err != nil {
@@ -152,6 +170,8 @@ func (h *httpServer) enableRPC(apis []rpc.API, config httpConfig) error {
 	router := mux.NewRouter()
 	router.PathPrefix(h.httpConfig.prefix).HandlerFunc(h.rpcServer.ServeHTTP).Methods("POST")
 	h.rpcHandler = newCorsHandler(router, h.httpConfig.CorsAllowedOrigins)
+
+	router.HandleFunc("/health", healthCheckHandler(healthChecks)).Methods("GET")
 
 	return nil
 }

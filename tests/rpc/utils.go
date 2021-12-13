@@ -126,6 +126,7 @@ func Setup() error {
 	}
 
 	w3.RegisterAPIs(rpc.GetRPCAPIs(context.Background(), rc, backend, tests.TestsConfig.Gateway))
+	w3.RegisterHealthChecks([]server.HealthCheck{indx})
 
 	if err = w3.Start(); err != nil {
 		w3.Close()
