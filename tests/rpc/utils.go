@@ -14,7 +14,6 @@ import (
 
 	cmnEth "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/go-pg/pg/v10"
 	"github.com/oasisprotocol/oasis-core/go/common"
 	cmnGrpc "github.com/oasisprotocol/oasis-core/go/common/grpc"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
@@ -36,6 +35,8 @@ import (
 	"github.com/starfishlabs/oasis-evm-web3-gateway/server"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/storage/psql"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/tests"
+
+	"github.com/uptrace/bun"
 )
 
 type Request struct {
@@ -104,21 +105,22 @@ func Setup() error {
 	}
 
 	// Initialize db.
-	db, err = psql.InitDB(tests.TestsConfig.Database)
+	ctx := context.Background()
+	db, err = psql.InitDB(ctx, tests.TestsConfig.Database)
 	if err != nil {
 		return fmt.Errorf("failed to initialize DB: %w", err)
 	}
 
 	// Create Indexer.
 	f := indexer.NewPsqlBackend()
-	indx, backend, err := indexer.New(f, rc, runtimeID, db, tests.TestsConfig.EnablePruning, tests.TestsConfig.PruningStep)
+	indx, backend, err := indexer.New(ctx, f, rc, runtimeID, db, tests.TestsConfig.EnablePruning, tests.TestsConfig.PruningStep)
 	if err != nil {
 		return fmt.Errorf("failed to create indexer: %w", err)
 	}
 	indx.Start()
 
 	// Create Web3 Gateway.
-	w3, err = server.New(tests.TestsConfig.Gateway)
+	w3, err = server.New(ctx, tests.TestsConfig.Gateway)
 	if err != nil {
 		return fmt.Errorf("setup: failed creating server: %w", err)
 	}
@@ -242,7 +244,7 @@ func InitialDeposit(rc client.RuntimeClient, amount uint64, to types.Address) er
 
 // Shutdown stops web3 gateway.
 func Shutdown() error {
-	if err := model.TruncateModel(db.DB.(*pg.DB)); err != nil {
+	if err := model.TruncateModel(context.Background(), db.DB.(*bun.DB)); err != nil {
 		return fmt.Errorf("db cleanup failed: %w", err)
 	}
 

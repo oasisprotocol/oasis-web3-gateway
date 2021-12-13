@@ -102,7 +102,7 @@ func ConvertToEthBlock(block *model.Block, fullTx bool) map[string]interface{} {
 		"extraData":        block.Header.Extra,
 		"mixHash":          common.HexToHash(block.Header.MixDigest),
 		"nonce":            ethtypes.EncodeNonce(block.Header.Nonce),
-		"uncles":           block.Uncles,
+		"uncles":           []*model.Header{},
 		"transactions":     transactions,
 		"hash":             common.HexToHash(block.Hash),
 		"size":             hexutil.Uint64(len(serialized)),

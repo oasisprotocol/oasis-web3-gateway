@@ -200,6 +200,7 @@ func (s *Service) Stop() {
 
 // New creates a new indexer service.
 func New(
+	ctxBackend context.Context,
 	backendFactory BackendFactory,
 	client client.RuntimeClient,
 	runtimeID common.Namespace,
@@ -207,7 +208,7 @@ func New(
 	enablePruning bool,
 	pruningStep uint64,
 ) (*Service, Backend, error) {
-	ctx, cancelCtx := context.WithCancel(context.Background())
+	ctx, cancelCtx := context.WithCancel(ctxBackend)
 
 	backend, err := backendFactory(ctx, runtimeID, storage)
 	if err != nil {

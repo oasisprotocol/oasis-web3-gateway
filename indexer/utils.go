@@ -81,7 +81,7 @@ func convertToEthFormat(
 		ReceiptHash: ethtypes.EmptyRootHash.Hex(),
 		Bloom:       string(bloomData),
 		Difficulty:  big.NewInt(0).String(),
-		Number:      number.String(),
+		Number:      number.Uint64(),
 		GasLimit:    uint64(defaultGasLimit),
 		GasUsed:     gas,
 		Time:        uint64(block.Header.Timestamp),
@@ -172,7 +172,6 @@ func convertToEthFormat(
 		Hash:         bhash,
 		Round:        number.Uint64(),
 		Header:       innerHeader,
-		Uncles:       []*model.Header{},
 		Transactions: innerTxs,
 	}
 
@@ -257,7 +256,7 @@ func (p *psqlBackend) StoreBlockData(oasisBlock *block.Block, txResults []*clien
 	return p.storage.RunInTransaction(p.ctx, func(s storage.Storage) error {
 		// Store txs.
 		for _, tx := range txs {
-			err = s.Upsert(tx)
+			err = s.Upsert(p.ctx, tx)
 			if err != nil {
 				return err
 			}
@@ -265,7 +264,7 @@ func (p *psqlBackend) StoreBlockData(oasisBlock *block.Block, txResults []*clien
 
 		// Store receipts.
 		for _, receipt := range receipts {
-			err = s.Upsert(receipt)
+			err = s.Upsert(p.ctx, receipt)
 			if err != nil {
 				return err
 			}
@@ -273,14 +272,14 @@ func (p *psqlBackend) StoreBlockData(oasisBlock *block.Block, txResults []*clien
 
 		// Store logs.
 		for _, log := range eth2DbLogs(logs) {
-			if err = s.Upsert(log); err != nil {
+			if err = s.Upsert(p.ctx, log); err != nil {
 				p.logger.Error("Failed to store logs", "height", blockNum, "log", log, "err", err)
 				return err
 			}
 		}
 
 		// Store block.
-		return s.Upsert(blk)
+		return s.Upsert(p.ctx, blk)
 	})
 }
 

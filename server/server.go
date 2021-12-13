@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync"
@@ -73,7 +74,7 @@ func timeoutsFromCfg(cfg *conf.HTTPTimeouts) rpc.HTTPTimeouts {
 }
 
 // New creates a new web3 gateway.
-func New(conf *conf.GatewayConfig) (*Web3Gateway, error) {
+func New(ctx context.Context, conf *conf.GatewayConfig) (*Web3Gateway, error) {
 	if conf == nil {
 		return nil, fmt.Errorf("missing gateway config")
 	}
@@ -94,10 +95,10 @@ func New(conf *conf.GatewayConfig) (*Web3Gateway, error) {
 
 	// Configure RPC servers.
 	if conf.HTTP != nil {
-		server.http = newHTTPServer(server.logger.With("server", "http"), timeoutsFromCfg(conf.HTTP.Timeouts))
+		server.http = newHTTPServer(ctx, server.logger.With("server", "http"), timeoutsFromCfg(conf.HTTP.Timeouts))
 	}
 	if conf.WS != nil {
-		server.ws = newHTTPServer(server.logger.With("server", "ws"), timeoutsFromCfg(conf.WS.Timeouts))
+		server.ws = newHTTPServer(ctx, server.logger.With("server", "ws"), timeoutsFromCfg(conf.WS.Timeouts))
 	}
 
 	return server, nil

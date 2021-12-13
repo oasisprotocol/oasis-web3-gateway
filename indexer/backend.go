@@ -111,7 +111,7 @@ func (p *psqlBackend) Index(oasisBlock *block.Block, txResults []*client.Transac
 		Round: oasisBlock.Header.Round,
 		Hash:  blockHash.String(),
 	}
-	if err := p.storage.Upsert(blockRef); err != nil {
+	if err := p.storage.Upsert(p.ctx, blockRef); err != nil {
 		return err
 	}
 
@@ -138,27 +138,27 @@ func (p *psqlBackend) Prune(round uint64) error {
 		return err
 	}
 
-	if err := p.storage.Delete(new(model.BlockRef), round); err != nil {
+	if err := p.storage.Delete(p.ctx, new(model.BlockRef), round); err != nil {
 		return err
 	}
 
-	if err := p.storage.Delete(new(model.Block), round); err != nil {
+	if err := p.storage.Delete(p.ctx, new(model.Block), round); err != nil {
 		return err
 	}
 
-	if err := p.storage.Delete(new(model.Log), round); err != nil {
+	if err := p.storage.Delete(p.ctx, new(model.Log), round); err != nil {
 		return err
 	}
 
-	if err := p.storage.Delete(new(model.Transaction), round); err != nil {
+	if err := p.storage.Delete(p.ctx, new(model.Transaction), round); err != nil {
 		return err
 	}
 
-	if err := p.storage.Delete(new(model.TransactionRef), round); err != nil {
+	if err := p.storage.Delete(p.ctx, new(model.TransactionRef), round); err != nil {
 		return err
 	}
 
-	if err := p.storage.Delete(new(model.Receipt), round); err != nil {
+	if err := p.storage.Delete(p.ctx, new(model.Receipt), round); err != nil {
 		return err
 	}
 
@@ -178,7 +178,7 @@ func (p *psqlBackend) blockNumberFromRound(round uint64) (number uint64, err err
 
 // QueryBlockRound returns block number for the provided hash.
 func (p *psqlBackend) QueryBlockRound(blockHash ethcommon.Hash) (uint64, error) {
-	round, err := p.storage.GetBlockRound(blockHash.String())
+	round, err := p.storage.GetBlockRound(p.ctx, blockHash.String())
 	if err != nil {
 		p.logger.Error("can't find matched block")
 		return 0, err
@@ -193,9 +193,9 @@ func (p *psqlBackend) QueryBlockHash(round uint64) (ethcommon.Hash, error) {
 	var err error
 	switch round {
 	case client.RoundLatest:
-		blockHash, err = p.storage.GetLatestBlockHash()
+		blockHash, err = p.storage.GetLatestBlockHash(p.ctx)
 	default:
-		blockHash, err = p.storage.GetBlockHash(round)
+		blockHash, err = p.storage.GetBlockHash(p.ctx, round)
 	}
 
 	if err != nil {
@@ -212,12 +212,12 @@ func (p *psqlBackend) storeIndexedRound(round uint64) error {
 		Round: round,
 	}
 
-	return p.storage.Upsert(r)
+	return p.storage.Upsert(p.ctx, r)
 }
 
 // QueryLastIndexedRound returns the last indexed round.
 func (p *psqlBackend) QueryLastIndexedRound() (uint64, error) {
-	indexedRound, err := p.storage.GetLastIndexedRound()
+	indexedRound, err := p.storage.GetLastIndexedRound(p.ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -232,12 +232,12 @@ func (p *psqlBackend) storeLastRetainedRound(round uint64) error {
 		Round: round,
 	}
 
-	return p.storage.Upsert(r)
+	return p.storage.Upsert(p.ctx, r)
 }
 
 // QueryLastRetainedRound returns the last retained round.
 func (p *psqlBackend) QueryLastRetainedRound() (uint64, error) {
-	lastRetainedRound, err := p.storage.GetLastRetainedRound()
+	lastRetainedRound, err := p.storage.GetLastRetainedRound(p.ctx)
 	if err != nil {
 		return 0, ErrGetLastRetainedRound
 	}
@@ -246,7 +246,7 @@ func (p *psqlBackend) QueryLastRetainedRound() (uint64, error) {
 
 // QueryTransaction returns transaction by transaction hash.
 func (p *psqlBackend) QueryTransaction(txHash ethcommon.Hash) (*model.Transaction, error) {
-	tx, err := p.storage.GetTransaction(txHash.String())
+	tx, err := p.storage.GetTransaction(p.ctx, txHash.String())
 	if err != nil {
 		return nil, err
 	}
@@ -255,7 +255,7 @@ func (p *psqlBackend) QueryTransaction(txHash ethcommon.Hash) (*model.Transactio
 
 // QueryTransactionRef returns TransactionRef by transaction hash.
 func (p *psqlBackend) QueryTransactionRef(hash string) (*model.TransactionRef, error) {
-	return p.storage.GetTransactionRef(hash)
+	return p.storage.GetTransactionRef(p.ctx, hash)
 }
 
 // GetBlockByRound returns a block for the provided round.
@@ -264,7 +264,7 @@ func (p *psqlBackend) GetBlockByRound(round uint64) (*model.Block, error) {
 	if err != nil {
 		return nil, err
 	}
-	blk, err := p.storage.GetBlockByNumber(blockNumber)
+	blk, err := p.storage.GetBlockByNumber(p.ctx, blockNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -274,7 +274,7 @@ func (p *psqlBackend) GetBlockByRound(round uint64) (*model.Block, error) {
 
 // GetBlockByHash returns a block by bock hash.
 func (p *psqlBackend) GetBlockByHash(blockHash ethcommon.Hash) (*model.Block, error) {
-	blk, err := p.storage.GetBlockByHash(blockHash.String())
+	blk, err := p.storage.GetBlockByHash(p.ctx, blockHash.String())
 	if err != nil {
 		return nil, err
 	}
@@ -288,22 +288,22 @@ func (p *psqlBackend) GetBlockTransactionCountByRound(round uint64) (int, error)
 	if err != nil {
 		return 0, err
 	}
-	return p.storage.GetBlockTransactionCountByNumber(blockNumber)
+	return p.storage.GetBlockTransactionCountByNumber(p.ctx, blockNumber)
 }
 
 // GetBlockTransactionCountByHash returns the count of block transactions by block hash.
 func (p *psqlBackend) GetBlockTransactionCountByHash(blockHash ethcommon.Hash) (int, error) {
-	return p.storage.GetBlockTransactionCountByHash(blockHash.String())
+	return p.storage.GetBlockTransactionCountByHash(p.ctx, blockHash.String())
 }
 
 // GetTransactionByBlockHashAndIndex returns transaction by the block hash and transaction index.
 func (p *psqlBackend) GetTransactionByBlockHashAndIndex(blockHash ethcommon.Hash, txIndex int) (*model.Transaction, error) {
-	return p.storage.GetBlockTransaction(blockHash.String(), txIndex)
+	return p.storage.GetBlockTransaction(p.ctx, blockHash.String(), txIndex)
 }
 
 // GetTransactionReceipt returns the receipt for the given tx.
 func (p *psqlBackend) GetTransactionReceipt(txHash ethcommon.Hash) (map[string]interface{}, error) {
-	dbReceipt, err := p.storage.GetTransactionReceipt(txHash.String())
+	dbReceipt, err := p.storage.GetTransactionReceipt(p.ctx, txHash.String())
 	if err != nil {
 		return nil, err
 	}
@@ -361,12 +361,12 @@ func (p *psqlBackend) GetTransactionReceipt(txHash ethcommon.Hash) (map[string]i
 
 // BlockNumber returns the latest block.
 func (p *psqlBackend) BlockNumber() (uint64, error) {
-	return p.storage.GetLatestBlockNumber()
+	return p.storage.GetLatestBlockNumber(p.ctx)
 }
 
 // GetLogs returns logs from db.
 func (p *psqlBackend) GetLogs(startRound, endRound uint64) ([]*model.Log, error) {
-	return p.storage.GetLogs(startRound, endRound)
+	return p.storage.GetLogs(p.ctx, startRound, endRound)
 }
 
 // Close closes postgresql backend.

@@ -71,12 +71,15 @@ func (cfg *LogConfig) Validate() error {
 
 // DatabaseConfig is the postgresql database configuration.
 type DatabaseConfig struct {
-	Host     string `koanf:"host"`
-	Port     int    `koanf:"port"`
-	DB       string `koanf:"db"`
-	User     string `koanf:"user"`
-	Password string `koanf:"password"`
-	Timeout  int    `koanf:"timeout"`
+	Host         string `koanf:"host"`
+	Port         int    `koanf:"port"`
+	DB           string `koanf:"db"`
+	User         string `koanf:"user"`
+	Password     string `koanf:"password"`
+	DialTimeout  int    `koanf:"dial_timeout"`
+	ReadTimeout  int    `koanf:"read_timeout"`
+	WriteTimeout int    `koanf:"write_timeout"`
+	MaxOpenConns int    `koanf:"max_open_conns"`
 }
 
 // Validate validates the database configuration.

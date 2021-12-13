@@ -13,7 +13,10 @@ database:
   db: "postgres"
   user: "postgres"
   password: "postgres"
-  timeout: 5
+  dial_timeout: 5
+  read_timeout: 10
+  write_timeout: 5
+  max_open_conns: 0
 
 gateway:
   chain_id: 42262

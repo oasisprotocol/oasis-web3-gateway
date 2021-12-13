@@ -27,7 +27,7 @@ func createLocalServer(httpPort, wsPort int, httpPrefix, wsPrefix string) (*Web3
 			PathPrefix: wsPrefix,
 		},
 	}
-	server, err := New(conf)
+	server, err := New(context.Background(), conf)
 	if err != nil {
 		return nil, fmt.Errorf("could not create a new web3 gateway: %w", err)
 	}
