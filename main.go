@@ -105,6 +105,7 @@ func runRoot() error {
 		return err
 	}
 	w3.RegisterAPIs(rpc.GetRPCAPIs(ctx, rc, backend, cfg.Gateway))
+	w3.RegisterHealthChecks([]server.HealthCheck{indx})
 
 	svr := server.Server{
 		Config: cfg,

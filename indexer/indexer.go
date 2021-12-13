@@ -3,6 +3,7 @@ package indexer
 import (
 	"context"
 	"errors"
+	"sync/atomic"
 	"time"
 
 	"github.com/oasisprotocol/oasis-core/go/common"
@@ -13,15 +14,18 @@ import (
 )
 
 const (
-	storageRequestTimeout = 5 * time.Second
-	storageRetryTimeout   = 1 * time.Second
-	pruningCheckInterval  = 60 * time.Second
+	storageRequestTimeout            = 5 * time.Second
+	storageRetryTimeout              = 1 * time.Second
+	pruningCheckInterval             = 60 * time.Second
+	healthCheckInterval              = 10 * time.Second
+	healthCheckIndexerDriftThreshold = 10
 )
 
 var (
 	ErrGetBlockFailed        = errors.New("get block failed")
 	ErrGetTransactionsFailed = errors.New("get transactions failed")
 	ErrIndexedFailed         = errors.New("index block failed")
+	ErrNotHealthy            = errors.New("not healthy")
 )
 
 // Service is an indexer service.
@@ -37,6 +41,16 @@ type Service struct {
 
 	ctx       context.Context
 	cancelCtx context.CancelFunc
+
+	health uint32
+}
+
+// Implements server.HealthCheck.
+func (s *Service) Health() error {
+	if atomic.LoadUint32(&s.health) == 0 {
+		return ErrNotHealthy
+	}
+	return nil
 }
 
 // indexBlock indexes given block number.
@@ -67,6 +81,55 @@ func (s *Service) getRoundLatest() (uint64, error) {
 	}
 
 	return blk.Header.Round, nil
+}
+
+func (s *Service) updateHealth(healthy bool) {
+	if healthy {
+		atomic.StoreUint32(&s.health, 1)
+	} else {
+		atomic.StoreUint32(&s.health, 0)
+	}
+}
+
+// healthWorker is the health check worker.
+func (s *Service) healthWorker() {
+	s.Logger.Debug("starting health check worker")
+	for {
+		select {
+		case <-s.ctx.Done():
+			return
+		case <-time.After(healthCheckInterval):
+			// Query last indexed round.
+			lastIndexed, err := s.backend.QueryLastIndexedRound()
+			if err != nil {
+				s.Logger.Error("failed to query last indexed round",
+					"err", err,
+				)
+				s.updateHealth(false)
+				continue
+			}
+
+			// Query latest round on the node.
+			latestBlk, err := s.client.GetBlock(s.ctx, client.RoundLatest)
+			if err != nil {
+				s.Logger.Error("failed to query latest block",
+					"err", err,
+				)
+				s.updateHealth(false)
+				continue
+			}
+			latestRound := latestBlk.Header.Round
+
+			s.Logger.Debug("checking health", "latest_round", latestRound, "latest_indexed", lastIndexed)
+			switch {
+			case latestRound >= lastIndexed:
+				s.updateHealth(latestRound-lastIndexed <= healthCheckIndexerDriftThreshold)
+			default:
+				// Indexer in front of node - not healthy.
+				s.updateHealth(false)
+			}
+		}
+	}
 }
 
 // pruningWorker handles data pruning.
@@ -187,6 +250,7 @@ func (s *Service) indexingWorker() {
 // Start starts service.
 func (s *Service) Start() {
 	go s.indexingWorker()
+	go s.healthWorker()
 
 	if s.enablePruning {
 		go s.pruningWorker()
