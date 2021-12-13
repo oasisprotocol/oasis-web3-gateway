@@ -27,11 +27,14 @@ func TestMain(m *testing.M) {
 docker run  -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=postgres  -p 5432:5432 -d postgres`)
 		log.Fatal("failed to initialize db:", err)
 	}
+	if err = db.RunMigrations(ctx); err != nil {
+		log.Fatal("failed to run migrations:", err)
+	}
 
 	// Run tests.
 	code := m.Run()
 
-	if err = model.TruncateModel(ctx, db.DB.(*bun.DB)); err != nil {
+	if err = model.DropTables(ctx, db.DB.(*bun.DB)); err != nil {
 		log.Fatal("failed to cleanup db:", err)
 	}
 
@@ -43,17 +46,20 @@ func TestInitPostDb(t *testing.T) {
 	var err error
 	ctx := context.Background()
 	require.NoError(err, "initialize db")
-	block1 := &model.BlockRef{
-		Round: 1,
-		Hash:  "hello",
+	block1 := &model.Block{
+		Round:  1,
+		Hash:   "hello",
+		Header: &model.Header{},
 	}
-	block2 := &model.BlockRef{
-		Round: 2,
-		Hash:  "world",
+	block2 := &model.Block{
+		Round:  2,
+		Hash:   "world",
+		Header: &model.Header{},
 	}
-	block3 := &model.BlockRef{
-		Round: 3,
-		Hash:  "hello world",
+	block3 := &model.Block{
+		Round:  3,
+		Hash:   "hello world",
+		Header: &model.Header{},
 	}
 	if err = db.Upsert(ctx, block1); err != nil {
 		log.Fatal("store error:", err)
@@ -75,29 +81,6 @@ func TestInitPostDb(t *testing.T) {
 	hash, err = db.GetLatestBlockHash(ctx)
 	require.NoError(err)
 	require.EqualValues("hello world", hash, "GetLatestBlockHash should return expected hash")
-
-	tx1 := &model.TransactionRef{
-		EthTxHash: "hello",
-		Index:     1,
-		Round:     1,
-		BlockHash: "abc123",
-	}
-	tx2 := &model.TransactionRef{
-		EthTxHash: "hello2",
-		Index:     1,
-		Round:     2,
-		BlockHash: "cde456",
-	}
-	if err = db.Upsert(ctx, tx1); err != nil {
-		log.Fatal("postdb store tx error:", err)
-	}
-	if err = db.Upsert(ctx, tx2); err != nil {
-		log.Fatal("postdb store tx error:", err)
-	}
-	txRef, err := db.GetTransactionRef(ctx, tx1.EthTxHash)
-	require.NoError(err)
-	require.EqualValues(1, txRef.Index)
-	require.EqualValues(1, txRef.Round)
 
 	legacyTx := &model.Transaction{
 		Hash:       "hello",
@@ -205,7 +188,7 @@ func TestDelete(t *testing.T) {
 	ctx := context.Background()
 	require.NoError(err, "initialize postdb")
 
-	require.NoError(db.Delete(ctx, new(model.BlockRef), 10), "delete")
+	require.NoError(db.Delete(ctx, new(model.Block), 10), "delete")
 }
 
 func TestGetBlockHash(t *testing.T) {
@@ -218,16 +201,4 @@ func TestGetBlockHash(t *testing.T) {
 	// hash, err := db.GetBlockHash(1)
 	// require.NoError(err, "GetBlockHash")
 	// fmt.Println("block hash:", hash)
-}
-
-func TestGetTransactionRef(t *testing.T) {
-	require := require.New(t)
-	var err error
-	require.NoError(err, "initialize db")
-
-	// TODO: this fails as expected as the db doesn't contain the transaction.
-	//       Forgot to initialize the db with the transaction?
-	// txRef, err := db.GetTransactionRef("0xec826b483b27e3a4f9b68994d2f4768533ab4d1ae0b7d05867fcc9da18064715")
-	// require.NoError(err, "GetTransactionRef")
-	// fmt.Println(txRef.EthTxHash, txRef.BlockHash, txRef.Round, txRef.Index)
 }

@@ -15,8 +15,7 @@ import (
 )
 
 const (
-	storageRequestTimeout            = 5 * time.Second
-	storageRetryTimeout              = 1 * time.Second
+	indexerLoopDelay                 = 1 * time.Second
 	pruningCheckInterval             = 60 * time.Second
 	healthCheckInterval              = 10 * time.Second
 	healthCheckIndexerDriftThreshold = 10
@@ -169,13 +168,12 @@ func (s *Service) indexingWorker() {
 		select {
 		case <-s.ctx.Done():
 			return
-		default:
+		case <-time.After(indexerLoopDelay):
 		}
 
 		// Query latest round available at the node.
 		latest, err := s.getRoundLatest()
 		if err != nil {
-			time.Sleep(storageRequestTimeout)
 			s.Logger.Info("failed to query latest round",
 				"err", err,
 			)
@@ -200,7 +198,6 @@ func (s *Service) indexingWorker() {
 			}
 			// Latest round already indexed.
 			if latest == lastIndexed {
-				time.Sleep(storageRetryTimeout)
 				continue
 			}
 			startAt = lastIndexed + 1
@@ -209,7 +206,6 @@ func (s *Service) indexingWorker() {
 		// Get last retained round on the node.
 		lastRetainedBlock, err := s.client.GetLastRetainedBlock(s.ctx)
 		if err != nil {
-			time.Sleep(storageRequestTimeout)
 			s.Logger.Error("failed to retrieve last retained round",
 				"err", err,
 			)
@@ -229,7 +225,6 @@ func (s *Service) indexingWorker() {
 
 			// Try to index block.
 			if err = s.indexBlock(round); err != nil {
-				time.Sleep(storageRequestTimeout)
 				s.Logger.Warn("failed to index block",
 					"err", err,
 					"round", round,

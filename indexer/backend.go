@@ -47,9 +47,6 @@ type QueryableBackend interface {
 	// QueryBlockHash queries block hash by round.
 	QueryBlockHash(round uint64) (ethcommon.Hash, error)
 
-	// QueryTransactionRef returns block hash, round and index of the transaction.
-	QueryTransactionRef(ethTxHash string) (*model.TransactionRef, error)
-
 	// QueryLastIndexedRound query continues indexed block round.
 	QueryLastIndexedRound() (uint64, error)
 
@@ -106,18 +103,7 @@ type indexBackend struct {
 // Index indexes oasis block.
 func (ib *indexBackend) Index(oasisBlock *block.Block, txResults []*client.TransactionWithResults) error {
 	round := oasisBlock.Header.Round
-	blockHash := ethcommon.HexToHash(oasisBlock.Header.EncodedHash().Hex())
 
-	// oasis block round <-> oasis block hash, maybe remove later
-	blockRef := &model.BlockRef{
-		Round: oasisBlock.Header.Round,
-		Hash:  blockHash.String(),
-	}
-	if err := ib.storage.Upsert(ib.ctx, blockRef); err != nil {
-		return err
-	}
-
-	// oasis block -> eth block, store eth block
 	err := ib.StoreBlockData(oasisBlock, txResults)
 	if err != nil {
 		ib.logger.Error("generateEthBlock failed", "err", err)
@@ -140,10 +126,6 @@ func (ib *indexBackend) Prune(round uint64) error {
 		return err
 	}
 
-	if err := ib.storage.Delete(ib.ctx, new(model.BlockRef), round); err != nil {
-		return err
-	}
-
 	if err := ib.storage.Delete(ib.ctx, new(model.Block), round); err != nil {
 		return err
 	}
@@ -153,10 +135,6 @@ func (ib *indexBackend) Prune(round uint64) error {
 	}
 
 	if err := ib.storage.Delete(ib.ctx, new(model.Transaction), round); err != nil {
-		return err
-	}
-
-	if err := ib.storage.Delete(ib.ctx, new(model.TransactionRef), round); err != nil {
 		return err
 	}
 
@@ -253,11 +231,6 @@ func (ib *indexBackend) QueryTransaction(txHash ethcommon.Hash) (*model.Transact
 		return nil, err
 	}
 	return tx, nil
-}
-
-// QueryTransactionRef returns TransactionRef by transaction hash.
-func (ib *indexBackend) QueryTransactionRef(hash string) (*model.TransactionRef, error) {
-	return ib.storage.GetTransactionRef(ib.ctx, hash)
 }
 
 // GetBlockByRound returns a block for the provided round.
