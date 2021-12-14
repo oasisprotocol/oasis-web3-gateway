@@ -120,12 +120,11 @@ func (srv *Web3Gateway) Start() error {
 	defer srv.startStopLock.Unlock()
 
 	srv.lock.Lock()
+	defer srv.lock.Unlock()
 	switch srv.state {
 	case runningState:
-		srv.lock.Unlock()
 		return ErrServerRunning
 	case closedState:
-		srv.lock.Unlock()
 		return ErrServerStopped
 	}
 	srv.state = runningState
@@ -134,7 +133,6 @@ func (srv *Web3Gateway) Start() error {
 	if err != nil {
 		srv.stopRPC()
 	}
-	srv.lock.Unlock()
 
 	// Check if RPC endpoint startup failed.
 	if err != nil {
@@ -159,8 +157,7 @@ func (srv *Web3Gateway) Close() error {
 		return srv.doClose(nil)
 	case runningState:
 		// The server was started, release resources acquired by Start().
-		var errs []error
-		return srv.doClose(errs)
+		return srv.doClose([]error{errors.New("error in function close")})
 	case closedState:
 		return ErrServerStopped
 	default:
