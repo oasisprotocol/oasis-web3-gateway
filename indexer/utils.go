@@ -94,15 +94,15 @@ func convertToEthFormat(
 		BaseFee:     baseFee.String(),
 	}
 
-	innerTxs := []*model.Transaction{}
-	innerReceipts := []*model.Receipt{}
+	innerTxs := make([]*model.Transaction, 0, len(transactions))
+	innerReceipts := make([]*model.Receipt, 0, len(transactions))
 	cumulativeGasUsed := uint64(0)
 	for idx, ethTx := range transactions {
 		v, r, s := ethTx.RawSignatureValues()
 		signer := ethtypes.LatestSignerForChainID(ethTx.ChainId())
 		from, _ := signer.Sender(ethTx)
 		ethAccList := ethTx.AccessList()
-		accList := []model.AccessTuple{}
+		accList := make([]model.AccessTuple, 0, len(ethAccList))
 		for _, ethAcc := range ethAccList {
 			keys := []string{}
 			for _, ethStorageKey := range ethAcc.StorageKeys {
@@ -247,7 +247,7 @@ func (ib *indexBackend) StoreBlockData(oasisBlock *block.Block, txResults []*cli
 			}
 		}
 		logs = append(logs, Logs2EthLogs(oasisLogs, blockNum, bhash, ethTx.Hash(), uint32(txIndex))...)
-		dbLogs = eth2DbLogs(logs)
+		dbLogs = append(dbLogs, eth2DbLogs(logs)...)
 	}
 
 	// Get convert block, transactions and receipts.
@@ -285,7 +285,7 @@ func (ib *indexBackend) StoreBlockData(oasisBlock *block.Block, txResults []*cli
 		}
 
 		// Store logs.
-		for _, log := range eth2DbLogs(logs) {
+		for _, log := range dbLogs {
 			if err = s.Upsert(ib.ctx, log); err != nil {
 				ib.logger.Error("Failed to store logs", "height", blockNum, "log", log, "err", err)
 				return err
@@ -299,15 +299,15 @@ func (ib *indexBackend) StoreBlockData(oasisBlock *block.Block, txResults []*cli
 
 // eth2DbLogs converts ethereum log to model log.
 func eth2DbLogs(ethLogs []*ethtypes.Log) []*model.Log {
-	res := []*model.Log{}
+	res := make([]*model.Log, 0, len(ethLogs))
 
 	for _, log := range ethLogs {
-		topics := []string{}
+		topics := make([]string, 0, len(log.Topics))
 		for _, tp := range log.Topics {
 			topics = append(topics, tp.Hex())
 		}
 
-		dbLog := &model.Log{
+		res = append(res, &model.Log{
 			Address:   log.Address.Hex(),
 			Topics:    topics,
 			Data:      hex.EncodeToString(log.Data),
@@ -317,9 +317,7 @@ func eth2DbLogs(ethLogs []*ethtypes.Log) []*model.Log {
 			TxIndex:   log.TxIndex,
 			Index:     log.Index,
 			Removed:   log.Removed,
-		}
-
-		res = append(res, dbLog)
+		})
 	}
 
 	return res
