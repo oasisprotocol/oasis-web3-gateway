@@ -27,9 +27,6 @@ type Storage interface {
 	// GetLatestBlockHash returns the block hash of the latest indexed round.
 	GetLatestBlockHash(ctx context.Context) (string, error)
 
-	// GetTransactionRef returns block hash, round and index of the transaction.
-	GetTransactionRef(ctx context.Context, ethTxHash string) (*model.TransactionRef, error)
-
 	// GetLastIndexedRound query the last indexed round.
 	GetLastIndexedRound(ctx context.Context) (uint64, error)
 

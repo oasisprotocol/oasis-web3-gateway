@@ -10,13 +10,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/starfishlabs/oasis-evm-web3-gateway/conf"
-	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
-	"github.com/starfishlabs/oasis-evm-web3-gateway/storage"
-
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/driver/pgdriver"
+
+	"github.com/starfishlabs/oasis-evm-web3-gateway/conf"
+	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
+	"github.com/starfishlabs/oasis-evm-web3-gateway/storage"
 )
 
 type PostDB struct {
@@ -51,24 +51,15 @@ func InitDB(ctx context.Context, cfg *conf.DatabaseConfig) (*PostDB, error) {
 	// create db
 	db := bun.NewDB(sqlDB, pgdialect.New())
 
-	// create tables
-	err := model.CreateTables(ctx, db)
-	if err != nil {
-		return nil, err
-	}
-
 	return &PostDB{DB: db}, nil
 }
 
-// GetTransactionRef returns block hash, round and index of the transaction.
-func (db *PostDB) GetTransactionRef(ctx context.Context, txHash string) (*model.TransactionRef, error) {
-	tx := new(model.TransactionRef)
-	err := db.DB.NewSelect().Model(tx).Where("eth_tx_hash = ? ", txHash).Scan(ctx)
-	if err != nil {
-		return nil, err
+func (db *PostDB) RunMigrations(ctx context.Context) error {
+	// Run migrations.
+	if err := model.Migrate(ctx, db.DB.(*bun.DB)); err != nil {
+		return fmt.Errorf("migrations: %w", err)
 	}
-
-	return tx, nil
+	return nil
 }
 
 // GetTransaction queries ethereum transaction by hash.
@@ -125,7 +116,7 @@ func (db *PostDB) Delete(ctx context.Context, table interface{}, round uint64) e
 
 // GetBlockRound returns block round by block hash.
 func (db *PostDB) GetBlockRound(ctx context.Context, hash string) (uint64, error) {
-	block := new(model.BlockRef)
+	block := new(model.Block)
 	err := db.DB.NewSelect().Model(block).Where("hash = ?", hash).Scan(ctx)
 	if err != nil {
 		return 0, err
@@ -136,7 +127,7 @@ func (db *PostDB) GetBlockRound(ctx context.Context, hash string) (uint64, error
 
 // GetBlockHash returns block hash by block round.
 func (db *PostDB) GetBlockHash(ctx context.Context, round uint64) (string, error) {
-	block := new(model.BlockRef)
+	block := new(model.Block)
 	err := db.DB.NewSelect().Model(block).Where("round = ?", round).Scan(ctx)
 	if err != nil {
 		return "", err
@@ -147,7 +138,7 @@ func (db *PostDB) GetBlockHash(ctx context.Context, round uint64) (string, error
 
 // GetLatestBlockHash returns for the block hash of the latest round.
 func (db *PostDB) GetLatestBlockHash(ctx context.Context) (string, error) {
-	block := new(model.BlockRef)
+	block := new(model.Block)
 	err := db.DB.NewSelect().Model(block).Order("round DESC").Limit(1).Scan(ctx)
 	if err != nil {
 		return "", err

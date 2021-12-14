@@ -128,6 +128,9 @@ func Setup() error {
 	if err != nil {
 		return fmt.Errorf("failed to initialize DB: %w", err)
 	}
+	if err = db.RunMigrations(ctx); err != nil {
+		return fmt.Errorf("failed to migrate DB: %w", err)
+	}
 
 	// Create Indexer.
 	f := indexer.NewIndexBackend()
@@ -266,7 +269,7 @@ func InitialDeposit(rc client.RuntimeClient, amount uint64, to types.Address) er
 
 // Shutdown stops web3 gateway.
 func Shutdown() error {
-	if err := model.TruncateModel(context.Background(), db.DB.(*bun.DB)); err != nil {
+	if err := model.DropTables(context.Background(), db.DB.(*bun.DB)); err != nil {
 		return fmt.Errorf("db cleanup failed: %w", err)
 	}
 
