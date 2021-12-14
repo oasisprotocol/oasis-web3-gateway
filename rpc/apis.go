@@ -8,8 +8,10 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 
 	"github.com/starfishlabs/oasis-evm-web3-gateway/conf"
+	eventFilters "github.com/starfishlabs/oasis-evm-web3-gateway/filters"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/indexer"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/eth"
+	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/eth/filters"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/net"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/txpool"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/web3"
@@ -21,6 +23,7 @@ func GetRPCAPIs(
 	client client.RuntimeClient,
 	backend indexer.Backend,
 	config *conf.GatewayConfig,
+	eventSystem *eventFilters.EventSystem,
 ) []ethRpc.API {
 	var apis []ethRpc.API
 
@@ -47,6 +50,12 @@ func GetRPCAPIs(
 			Namespace: "txpool",
 			Version:   "1.0",
 			Service:   txpool.NewPublicAPI(),
+			Public:    true,
+		},
+		ethRpc.API{
+			Namespace: "eth",
+			Version:   "1.0",
+			Service:   filters.NewPublicAPI(ctx, client, logging.GetLogger("eth_filters"), backend, eventSystem),
 			Public:    true,
 		},
 	)

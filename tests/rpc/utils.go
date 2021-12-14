@@ -14,6 +14,7 @@ import (
 
 	cmnEth "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/oasisprotocol/oasis-core/go/common"
 	cmnGrpc "github.com/oasisprotocol/oasis-core/go/common/grpc"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
@@ -28,6 +29,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 
+	"github.com/starfishlabs/oasis-evm-web3-gateway/filters"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/indexer"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/log"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
@@ -64,6 +66,22 @@ var (
 	db *psql.PostDB
 	w3 *server.Web3Gateway
 )
+
+func localClient(t *testing.T, ws bool) *ethclient.Client {
+	var url string
+	var err error
+	switch ws {
+	case true:
+		url, err = w3.GetWSEndpoint()
+	case false:
+		url, err = w3.GetHTTPEndpoint()
+	}
+	require.NoError(t, err, "local client url")
+	c, err := ethclient.Dial(url)
+	require.NoError(t, err, "local client dial")
+
+	return c
+}
 
 // Setup spins up web3 gateway.
 func Setup() error {
@@ -112,12 +130,15 @@ func Setup() error {
 	}
 
 	// Create Indexer.
-	f := indexer.NewPsqlBackend()
-	indx, backend, err := indexer.New(ctx, f, rc, runtimeID, db, tests.TestsConfig.EnablePruning, tests.TestsConfig.PruningStep)
+	f := indexer.NewIndexBackend()
+	indx, backend, subBackend, err := indexer.New(ctx, f, rc, runtimeID, db, tests.TestsConfig.EnablePruning, tests.TestsConfig.PruningStep)
 	if err != nil {
 		return fmt.Errorf("failed to create indexer: %w", err)
 	}
 	indx.Start()
+
+	// Create event system.
+	es := filters.NewEventSystem(subBackend)
 
 	// Create Web3 Gateway.
 	w3, err = server.New(ctx, tests.TestsConfig.Gateway)
@@ -125,7 +146,7 @@ func Setup() error {
 		return fmt.Errorf("setup: failed creating server: %w", err)
 	}
 
-	w3.RegisterAPIs(rpc.GetRPCAPIs(context.Background(), rc, backend, tests.TestsConfig.Gateway))
+	w3.RegisterAPIs(rpc.GetRPCAPIs(context.Background(), rc, backend, tests.TestsConfig.Gateway, es))
 	w3.RegisterHealthChecks([]server.HealthCheck{indx})
 
 	if err = w3.Start(); err != nil {

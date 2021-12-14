@@ -10,6 +10,7 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/service"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 
+	"github.com/starfishlabs/oasis-evm-web3-gateway/filters"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/storage"
 )
 
@@ -271,13 +272,17 @@ func New(
 	storage storage.Storage,
 	enablePruning bool,
 	pruningStep uint64,
-) (*Service, Backend, error) {
-	ctx, cancelCtx := context.WithCancel(ctxBackend)
+) (*Service, Backend, filters.SubscribeBackend, error) {
+	subBackend, err := filters.NewSubscribeBackend(storage)
+	if err != nil {
+		return nil, nil, nil, err
+	}
 
-	backend, err := backendFactory(ctx, runtimeID, storage)
+	ctx, cancelCtx := context.WithCancel(ctxBackend)
+	backend, err := backendFactory(ctx, runtimeID, storage, subBackend)
 	if err != nil {
 		cancelCtx()
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	s := &Service{
@@ -292,5 +297,5 @@ func New(
 	}
 	s.Logger = s.Logger.With("runtime_id", s.runtimeID.String())
 
-	return s, backend, nil
+	return s, backend, subBackend, nil
 }

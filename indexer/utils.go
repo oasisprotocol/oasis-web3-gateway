@@ -4,14 +4,17 @@ import (
 	"encoding/hex"
 	"math/big"
 
+	"github.com/fxamacker/cbor/v2"
+
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/fxamacker/cbor/v2"
+
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 
+	"github.com/starfishlabs/oasis-evm-web3-gateway/filters"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
 	"github.com/starfishlabs/oasis-evm-web3-gateway/storage"
 )
@@ -179,7 +182,7 @@ func convertToEthFormat(
 }
 
 // StoreBlockData parses oasis block and stores in db.
-func (p *psqlBackend) StoreBlockData(oasisBlock *block.Block, txResults []*client.TransactionWithResults) error {
+func (ib *indexBackend) StoreBlockData(oasisBlock *block.Block, txResults []*client.TransactionWithResults) error {
 	encoded := oasisBlock.Header.EncodedHash()
 	bhash := common.HexToHash(encoded.Hex())
 	blockNum := oasisBlock.Header.Round
@@ -189,6 +192,7 @@ func (p *psqlBackend) StoreBlockData(oasisBlock *block.Block, txResults []*clien
 	txsStatus := []uint8{}
 	results := []types.CallResult{}
 	var gasUsed uint64
+	var dbLogs []*model.Log
 
 	// Decode tx and get logs
 	for txIndex, item := range txResults {
@@ -204,7 +208,7 @@ func (p *psqlBackend) StoreBlockData(oasisBlock *block.Block, txResults []*clien
 		ethTx := &ethtypes.Transaction{}
 		err := rlp.DecodeBytes(rawEthTx, ethTx)
 		if err != nil {
-			p.logger.Error("Failed to decode UnverifiedTransaction", "height", blockNum, "index", txIndex, "err", err)
+			ib.logger.Error("Failed to decode UnverifiedTransaction", "height", blockNum, "index", txIndex, "err", err)
 			return err
 		}
 
@@ -226,13 +230,13 @@ func (p *psqlBackend) StoreBlockData(oasisBlock *block.Block, txResults []*clien
 			if event.Code == 1 {
 				var logs []*Log
 				if err = cbor.Unmarshal(event.Value, &logs); err != nil {
-					p.logger.Debug("Failed to unmarshal event value, trying legacy format next", "index", eventIndex, "err", err)
+					ib.logger.Debug("Failed to unmarshal event value, trying legacy format next", "index", eventIndex, "err", err)
 
 					// Emerald events value format changed in https://github.com/oasisprotocol/oasis-sdk/pull/675.
 					// Try the legacy format in case the new format unmarshalling failed.
 					var log Log
 					if lerr := cbor.Unmarshal(event.Value, &log); lerr != nil {
-						p.logger.Error("Failed to unmarshal event value", "index", eventIndex, "legacy_err", lerr, "err", err)
+						ib.logger.Error("Failed to unmarshal event value", "index", eventIndex, "legacy_err", lerr, "err", err)
 						// The legacy fallback failed, likely the event not in legacy format, return the original unmarshal error.
 						return err
 					}
@@ -243,20 +247,30 @@ func (p *psqlBackend) StoreBlockData(oasisBlock *block.Block, txResults []*clien
 			}
 		}
 		logs = append(logs, Logs2EthLogs(oasisLogs, blockNum, bhash, ethTx.Hash(), uint32(txIndex))...)
+		dbLogs = eth2DbLogs(logs)
 	}
 
 	// Get convert block, transactions and receipts.
 	logsBloom := ethtypes.BytesToBloom(ethtypes.LogsBloom(logs))
 	blk, txs, receipts, err := convertToEthFormat(oasisBlock, ethTxs, logsBloom, txsStatus, results, gasUsed)
 	if err != nil {
-		p.logger.Debug("Failed to ConvertToEthBlock", "height", blockNum, "err", err)
+		ib.logger.Debug("Failed to ConvertToEthBlock", "height", blockNum, "err", err)
 		return err
 	}
 
-	return p.storage.RunInTransaction(p.ctx, func(s storage.Storage) error {
+	// Send event to event system
+	chainEvent := filters.ChainEvent{
+		Block: blk,
+		Hash:  bhash,
+		Logs:  dbLogs,
+	}
+	ib.subscribe.ChainChan() <- chainEvent
+	ib.logger.Debug("Send chain event to event system", "height", blockNum)
+
+	return ib.storage.RunInTransaction(ib.ctx, func(s storage.Storage) error {
 		// Store txs.
 		for _, tx := range txs {
-			err = s.Upsert(p.ctx, tx)
+			err = s.Upsert(ib.ctx, tx)
 			if err != nil {
 				return err
 			}
@@ -264,7 +278,7 @@ func (p *psqlBackend) StoreBlockData(oasisBlock *block.Block, txResults []*clien
 
 		// Store receipts.
 		for _, receipt := range receipts {
-			err = s.Upsert(p.ctx, receipt)
+			err = s.Upsert(ib.ctx, receipt)
 			if err != nil {
 				return err
 			}
@@ -272,14 +286,14 @@ func (p *psqlBackend) StoreBlockData(oasisBlock *block.Block, txResults []*clien
 
 		// Store logs.
 		for _, log := range eth2DbLogs(logs) {
-			if err = s.Upsert(p.ctx, log); err != nil {
-				p.logger.Error("Failed to store logs", "height", blockNum, "log", log, "err", err)
+			if err = s.Upsert(ib.ctx, log); err != nil {
+				ib.logger.Error("Failed to store logs", "height", blockNum, "log", log, "err", err)
 				return err
 			}
 		}
 
 		// Store block.
-		return s.Upsert(p.ctx, blk)
+		return s.Upsert(ib.ctx, blk)
 	})
 }
 
