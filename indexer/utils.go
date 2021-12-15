@@ -258,16 +258,7 @@ func (ib *indexBackend) StoreBlockData(oasisBlock *block.Block, txResults []*cli
 		return err
 	}
 
-	// Send event to event system
-	chainEvent := filters.ChainEvent{
-		Block: blk,
-		Hash:  bhash,
-		Logs:  dbLogs,
-	}
-	ib.subscribe.ChainChan() <- chainEvent
-	ib.logger.Debug("Send chain event to event system", "height", blockNum)
-
-	return ib.storage.RunInTransaction(ib.ctx, func(s storage.Storage) error {
+	if err = ib.storage.RunInTransaction(ib.ctx, func(s storage.Storage) error {
 		// Store txs.
 		for _, tx := range txs {
 			err = s.Upsert(ib.ctx, tx)
@@ -294,7 +285,20 @@ func (ib *indexBackend) StoreBlockData(oasisBlock *block.Block, txResults []*cli
 
 		// Store block.
 		return s.Upsert(ib.ctx, blk)
-	})
+	}); err != nil {
+		return err
+	}
+
+	// Send event to event system.
+	chainEvent := filters.ChainEvent{
+		Block: blk,
+		Hash:  bhash,
+		Logs:  dbLogs,
+	}
+	ib.subscribe.ChainChan() <- chainEvent
+	ib.logger.Debug("sent chain event to event system", "height", blockNum)
+
+	return nil
 }
 
 // eth2DbLogs converts ethereum log to model log.
