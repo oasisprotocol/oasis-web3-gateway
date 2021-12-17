@@ -192,7 +192,6 @@ func (ib *indexBackend) StoreBlockData(oasisBlock *block.Block, txResults []*cli
 	txsStatus := []uint8{}
 	results := []types.CallResult{}
 	var gasUsed uint64
-	var dbLogs []*model.Log
 
 	// Decode tx and get logs
 	for txIndex, item := range txResults {
@@ -247,8 +246,8 @@ func (ib *indexBackend) StoreBlockData(oasisBlock *block.Block, txResults []*cli
 			}
 		}
 		logs = append(logs, Logs2EthLogs(oasisLogs, blockNum, bhash, ethTx.Hash(), uint32(txIndex))...)
-		dbLogs = append(dbLogs, eth2DbLogs(logs)...)
 	}
+	dbLogs := eth2DbLogs(logs)
 
 	// Get convert block, transactions and receipts.
 	logsBloom := ethtypes.BytesToBloom(ethtypes.LogsBloom(logs))
