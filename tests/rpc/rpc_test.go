@@ -337,6 +337,65 @@ func TestEth_GetLogsWithoutBlockhash(t *testing.T) {
 	require.NoError(t, err, "getLogs without explicit block hash")
 }
 
+func TestEth_GetLogsWithFilters(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
+	defer cancel()
+
+	ec := localClient(t, false)
+	code := common.FromHex(strings.TrimSpace(evmEventsTestCompiledHex))
+	chainID, err := ec.ChainID(context.Background())
+	require.NoError(t, err, "get chainid")
+
+	signer := types.LatestSignerForChainID(chainID)
+
+	nonce, err := ec.NonceAt(ctx, tests.TestKey1.EthAddress, nil)
+	require.NoError(t, err, "get nonce failed")
+
+	// Create transaction
+	tx := types.NewTx(&types.LegacyTx{
+		Nonce:    nonce,
+		Value:    big.NewInt(0),
+		Gas:      1000000,
+		GasPrice: big.NewInt(2),
+		Data:     code,
+	})
+	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), tests.TestKey1.Private)
+	require.NoError(t, err, "sign tx")
+
+	signedTx, err := tx.WithSignature(signer, signature)
+	require.NoError(t, err, "pack tx")
+
+	err = ec.SendTransaction(context.Background(), signedTx)
+	require.NoError(t, err, "send transaction failed")
+
+	receipt, err := waitTransaction(ctx, ec, signedTx.Hash())
+	require.NoError(t, err)
+
+	t.Logf("Contract address: %s", receipt.ContractAddress)
+	t.Logf("Transaction block: %d", receipt.BlockNumber)
+
+	receiptLogs := make([]types.Log, 0, len(receipt.Logs))
+	for _, log := range receipt.Logs {
+		receiptLogs = append(receiptLogs, *log)
+	}
+
+	blockLogs, err := ec.FilterLogs(ctx, ethereum.FilterQuery{FromBlock: receipt.BlockNumber, ToBlock: receipt.BlockNumber})
+	require.NoError(t, err, "filter logs by block")
+	require.EqualValues(t, receiptLogs, blockLogs, "block logs should match receipt logs")
+
+	blockContractLogs, err := ec.FilterLogs(ctx, ethereum.FilterQuery{FromBlock: receipt.BlockNumber, ToBlock: receipt.BlockNumber, Addresses: []common.Address{receipt.ContractAddress}})
+	require.NoError(t, err, "filter logs by block and contract address")
+	require.EqualValues(t, receiptLogs, blockContractLogs, "block contract logs should match receipt logs")
+
+	blockContractTopicLogs, err := ec.FilterLogs(ctx, ethereum.FilterQuery{FromBlock: receipt.BlockNumber, ToBlock: receipt.BlockNumber, Addresses: []common.Address{receipt.ContractAddress}, Topics: [][]common.Hash{}})
+	require.NoError(t, err, "filter logs by block, contract address and topics")
+	require.EqualValues(t, receiptLogs, blockContractTopicLogs, "block contract topic logs should match receipt logs")
+
+	invalidTopicLogs, err := ec.FilterLogs(ctx, ethereum.FilterQuery{FromBlock: receipt.BlockNumber, ToBlock: receipt.BlockNumber, Addresses: []common.Address{receipt.ContractAddress}, Topics: [][]common.Hash{{common.HexToHash("0x123456")}}})
+	require.NoError(t, err, "filter logs by block, contract address and topics")
+	require.Empty(t, invalidTopicLogs, "filter by invalid topic should return empty logs")
+}
+
 func TestEth_GetLogsMultiple(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
 	defer cancel()
