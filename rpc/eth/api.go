@@ -1,6 +1,7 @@
 package eth
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha512"
 	"database/sql"
@@ -581,8 +582,6 @@ func (api *PublicAPI) GetLogs(filter filters.FilterCriteria) ([]*ethtypes.Log, e
 		return nil, fmt.Errorf("%w: max allowed of rounds in logs query is: %d", ErrInvalidRequest, limit)
 	}
 
-	// TODO: filter addresses and topics
-
 	ethLogs := []*ethtypes.Log{}
 	dbLogs, err := api.backend.GetLogs(startRoundInclusive, endRoundInclusive)
 	if err != nil {
@@ -591,9 +590,37 @@ func (api *PublicAPI) GetLogs(filter filters.FilterCriteria) ([]*ethtypes.Log, e
 	}
 	ethLogs = utils.DB2EthLogs(dbLogs)
 
-	logger.Debug("response", "rsp", ethLogs)
+	// Early return if no further filtering.
+	if len(filter.Addresses) == 0 && len(filter.Topics) == 0 {
+		logger.Debug("response", "rsp", ethLogs)
+		return ethLogs, nil
+	}
 
-	return ethLogs, nil
+	filtered := make([]*ethtypes.Log, 0, len(ethLogs))
+	for _, log := range ethLogs {
+		// Filter by address.
+		addressMatch := len(filtered) == 0
+		for _, addr := range filter.Addresses {
+			if bytes.Equal(addr[:], log.Address[:]) {
+				addressMatch = true
+				break
+			}
+		}
+		if !addressMatch {
+			continue
+		}
+
+		// Filter by topics.
+		if !utils.TopicsMatch(log, filter.Topics) {
+			continue
+		}
+
+		// Log matched all filters.
+		filtered = append(filtered, log)
+	}
+
+	logger.Debug("response", "rsp", filtered, "all_logs", ethLogs)
+	return filtered, nil
 }
 
 // GetBlockHash returns the block hash by the given number.
