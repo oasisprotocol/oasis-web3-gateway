@@ -33,7 +33,7 @@ To run tests:
 Start PostgreSQL (for testing [Postgres Docker](https://hub.docker.com/_/postgres) container can be used):
 
 ```bash
-docker run --rm --name postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:13.3-alpine
+docker run --name postgres --rm -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=postgres  -p 5432:5432 -d postgres
 ```
 
 In a separate terminal, start an Oasis development network:
