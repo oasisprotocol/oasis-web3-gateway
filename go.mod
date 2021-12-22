@@ -1,4 +1,4 @@
-module github.com/starfishlabs/oasis-evm-web3-gateway
+module github.com/oasisprotocol/oasis-evm-web3-gateway
 
 go 1.17
 

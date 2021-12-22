@@ -15,14 +15,14 @@ import (
 	"github.com/uptrace/bun"
 	"google.golang.org/grpc"
 
-	"github.com/starfishlabs/oasis-evm-web3-gateway/conf"
-	"github.com/starfishlabs/oasis-evm-web3-gateway/filters"
-	"github.com/starfishlabs/oasis-evm-web3-gateway/indexer"
-	"github.com/starfishlabs/oasis-evm-web3-gateway/log"
-	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
-	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc"
-	"github.com/starfishlabs/oasis-evm-web3-gateway/server"
-	"github.com/starfishlabs/oasis-evm-web3-gateway/storage/psql"
+	"github.com/oasisprotocol/oasis-evm-web3-gateway/conf"
+	"github.com/oasisprotocol/oasis-evm-web3-gateway/filters"
+	"github.com/oasisprotocol/oasis-evm-web3-gateway/indexer"
+	"github.com/oasisprotocol/oasis-evm-web3-gateway/log"
+	"github.com/oasisprotocol/oasis-evm-web3-gateway/model"
+	"github.com/oasisprotocol/oasis-evm-web3-gateway/rpc"
+	"github.com/oasisprotocol/oasis-evm-web3-gateway/server"
+	"github.com/oasisprotocol/oasis-evm-web3-gateway/storage/psql"
 )
 
 var (

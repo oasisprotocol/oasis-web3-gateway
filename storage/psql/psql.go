@@ -14,9 +14,9 @@ import (
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/driver/pgdriver"
 
-	"github.com/starfishlabs/oasis-evm-web3-gateway/conf"
-	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
-	"github.com/starfishlabs/oasis-evm-web3-gateway/storage"
+	"github.com/oasisprotocol/oasis-evm-web3-gateway/conf"
+	"github.com/oasisprotocol/oasis-evm-web3-gateway/model"
+	"github.com/oasisprotocol/oasis-evm-web3-gateway/storage"
 )
 
 type PostDB struct {

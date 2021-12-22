@@ -27,18 +27,17 @@ import (
 	oasisTesting "github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun"
 	"google.golang.org/grpc"
 
-	"github.com/starfishlabs/oasis-evm-web3-gateway/filters"
-	"github.com/starfishlabs/oasis-evm-web3-gateway/indexer"
-	"github.com/starfishlabs/oasis-evm-web3-gateway/log"
-	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
-	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc"
-	"github.com/starfishlabs/oasis-evm-web3-gateway/server"
-	"github.com/starfishlabs/oasis-evm-web3-gateway/storage/psql"
-	"github.com/starfishlabs/oasis-evm-web3-gateway/tests"
-
-	"github.com/uptrace/bun"
+	"github.com/oasisprotocol/oasis-evm-web3-gateway/filters"
+	"github.com/oasisprotocol/oasis-evm-web3-gateway/indexer"
+	"github.com/oasisprotocol/oasis-evm-web3-gateway/log"
+	"github.com/oasisprotocol/oasis-evm-web3-gateway/model"
+	"github.com/oasisprotocol/oasis-evm-web3-gateway/rpc"
+	"github.com/oasisprotocol/oasis-evm-web3-gateway/server"
+	"github.com/oasisprotocol/oasis-evm-web3-gateway/storage/psql"
+	"github.com/oasisprotocol/oasis-evm-web3-gateway/tests"
 )
 
 type Request struct {

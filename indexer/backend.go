@@ -5,8 +5,6 @@ import (
 	"encoding/hex"
 	"errors"
 
-	"github.com/starfishlabs/oasis-evm-web3-gateway/filters"
-
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -16,8 +14,9 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 
-	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
-	"github.com/starfishlabs/oasis-evm-web3-gateway/storage"
+	"github.com/oasisprotocol/oasis-evm-web3-gateway/filters"
+	"github.com/oasisprotocol/oasis-evm-web3-gateway/model"
+	"github.com/oasisprotocol/oasis-evm-web3-gateway/storage"
 )
 
 var ErrGetLastRetainedRound = errors.New("get last retained round error in db")
