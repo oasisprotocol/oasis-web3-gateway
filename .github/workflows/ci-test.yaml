@@ -67,6 +67,17 @@ jobs:
       - name: Unit tests with coverage
         run: go test -race -coverpkg=./... -coverprofile=coverage.txt -covermode=atomic -v ./...
 
+      - name: Mosaic-1 e2e test
+        run: |
+          ./oasis-evm-web3-gateway --config conf/tests.yml &
+          git clone https://github.com/cgewecke/mosaic-1.git
+          cp tests/tools/buidler.config.js mosaic-1
+          cd mosaic-1
+          yarn
+          yarn test
+          cd ..
+          killall oasis-evm-web3-gateway
+
       - name: Shutdown oasis-node
         run: killall oasis-node
         if: always()
@@ -80,3 +91,4 @@ jobs:
 
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v2.1.0
+
