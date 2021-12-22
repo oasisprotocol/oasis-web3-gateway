@@ -13,7 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/require"
 
-	"github.com/starfishlabs/oasis-evm-web3-gateway/tests"
+	"github.com/oasisprotocol/oasis-evm-web3-gateway/tests"
 )
 
 func TestEth_SubscribeNewHead(t *testing.T) {

@@ -14,9 +14,9 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 
-	"github.com/starfishlabs/oasis-evm-web3-gateway/filters"
-	"github.com/starfishlabs/oasis-evm-web3-gateway/model"
-	"github.com/starfishlabs/oasis-evm-web3-gateway/storage"
+	"github.com/oasisprotocol/oasis-evm-web3-gateway/filters"
+	"github.com/oasisprotocol/oasis-evm-web3-gateway/model"
+	"github.com/oasisprotocol/oasis-evm-web3-gateway/storage"
 )
 
 var (

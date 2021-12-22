@@ -8,6 +8,9 @@
 # Test binary, built with `go test -c`
 *.test
 
+# Coverage files
+coverage.txt
+
 # Build binary.
 oasis-evm-web3-gateway
 

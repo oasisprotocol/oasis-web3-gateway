@@ -21,7 +21,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/require"
 
-	"github.com/starfishlabs/oasis-evm-web3-gateway/tests"
+	"github.com/oasisprotocol/oasis-evm-web3-gateway/tests"
 )
 
 func createRequest(method string, params interface{}) Request {
@@ -170,7 +170,7 @@ func TestEth_GetBlockByNumberAndGetBlockByHash(t *testing.T) {
 	// transactions in the block which need to be considered, but are not
 	// accessible by go-ethereum. To overcome this, we perform getBlockByNumber
 	// query with raw HTTP client and use the block's hash from that response.
-	// For details, see https://github.com/starfishlabs/oasis-evm-web3-gateway/issues/72
+	// For details, see https://github.com/oasisprotocol/oasis-evm-web3-gateway/issues/72
 	param := []interface{}{fmt.Sprintf("0x%x", number), false}
 	rpcRes := call(t, "eth_getBlockByNumber", param)
 	blk2 := make(map[string]interface{})

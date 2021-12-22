@@ -7,14 +7,14 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 
-	"github.com/starfishlabs/oasis-evm-web3-gateway/conf"
-	eventFilters "github.com/starfishlabs/oasis-evm-web3-gateway/filters"
-	"github.com/starfishlabs/oasis-evm-web3-gateway/indexer"
-	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/eth"
-	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/eth/filters"
-	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/net"
-	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/txpool"
-	"github.com/starfishlabs/oasis-evm-web3-gateway/rpc/web3"
+	"github.com/oasisprotocol/oasis-evm-web3-gateway/conf"
+	eventFilters "github.com/oasisprotocol/oasis-evm-web3-gateway/filters"
+	"github.com/oasisprotocol/oasis-evm-web3-gateway/indexer"
+	"github.com/oasisprotocol/oasis-evm-web3-gateway/rpc/eth"
+	"github.com/oasisprotocol/oasis-evm-web3-gateway/rpc/eth/filters"
+	"github.com/oasisprotocol/oasis-evm-web3-gateway/rpc/net"
+	"github.com/oasisprotocol/oasis-evm-web3-gateway/rpc/txpool"
+	"github.com/oasisprotocol/oasis-evm-web3-gateway/rpc/web3"
 )
 
 // GetRPCAPIs returns the list of all APIs.

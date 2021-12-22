@@ -3,7 +3,7 @@ package tests
 import (
 	"log"
 
-	"github.com/starfishlabs/oasis-evm-web3-gateway/conf"
+	"github.com/oasisprotocol/oasis-evm-web3-gateway/conf"
 )
 
 var TestsConfig *conf.Config

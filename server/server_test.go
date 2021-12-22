@@ -11,7 +11,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/require"
 
-	"github.com/starfishlabs/oasis-evm-web3-gateway/conf"
+	"github.com/oasisprotocol/oasis-evm-web3-gateway/conf"
 )
 
 func createLocalServer(httpPort, wsPort int, httpPrefix, wsPrefix string) (*Web3Gateway, error) {
