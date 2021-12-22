@@ -2,6 +2,7 @@
 
 [![ci-lint](https://github.com/oasisprotocol/oasis-evm-web3-gateway/actions/workflows/ci-lint.yml/badge.svg)](https://github.com/oasisprotocol/oasis-evm-web3-gateway/actions/workflows/ci-lint.yml)
 [![ci-test](https://github.com/oasisprotocol/oasis-evm-web3-gateway/actions/workflows/ci-test.yaml/badge.svg)](https://github.com/oasisprotocol/oasis-evm-web3-gateway/actions/workflows/ci-test.yaml)
+[![codecov](https://codecov.io/gh/oasisprotocol/oasis-evm-web3-gateway/branch/main/graph/badge.svg?token=WMx1Bg91Hm)](https://codecov.io/gh/oasisprotocol/oasis-evm-web3-gateway)
 
 
 Web3 Gateway for Oasis Emerald EVM.

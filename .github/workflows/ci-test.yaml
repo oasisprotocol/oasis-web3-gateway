@@ -65,7 +65,7 @@ jobs:
       - run: go build
 
       - name: Unit tests with coverage
-        run: go test -race -coverprofile=coverage.txt -covermode=atomic -v ./...
+        run: go test -race -coverpkg=./... -coverprofile=coverage.txt -covermode=atomic -v ./...
 
       - name: Shutdown oasis-node
         run: killall oasis-node
