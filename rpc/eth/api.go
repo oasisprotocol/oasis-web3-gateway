@@ -382,7 +382,18 @@ func (api *PublicAPI) Call(args utils.TransactionArgs, blockNum ethrpc.BlockNumb
 	return res, nil
 }
 
-// SendRawTransaction send a raw Ethereum transaction.
+// SendTransaction signs and sends an Ethereum transaction.
+//func (api *PublicAPI) SendTransaction(ethTx *ethtypes.Transaction) (common.Hash, error) {
+//	logger := api.Logger.With("method", "eth_sendTransaction")
+//	logger.Debug("request", "tx", ethTx)
+//	data, err := ethTx.MarshalBinary()
+//	if err != nil {
+//		return common.Hash{}, err
+//	}
+//	return api.SendRawTransaction(data)
+//}
+
+// SendRawTransaction sends a raw Ethereum transaction.
 func (api *PublicAPI) SendRawTransaction(data hexutil.Bytes) (common.Hash, error) {
 	logger := api.Logger.With("method", "eth_sendRawTransaction")
 	logger.Debug("request", "length", len(data))
@@ -657,6 +668,8 @@ func (api *PublicAPI) Accounts() ([]common.Address, error) {
 	logger.Debug("request")
 
 	addresses := make([]common.Address, 0)
+	//	addresses = append(addresses, common.HexToAddress("0x90adE3B7065fa715c7a150313877dF1d33e777D5")) // Dave
+	//	addresses = append(addresses, common.HexToAddress("0x33a8Ba274FEdFeed6A08d09eC524a1E1A6Da8262")) // Eugene
 	return addresses, nil
 }
 
