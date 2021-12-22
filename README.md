@@ -14,7 +14,7 @@ Web3 Gateway for Oasis Emerald EVM.
 - [PostgreSQL](https://www.postgresql.org/) (at least version 13.3).
 
 Additionally, for testing:
-- [Oasis-core](https://github.com/oasisprotocol/oasis-core) version 21.3.6.
+- [Oasis Core](https://github.com/oasisprotocol/oasis-core) version 21.3.7.
 - [Emerald Paratime](https://github.com/oasisprotocol/emerald-paratime) version 6.0.0.
 
 
@@ -62,7 +62,7 @@ Set up the config file (e.g. `gateway.yml`) appropriately:
 
 ```yaml
 runtime_id: <emerald_paratime_id>
-node_address: <path-to-oasis-node-unix-socket>
+node_address: "unix:<path-to-oasis-node-unix-socket>"
 enable_pruning: false
 pruning_step: 100000
 
