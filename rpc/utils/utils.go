@@ -107,6 +107,10 @@ func ConvertToEthBlock(block *model.Block, fullTx bool) map[string]interface{} {
 		"totalDifficulty":  (*hexutil.Big)(big.NewInt(0)),
 	}
 
+	if len(header.Extra) == 0 {
+		res["extraData"] = "0x"
+	}
+
 	return res
 }
 
