@@ -178,6 +178,9 @@ func TestEth_GetBlockByNumberAndGetBlockByHash(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, fmt.Sprintf("0x%x", number), blk2["number"])
 
+	// Test return "0x" instead of "" in extra data.
+	require.Equal(t, blk2["extraData"].(string), "0x")
+
 	blk3, err := ec.BlockByHash(ctx, common.HexToHash(blk2["hash"].(string)))
 	require.NoError(t, err)
 	require.Equal(t, number, blk3.Number())
