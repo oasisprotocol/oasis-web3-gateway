@@ -322,8 +322,8 @@ func (api *PublicAPI) NewRevertError(revertErr error) *RevertError {
 
 // Call executes the given transaction on the state for the given block number.
 // This function doesn't make any changes in the evm state of blockchain.
-func (api *PublicAPI) Call(args utils.TransactionArgs, blockNum ethrpc.BlockNumber, _ *utils.StateOverride) (hexutil.Bytes, error) {
-	logger := api.Logger.With("method", "eth_Call", "block_number", blockNum)
+func (api *PublicAPI) Call(args utils.TransactionArgs, blockNrOrHash ethrpc.BlockNumberOrHash, _ *utils.StateOverride) (hexutil.Bytes, error) {
+	logger := api.Logger.With("method", "eth_call", "block number or hash", blockNrOrHash)
 	logger.Debug("request", "args", args)
 	var (
 		amount   = []byte{0}
@@ -333,7 +333,8 @@ func (api *PublicAPI) Call(args utils.TransactionArgs, blockNum ethrpc.BlockNumb
 		// This gas cap should be enough for SimulateCall an ethereum transaction
 		gas uint64 = 30_000_000
 	)
-	round, err := api.roundParamFromBlockNum(logger, blockNum)
+
+	round, err := api.getBlockRound(logger, blockNrOrHash)
 	if err != nil {
 		return nil, err
 	}
@@ -672,4 +673,20 @@ func (api *PublicAPI) Hashrate() hexutil.Uint64 {
 	logger := api.Logger.With("method", "eth_hashrate")
 	logger.Debug("request")
 	return 0
+}
+
+// getBlockRound returns the block round from BlockNumberOrHash
+func (api *PublicAPI) getBlockRound(logger *logging.Logger, blockNrOrHash ethrpc.BlockNumberOrHash) (uint64, error) {
+	switch {
+	case blockNrOrHash.BlockHash == nil && blockNrOrHash.BlockNumber == nil:
+		return 0, fmt.Errorf("types BlockHash and BlockNumber cannot be both nil")
+	case blockNrOrHash.BlockHash != nil:
+		round, err := api.backend.QueryBlockRound(*blockNrOrHash.BlockHash)
+		return round, err
+	case blockNrOrHash.BlockNumber != nil:
+		round, err := api.roundParamFromBlockNum(logger, *blockNrOrHash.BlockNumber)
+		return round, err
+	default:
+		return 0, nil
+	}
 }
