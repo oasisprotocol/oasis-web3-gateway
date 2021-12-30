@@ -675,7 +675,7 @@ func (api *PublicAPI) Hashrate() hexutil.Uint64 {
 	return 0
 }
 
-// getBlockRound returns the block round from BlockNumberOrHash
+// getBlockRound returns the block round from BlockNumberOrHash.
 func (api *PublicAPI) getBlockRound(logger *logging.Logger, blockNrOrHash ethrpc.BlockNumberOrHash) (uint64, error) {
 	switch {
 	case blockNrOrHash.BlockHash == nil && blockNrOrHash.BlockNumber == nil:
