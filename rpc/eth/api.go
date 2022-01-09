@@ -599,7 +599,7 @@ func (api *PublicAPI) GetLogs(filter filters.FilterCriteria) ([]*ethtypes.Log, e
 	filtered := make([]*ethtypes.Log, 0, len(ethLogs))
 	for _, log := range ethLogs {
 		// Filter by address.
-		addressMatch := len(filtered) == 0
+		addressMatch := len(filter.Addresses) == 0
 		for _, addr := range filter.Addresses {
 			if bytes.Equal(addr[:], log.Address[:]) {
 				addressMatch = true

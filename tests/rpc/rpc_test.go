@@ -447,6 +447,13 @@ func TestEth_GetLogsMultiple(t *testing.T) {
 
 		// Check emitted logs.
 		require.Len(t, receipt.Logs, 3, "3 logs expected")
+
+		// Query logs for the block.
+		blockLogs, err := ec.FilterLogs(ctx, ethereum.FilterQuery{FromBlock: receipt.BlockNumber, ToBlock: receipt.BlockNumber})
+		require.NoError(t, err, "filter logs by block")
+		for _, log := range receipt.Logs {
+			require.Contains(t, blockLogs, *log, "all receipt logs should be present in block logs")
+		}
 	}
 
 	// Submit transactions in parallel so the transactions (likely) get processed
