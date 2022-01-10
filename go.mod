@@ -10,7 +10,7 @@ require (
 	github.com/knadh/koanf v1.3.2
 	github.com/oasisprotocol/oasis-core/go v0.2103.6
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.1.1-0.20211203131800-7bc6c485ad2f
-	github.com/rs/cors v1.7.0
+	github.com/rs/cors v1.8.2
 	github.com/spf13/cobra v1.2.1
 	github.com/stretchr/testify v1.7.0
 	github.com/uptrace/bun v1.0.21
