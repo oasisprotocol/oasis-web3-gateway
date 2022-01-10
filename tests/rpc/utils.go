@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/oasisprotocol/oasis-evm-web3-gateway/filters"
 	"github.com/oasisprotocol/oasis-evm-web3-gateway/indexer"
@@ -91,7 +92,7 @@ func Setup() error {
 	}
 
 	// Establish a gRPC connection with the client node.
-	conn, err := cmnGrpc.Dial(tests.TestsConfig.NodeAddress, grpc.WithInsecure())
+	conn, err := cmnGrpc.Dial(tests.TestsConfig.NodeAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return fmt.Errorf("setup: failed to establish gRPC connection with oasis-node: %w", err)
 	}
