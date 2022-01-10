@@ -13,8 +13,8 @@ require (
 	github.com/rs/cors v1.7.0
 	github.com/spf13/cobra v1.2.1
 	github.com/stretchr/testify v1.7.0
-	github.com/uptrace/bun v1.0.20-0.20211209064848-368a05972a99
-	github.com/uptrace/bun/dialect/pgdialect v1.0.19
+	github.com/uptrace/bun v1.0.21
+	github.com/uptrace/bun/dialect/pgdialect v1.0.21
 	github.com/uptrace/bun/driver/pgdriver v1.0.19
 	golang.org/x/crypto v0.0.0-20211117183948-ae814b36b871
 	google.golang.org/grpc v1.41.0
@@ -91,7 +91,7 @@ require (
 	go.dedis.ch/fixbuf v1.0.3 // indirect
 	go.dedis.ch/kyber/v3 v3.0.13 // indirect
 	golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2 // indirect
-	golang.org/x/sys v0.0.0-20211124211545-fe61309f8881 // indirect
+	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e // indirect
 	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/genproto v0.0.0-20210828152312-66f60bf46e71 // indirect
 	google.golang.org/grpc/security/advancedtls v0.0.0-20200902210233-8630cac324bf // indirect
