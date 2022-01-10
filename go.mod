@@ -15,8 +15,8 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/uptrace/bun v1.0.21
 	github.com/uptrace/bun/dialect/pgdialect v1.0.21
-	github.com/uptrace/bun/driver/pgdriver v1.0.19
-	golang.org/x/crypto v0.0.0-20211117183948-ae814b36b871
+	github.com/uptrace/bun/driver/pgdriver v1.0.21
+	golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3
 	google.golang.org/grpc v1.41.0
 )
 
