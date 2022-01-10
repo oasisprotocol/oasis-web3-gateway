@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/uptrace/bun"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/oasisprotocol/oasis-evm-web3-gateway/conf"
 	"github.com/oasisprotocol/oasis-evm-web3-gateway/filters"
@@ -163,7 +164,7 @@ func runRoot() error {
 
 	// Establish a gRPC connection with the client node.
 	logger.Info("connecting to local node", "addr", cfg.NodeAddress)
-	conn, err := cmnGrpc.Dial(cfg.NodeAddress, grpc.WithInsecure())
+	conn, err := cmnGrpc.Dial(cfg.NodeAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		logger.Error("failed to establish connection", "err", err)
 		return err
