@@ -1,16 +1,34 @@
 package version
 
 import (
-	"fmt"
+	"runtime"
+	"runtime/debug"
 )
 
-const (
-	VersionMajor = 0
-	VersionMinor = 1
-	VersionPatch = 0
-	VersionTag   = "alpha"
+// Unknown represents an unknown version.
+const Unknown = "unknown"
+
+var (
+	// Software represents the Emerald Web3 Gateway's version and
+	// should be set by the linker.
+	Software = "0.0.0-unset"
+
+	// Toolchain is the version of the Go compiler/standard library.
+	Toolchain = runtime.Version()
 )
 
-func Version() string {
-	return fmt.Sprintf("%d.%d.%d-%s", VersionMajor, VersionMinor, VersionPatch, VersionTag)
+// GetOasisSDKVersion returns the version of the Oasis SDK dependency or
+// unknown if it can't be obtained.
+func GetOasisSDKVersion() string {
+	bi, ok := debug.ReadBuildInfo()
+	if !ok {
+		return Unknown
+	}
+
+	for _, dep := range bi.Deps {
+		if dep.Path == "github.com/oasisprotocol/oasis-sdk/client-sdk/go" {
+			return dep.Version
+		}
+	}
+	return Unknown
 }

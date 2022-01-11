@@ -24,7 +24,7 @@ Additionally, for testing:
 To build the binary run:
 
 ```bash
-go build
+make build
 ```
 
 ### Test
@@ -52,7 +52,7 @@ export OASIS_NODE_DATADIR=/tmp/oasis-evm-gateway-tests
 Run tests:
 
 ```bash
-go test ./...
+make test
 ```
 
 ## Running the Gateway on Testnet/Mainnet

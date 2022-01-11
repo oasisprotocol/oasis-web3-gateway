@@ -24,6 +24,7 @@ import (
 	"github.com/oasisprotocol/emerald-web3-gateway/rpc"
 	"github.com/oasisprotocol/emerald-web3-gateway/server"
 	"github.com/oasisprotocol/emerald-web3-gateway/storage/psql"
+	"github.com/oasisprotocol/emerald-web3-gateway/version"
 )
 
 var (
@@ -34,9 +35,10 @@ var (
 
 	// Oasis-web3-gateway root command.
 	rootCmd = &cobra.Command{
-		Use:   "emerald-web3-gateway",
-		Short: "emerald-web3-gateway",
-		RunE:  exec,
+		Use:     "emerald-web3-gateway",
+		Short:   "emerald-web3-gateway",
+		Version: version.Software,
+		RunE:    exec,
 	}
 
 	// Truncate DB.
@@ -54,7 +56,19 @@ var (
 	}
 )
 
+func initVersions() {
+	cobra.AddTemplateFunc("toolchain", func() interface{} { return version.Toolchain })
+	cobra.AddTemplateFunc("sdk", func() interface{} { return version.GetOasisSDKVersion() })
+
+	rootCmd.SetVersionTemplate(`Software version: {{.Version}}
+Oasis SDK version: {{ sdk }}
+Go toolchain version: {{ toolchain }}
+`)
+}
+
 func init() {
+	initVersions()
+
 	rootCmd.Flags().StringVar(&configFile, "config", "./conf/server.yml", "path to the config.yml file")
 
 	truncateCmd.Flags().StringVar(&configFile, "config", "./conf/server.yml", "path to the config.yml file")
