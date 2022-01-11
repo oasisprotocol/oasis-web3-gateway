@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/oasisprotocol/oasis-evm-web3-gateway/tests"
+	"github.com/oasisprotocol/emerald-web3-gateway/tests"
 )
 
 func TestMain(m *testing.M) {

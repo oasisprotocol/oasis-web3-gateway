@@ -9,8 +9,8 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 
-	"github.com/oasisprotocol/oasis-evm-web3-gateway/conf"
-	"github.com/oasisprotocol/oasis-evm-web3-gateway/storage"
+	"github.com/oasisprotocol/emerald-web3-gateway/conf"
+	"github.com/oasisprotocol/emerald-web3-gateway/storage"
 )
 
 // HealthCheck is the health checker interface.

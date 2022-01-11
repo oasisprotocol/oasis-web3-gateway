@@ -9,7 +9,7 @@ import (
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/migrate"
 
-	"github.com/oasisprotocol/oasis-evm-web3-gateway/model/migrations"
+	"github.com/oasisprotocol/emerald-web3-gateway/model/migrations"
 )
 
 // DropTables deletes all database tables in the `public` schema of the configured database.

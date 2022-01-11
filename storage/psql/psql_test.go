@@ -10,8 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
 
-	"github.com/oasisprotocol/oasis-evm-web3-gateway/model"
-	"github.com/oasisprotocol/oasis-evm-web3-gateway/tests"
+	"github.com/oasisprotocol/emerald-web3-gateway/model"
+	"github.com/oasisprotocol/emerald-web3-gateway/tests"
 )
 
 var db *PostDB

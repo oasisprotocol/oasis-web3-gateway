@@ -16,14 +16,14 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	"github.com/oasisprotocol/oasis-evm-web3-gateway/conf"
-	"github.com/oasisprotocol/oasis-evm-web3-gateway/filters"
-	"github.com/oasisprotocol/oasis-evm-web3-gateway/indexer"
-	"github.com/oasisprotocol/oasis-evm-web3-gateway/log"
-	"github.com/oasisprotocol/oasis-evm-web3-gateway/model"
-	"github.com/oasisprotocol/oasis-evm-web3-gateway/rpc"
-	"github.com/oasisprotocol/oasis-evm-web3-gateway/server"
-	"github.com/oasisprotocol/oasis-evm-web3-gateway/storage/psql"
+	"github.com/oasisprotocol/emerald-web3-gateway/conf"
+	"github.com/oasisprotocol/emerald-web3-gateway/filters"
+	"github.com/oasisprotocol/emerald-web3-gateway/indexer"
+	"github.com/oasisprotocol/emerald-web3-gateway/log"
+	"github.com/oasisprotocol/emerald-web3-gateway/model"
+	"github.com/oasisprotocol/emerald-web3-gateway/rpc"
+	"github.com/oasisprotocol/emerald-web3-gateway/server"
+	"github.com/oasisprotocol/emerald-web3-gateway/storage/psql"
 )
 
 var (
@@ -34,8 +34,8 @@ var (
 
 	// Oasis-web3-gateway root command.
 	rootCmd = &cobra.Command{
-		Use:   "oasis-evm-web3-gateway",
-		Short: "oasis-evm-web3-gateway",
+		Use:   "emerald-web3-gateway",
+		Short: "emerald-web3-gateway",
 		RunE:  exec,
 	}
 
