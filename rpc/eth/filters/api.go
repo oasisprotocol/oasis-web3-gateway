@@ -11,8 +11,8 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 
-	eventFilters "github.com/oasisprotocol/oasis-evm-web3-gateway/filters"
-	"github.com/oasisprotocol/oasis-evm-web3-gateway/indexer"
+	eventFilters "github.com/oasisprotocol/emerald-web3-gateway/filters"
+	"github.com/oasisprotocol/emerald-web3-gateway/indexer"
 )
 
 // PublicAPI is the eth_ prefixed set of APIs in the Web3 JSON-RPC spec.

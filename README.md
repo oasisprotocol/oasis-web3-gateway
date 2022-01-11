@@ -1,8 +1,8 @@
-# oasis-evm-web3-gateway
+# emerald-web3-gateway
 
-[![ci-lint](https://github.com/oasisprotocol/oasis-evm-web3-gateway/actions/workflows/ci-lint.yml/badge.svg)](https://github.com/oasisprotocol/oasis-evm-web3-gateway/actions/workflows/ci-lint.yml)
-[![ci-test](https://github.com/oasisprotocol/oasis-evm-web3-gateway/actions/workflows/ci-test.yaml/badge.svg)](https://github.com/oasisprotocol/oasis-evm-web3-gateway/actions/workflows/ci-test.yaml)
-[![codecov](https://codecov.io/gh/oasisprotocol/oasis-evm-web3-gateway/branch/main/graph/badge.svg?token=WMx1Bg91Hm)](https://codecov.io/gh/oasisprotocol/oasis-evm-web3-gateway)
+[![ci-lint](https://github.com/oasisprotocol/emerald-web3-gateway/actions/workflows/ci-lint.yml/badge.svg)](https://github.com/oasisprotocol/emerald-web3-gateway/actions/workflows/ci-lint.yml)
+[![ci-test](https://github.com/oasisprotocol/emerald-web3-gateway/actions/workflows/ci-test.yaml/badge.svg)](https://github.com/oasisprotocol/emerald-web3-gateway/actions/workflows/ci-test.yaml)
+[![codecov](https://codecov.io/gh/oasisprotocol/emerald-web3-gateway/branch/main/graph/badge.svg?token=WMx1Bg91Hm)](https://codecov.io/gh/oasisprotocol/emerald-web3-gateway)
 
 
 Web3 Gateway for Oasis Emerald EVM.
@@ -102,10 +102,10 @@ DATABASE__PASSWORD: <postgresql_password>
 
 environment variable.
 
-Start the gateway by running the `oasis-evm-web3-gateway` binary:
+Start the gateway by running the `emerald-web3-gateway` binary:
 
 ```bash
-oasis-evm-web3-gateway --config gateway.yml
+emerald-web3-gateway --config gateway.yml
 ```
 ## Credits
 

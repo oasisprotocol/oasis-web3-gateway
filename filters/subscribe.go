@@ -5,7 +5,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/event"
 
-	"github.com/oasisprotocol/oasis-evm-web3-gateway/storage"
+	"github.com/oasisprotocol/emerald-web3-gateway/storage"
 )
 
 type Subscribe struct {

@@ -61,4 +61,4 @@ linters-settings:
     check-shadowing: true
   goimports:
     # Put local imports after 3rd-party packages.
-    local-prefixes: github.com/oasisprotocol/oasis-evm-web3-gateway
+    local-prefixes: github.com/oasisprotocol/emerald-web3-gateway

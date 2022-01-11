@@ -7,7 +7,7 @@ import (
 
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 
-	"github.com/oasisprotocol/oasis-evm-web3-gateway/conf"
+	"github.com/oasisprotocol/emerald-web3-gateway/conf"
 )
 
 // InitLogging initializes logging based on the provided configuration.
