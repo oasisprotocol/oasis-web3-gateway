@@ -2,7 +2,6 @@ package web3
 
 import (
 	"fmt"
-	"runtime"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -25,5 +24,5 @@ func (a *PublicAPI) Sha3(input hexutil.Bytes) hexutil.Bytes {
 
 // ClientVersion returns the current client info.
 func (a *PublicAPI) ClientVersion() string {
-	return fmt.Sprintf("oasis/%s/%s", version.Version(), runtime.Version())
+	return fmt.Sprintf("oasis/%s/%s", version.Software, version.Toolchain)
 }
