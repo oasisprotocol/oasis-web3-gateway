@@ -18,7 +18,6 @@ Additionally, for testing:
 - [Oasis Core](https://github.com/oasisprotocol/oasis-core) version 21.3.7.
 - [Emerald Paratime](https://github.com/oasisprotocol/emerald-paratime) version 6.0.0.
 
-
 ### Build
 
 To build the binary run:
@@ -107,6 +106,23 @@ Start the gateway by running the `emerald-web3-gateway` binary:
 ```bash
 emerald-web3-gateway --config gateway.yml
 ```
+
+## Contributing
+
+See our [Contributing Guidelines](CONTRIBUTING.md).
+
+### Versioning
+
+See our [Versioning] document.
+
+[Versioning]: docs/versioning.md
+
+### Release Process
+
+See our [Release Process] document.
+
+[Release Process]: docs/release-process.md
+
 ## Credits
 
 Parts of the code heavily based on [go-ethereum](https://github.com/ethereum/go-ethereum).
