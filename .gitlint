@@ -8,6 +8,9 @@ ignore=body-is-missing
 [title-max-length]
 line-length=80
 
+[title-match-regex]
+regex=^(breaks|fix|feat|other|deps)(\(\w*\))?:.*$
+
 [body-max-line-length]
 line-length=80
 

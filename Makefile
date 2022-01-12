@@ -34,13 +34,19 @@ lint-go-mod-tidy:
 	@$(CHECK_GO_MOD_TIDY)
 
 lint-git:
-	@$(CHECK_GITLINT)
+	@$(CHECK_GITLINT) || \
+	($(ECHO) "See commit style guide at: https://github.com/oasisprotocol/emerald-web3-gateway/blob/main/CONTRIBUTING.md#git-commit-messages" && \
+	exit 1)
 
 lint: $(lint-targets)
+
+release-build:
+	@goreleaser release --rm-dist
 
 # List of targets that are not actual files.
 .PHONY: \
 	all build \
 	test \
 	fmt \
-	$(lint-targets) lint
+	$(lint-targets) lint \
+	release-build
