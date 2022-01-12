@@ -20,3 +20,5 @@ emerald-web3-gateway
 # Dependency directories (remove the comment below to include it)
 # vendor/
 .vscode
+
+dist/

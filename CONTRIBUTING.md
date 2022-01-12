@@ -165,12 +165,11 @@ A quick summary:
 - Separate subject from body with a blank line.
 - Limit the subject line to 80 characters.
 - Prefix the subject line with one of:
-  - "breaks: \<description\>" if commit implements a non-backward compatible
-    breaking change
-  - "fix: \<description\>" if commit implements a bugfix
-  - "feat: \<description\>" if commit implements a new description
-  - "deps: \<description>\" if commit updates a dependency
-  - "other: \<description\>" if commit doesn't fall in any of the above categories
+  - "breaks:" if commit implements a non-backward compatible breaking change
+  - "fix:" if commit implements a bugfix
+  - "feat:" if commit implements a new feature
+  - "deps:" if commit updates a dependency
+  - "other:" if commit doesn't fall in any of the above categories
 - Do not end the subject line with a period.
 - Wrap the body at 80 characters.
 - Use the body to explain _what_ and _why_ vs. _how_.

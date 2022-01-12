@@ -1,0 +1,65 @@
+project_name: Emerald Web3 Gateway
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - binary: emerald-web3-gateway
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -buildid=
+      - "{{.Env.GOLDFLAGS_VERSION}}"
+    goos:
+      - linux
+    goarch:
+      - amd64
+
+archives:
+  - name_template: "{{replace .ProjectName \" \" \"_\" | tolower}}_{{.Version}}_{{.Os}}_{{.Arch}}"
+    wrap_in_directory: true
+
+checksum:
+  name_template: SHA256SUMS-{{.Version}}.txt
+  algorithm: sha256
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+    - Merge pull request
+    - Merge remote-tracking branch
+    - Merge branch
+
+  # Enable this after the initial release.
+  # groups:
+  #   - title: Breaking changes
+  #     regexp: "^.*breaks[(\\w)]*:+.*$"
+  #     order: 0
+  #   - title: New Features
+  #     regexp: "^.*feat[(\\w)]*:+.*$"
+  #     order: 5
+  #   - title: Bug fixes
+  #     regexp: "^.*fix[(\\w)]*:+.*$"
+  #     order: 10
+  #   - title: Dependencies updates
+  #     regexp: "^.*deps[(\\w)]*:+.*$"
+  #     order: 500
+  #   - title: Other changes
+  #     order: 999
+
+release:
+  name_template: "{{.ProjectName}} {{.Version}}"
+  footer: |
+    **Full Changelog**: https://github.com/oasisprotocol/emerald-web3-gateway/compare/{{ .PreviousTag }}...{{ .Tag }}
+
+    ### Running the gateway
+
+    https://github.com/oasisprotocol/emerald-web3-gateway/blob/{{ .Tag }}/README.md#running-the-gateway-on-testnetmainnet
