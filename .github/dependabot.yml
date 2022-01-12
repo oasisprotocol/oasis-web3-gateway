@@ -7,7 +7,7 @@ updates:
     schedule:
       interval: daily
     commit-message:
-      prefix: "ci:"
+      prefix: "deps(ci):"
     labels:
       - c:deps
 
@@ -17,7 +17,7 @@ updates:
     schedule:
       interval: daily
     commit-message:
-      prefix: "go:"
+      prefix: "deps(go):"
     labels:
       - c:deps
     ignore:
