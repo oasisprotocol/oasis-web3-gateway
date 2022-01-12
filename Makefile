@@ -22,7 +22,7 @@ fmt:
 	@goimports -w -local github.com/oasisprotocol/emerald-web3-gateway .
 
 # Lint code, commits and documentation.
-lint-targets := lint-go lint-go-mod-tidy
+lint-targets := lint-go lint-go-mod-tidy lint-git
 
 lint-go:
 	@$(ECHO) "$(CYAN)*** Running Go linters...$(OFF)"
@@ -32,6 +32,9 @@ lint-go-mod-tidy:
 	@$(ECHO) "$(CYAN)*** Checking go mod tidy...$(OFF)"
 	@$(ENSURE_GIT_CLEAN)
 	@$(CHECK_GO_MOD_TIDY)
+
+lint-git:
+	@$(CHECK_GITLINT)
 
 lint: $(lint-targets)
 
