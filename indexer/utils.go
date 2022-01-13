@@ -270,7 +270,7 @@ func (ib *indexBackend) StoreBlockData(oasisBlock *block.Block, txResults []*cli
 					return err
 				}
 			default:
-				if err = s.Upsert(ib.ctx, tx); err != nil {
+				if err = s.Insert(ib.ctx, tx); err != nil {
 					return err
 				}
 			}
@@ -288,7 +288,7 @@ func (ib *indexBackend) StoreBlockData(oasisBlock *block.Block, txResults []*cli
 					return err
 				}
 			default:
-				if err = s.Upsert(ib.ctx, receipt); err != nil {
+				if err = s.Insert(ib.ctx, receipt); err != nil {
 					return err
 				}
 			}
@@ -296,14 +296,23 @@ func (ib *indexBackend) StoreBlockData(oasisBlock *block.Block, txResults []*cli
 
 		// Store logs.
 		for _, log := range dbLogs {
-			if err = s.Upsert(ib.ctx, log); err != nil {
+			if err = s.Insert(ib.ctx, log); err != nil {
 				ib.logger.Error("Failed to store logs", "height", blockNum, "log", log, "err", err)
 				return err
 			}
 		}
 
 		// Store block.
-		return s.Upsert(ib.ctx, blk)
+		if err = s.Insert(ib.ctx, blk); err != nil {
+			return err
+		}
+
+		// Update last indexed round.
+		r := &model.IndexedRoundWithTip{
+			Tip:   model.Continues,
+			Round: blk.Round,
+		}
+		return s.Upsert(ib.ctx, r)
 	}); err != nil {
 		return err
 	}

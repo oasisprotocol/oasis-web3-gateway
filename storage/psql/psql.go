@@ -73,6 +73,26 @@ func (db *PostDB) GetTransaction(ctx context.Context, hash string) (*model.Trans
 	return tx, nil
 }
 
+// Inserts a single record in the DB.
+func (db *PostDB) Insert(ctx context.Context, value interface{}) error {
+	switch values := value.(type) {
+	case []interface{}:
+		for v := range values {
+			if _, err := db.DB.NewInsert().
+				Model(v).
+				Exec(ctx); err != nil {
+				return err
+			}
+		}
+	case interface{}:
+		_, err := db.DB.NewInsert().
+			Model(value).
+			Exec(ctx)
+		return err
+	}
+	return nil
+}
+
 func (db *PostDB) insertSingle(ctx context.Context, value interface{}, upsert bool) error {
 	typ := reflect.TypeOf(value)
 	table := db.DB.Dialect().Tables().Get(typ)

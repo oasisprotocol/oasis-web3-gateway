@@ -82,9 +82,6 @@ type Backend interface {
 	// Prune removes indexed data for rounds equal to or earlier than the passed round.
 	Prune(round uint64) error
 
-	// UpdateLastIndexedRound updates the last indexed round metadata.
-	UpdateLastIndexedRound(round uint64) error
-
 	// Close performs backend-specific cleanup. The backend should not be used anymore after calling
 	// this method.
 	Close()
@@ -175,16 +172,6 @@ func (ib *indexBackend) QueryBlockHash(round uint64) (ethcommon.Hash, error) {
 		return ethcommon.Hash{}, err
 	}
 	return ethcommon.HexToHash(blockHash), nil
-}
-
-// storeIndexedRound stores indexed round.
-func (ib *indexBackend) storeIndexedRound(round uint64) error {
-	r := &model.IndexedRoundWithTip{
-		Tip:   model.Continues,
-		Round: round,
-	}
-
-	return ib.storage.Upsert(ib.ctx, r)
 }
 
 // QueryLastIndexedRound returns the last indexed round.
