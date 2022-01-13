@@ -260,17 +260,37 @@ func (ib *indexBackend) StoreBlockData(oasisBlock *block.Block, txResults []*cli
 	if err = ib.storage.RunInTransaction(ib.ctx, func(s storage.Storage) error {
 		// Store txs.
 		for _, tx := range txs {
-			err = s.Upsert(ib.ctx, tx)
-			if err != nil {
-				return err
+			switch tx.Status {
+			case uint(ethtypes.ReceiptStatusFailed):
+				// In the Emerald Paratime it can happen that an already committed
+				// transaction is re-proposed at a later block. The duplicate transaction fails,
+				// but it is still included in the block. The gateway should drop these
+				// transactions to remain compatible with ETH semantics.
+				if err = s.InsertIfNotExists(ib.ctx, tx); err != nil {
+					return err
+				}
+			default:
+				if err = s.Upsert(ib.ctx, tx); err != nil {
+					return err
+				}
 			}
 		}
 
 		// Store receipts.
 		for _, receipt := range receipts {
-			err = s.Upsert(ib.ctx, receipt)
-			if err != nil {
-				return err
+			switch receipt.Status {
+			case uint(ethtypes.ReceiptStatusFailed):
+				// In the Emerald Paratime it can happen that an already committed
+				// transaction is re-proposed at a later block. The duplicate transaction fails,
+				// but it is still included in the block. The gateway should drop these
+				// transactions to remain compatible with ETH semantics.
+				if err = s.InsertIfNotExists(ib.ctx, receipt); err != nil {
+					return err
+				}
+			default:
+				if err = s.Upsert(ib.ctx, receipt); err != nil {
+					return err
+				}
 			}
 		}
 
