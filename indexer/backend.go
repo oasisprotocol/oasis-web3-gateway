@@ -114,34 +114,27 @@ func (ib *indexBackend) Index(oasisBlock *block.Block, txResults []*client.Trans
 	return nil
 }
 
-// UpdateLastIndexedRound updates the last indexed round.
-func (ib *indexBackend) UpdateLastIndexedRound(round uint64) error {
-	return ib.storeIndexedRound(round)
-}
-
 // Prune prunes data in db.
 func (ib *indexBackend) Prune(round uint64) error {
-	if err := ib.storeLastRetainedRound(round); err != nil {
-		return err
-	}
+	return ib.storage.RunInTransaction(ib.ctx, func(s storage.Storage) error {
+		if err := ib.storeLastRetainedRound(round); err != nil {
+			return err
+		}
 
-	if err := ib.storage.Delete(ib.ctx, new(model.Block), round); err != nil {
-		return err
-	}
+		if err := ib.storage.Delete(ib.ctx, new(model.Block), round); err != nil {
+			return err
+		}
 
-	if err := ib.storage.Delete(ib.ctx, new(model.Log), round); err != nil {
-		return err
-	}
+		if err := ib.storage.Delete(ib.ctx, new(model.Log), round); err != nil {
+			return err
+		}
 
-	if err := ib.storage.Delete(ib.ctx, new(model.Transaction), round); err != nil {
-		return err
-	}
+		if err := ib.storage.Delete(ib.ctx, new(model.Transaction), round); err != nil {
+			return err
+		}
 
-	if err := ib.storage.Delete(ib.ctx, new(model.Receipt), round); err != nil {
-		return err
-	}
-
-	return nil
+		return ib.storage.Delete(ib.ctx, new(model.Receipt), round)
+	})
 }
 
 // blockNumberFromRound converts a round to a blocknumber.
