@@ -73,39 +73,78 @@ func (db *PostDB) GetTransaction(ctx context.Context, hash string) (*model.Trans
 	return tx, nil
 }
 
-// upsert updates record when PK conflicts, otherwise inserts.
-func (db *PostDB) upsertSingle(ctx context.Context, value interface{}) error {
+// Inserts a single record in the DB.
+func (db *PostDB) Insert(ctx context.Context, value interface{}) error {
+	switch values := value.(type) {
+	case []interface{}:
+		for v := range values {
+			if _, err := db.DB.NewInsert().
+				Model(v).
+				Exec(ctx); err != nil {
+				return err
+			}
+		}
+	case interface{}:
+		_, err := db.DB.NewInsert().
+			Model(value).
+			Exec(ctx)
+		return err
+	}
+	return nil
+}
+
+func (db *PostDB) insertSingle(ctx context.Context, value interface{}, upsert bool) error {
 	typ := reflect.TypeOf(value)
 	table := db.DB.Dialect().Tables().Get(typ)
 	pks := make([]string, len(table.PKs))
 	for i, f := range table.PKs {
 		pks[i] = f.Name
 	}
+
+	var onConflictAction string
+	switch upsert {
+	case true:
+		onConflictAction = "UPDATE"
+	case false:
+		onConflictAction = "NOTHING"
+	}
+
 	_, err := db.DB.NewInsert().
 		Model(value).
-		On(fmt.Sprintf("CONFLICT (%v) DO UPDATE", strings.Join(pks, ","))).
+		On(fmt.Sprintf("CONFLICT (%s) DO %s", strings.Join(pks, ","), onConflictAction)).
 		Exec(ctx)
 
 	return err
 }
 
-//  upsert updates record when PK conflicts, otherwise inserts.
-func (db *PostDB) upsert(ctx context.Context, value interface{}) (err error) {
+// InsertIfNotExists inserts the record if it does not yet exist.
+func (db *PostDB) InsertIfNotExists(ctx context.Context, value interface{}) error {
 	switch values := value.(type) {
 	case []interface{}:
 		for v := range values {
-			err = db.upsertSingle(ctx, v)
+			if err := db.insertSingle(ctx, v, false); err != nil {
+				return err
+			}
 		}
 	case interface{}:
-		err = db.upsertSingle(ctx, value)
+		return db.insertSingle(ctx, value, false)
 	}
-
-	return
+	return nil
 }
 
-// Store stores data in db.
+// Upsert upserts the record.
 func (db *PostDB) Upsert(ctx context.Context, value interface{}) error {
-	return db.upsert(ctx, value)
+	switch values := value.(type) {
+	case []interface{}:
+		for v := range values {
+			if err := db.insertSingle(ctx, v, true); err != nil {
+				return err
+			}
+		}
+	case interface{}:
+		return db.insertSingle(ctx, value, true)
+	}
+	return nil
 }
 
 // Delete deletes all records with round less than the given round.

@@ -231,14 +231,6 @@ func (s *Service) indexingWorker() {
 				)
 				break
 			}
-
-			// Update last indexed round for correct resumption.
-			if err = s.backend.UpdateLastIndexedRound(round); err != nil {
-				s.Logger.Warn("failed to update last indexed round",
-					"err", err,
-					"round", round,
-				)
-			}
 		}
 	}
 }

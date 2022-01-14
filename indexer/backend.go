@@ -82,9 +82,6 @@ type Backend interface {
 	// Prune removes indexed data for rounds equal to or earlier than the passed round.
 	Prune(round uint64) error
 
-	// UpdateLastIndexedRound updates the last indexed round metadata.
-	UpdateLastIndexedRound(round uint64) error
-
 	// Close performs backend-specific cleanup. The backend should not be used anymore after calling
 	// this method.
 	Close()
@@ -114,34 +111,27 @@ func (ib *indexBackend) Index(oasisBlock *block.Block, txResults []*client.Trans
 	return nil
 }
 
-// UpdateLastIndexedRound updates the last indexed round.
-func (ib *indexBackend) UpdateLastIndexedRound(round uint64) error {
-	return ib.storeIndexedRound(round)
-}
-
 // Prune prunes data in db.
 func (ib *indexBackend) Prune(round uint64) error {
-	if err := ib.storeLastRetainedRound(round); err != nil {
-		return err
-	}
+	return ib.storage.RunInTransaction(ib.ctx, func(s storage.Storage) error {
+		if err := ib.storeLastRetainedRound(round); err != nil {
+			return err
+		}
 
-	if err := ib.storage.Delete(ib.ctx, new(model.Block), round); err != nil {
-		return err
-	}
+		if err := ib.storage.Delete(ib.ctx, new(model.Block), round); err != nil {
+			return err
+		}
 
-	if err := ib.storage.Delete(ib.ctx, new(model.Log), round); err != nil {
-		return err
-	}
+		if err := ib.storage.Delete(ib.ctx, new(model.Log), round); err != nil {
+			return err
+		}
 
-	if err := ib.storage.Delete(ib.ctx, new(model.Transaction), round); err != nil {
-		return err
-	}
+		if err := ib.storage.Delete(ib.ctx, new(model.Transaction), round); err != nil {
+			return err
+		}
 
-	if err := ib.storage.Delete(ib.ctx, new(model.Receipt), round); err != nil {
-		return err
-	}
-
-	return nil
+		return ib.storage.Delete(ib.ctx, new(model.Receipt), round)
+	})
 }
 
 // blockNumberFromRound converts a round to a blocknumber.
@@ -182,16 +172,6 @@ func (ib *indexBackend) QueryBlockHash(round uint64) (ethcommon.Hash, error) {
 		return ethcommon.Hash{}, err
 	}
 	return ethcommon.HexToHash(blockHash), nil
-}
-
-// storeIndexedRound stores indexed round.
-func (ib *indexBackend) storeIndexedRound(round uint64) error {
-	r := &model.IndexedRoundWithTip{
-		Tip:   model.Continues,
-		Round: round,
-	}
-
-	return ib.storage.Upsert(ib.ctx, r)
 }
 
 // QueryLastIndexedRound returns the last indexed round.

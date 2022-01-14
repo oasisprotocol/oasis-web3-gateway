@@ -12,6 +12,12 @@ import (
 var ErrNoRoundsIndexed = fmt.Errorf("no rounds indexed")
 
 type Storage interface {
+	// Insert inserts a record. On conflict the insert errors.
+	Insert(ctx context.Context, value interface{}) error
+
+	// InsertIfNotExists inserts a record if a record with same primary key does not exist.
+	InsertIfNotExists(ctx context.Context, value interface{}) error
+
 	// Upsert upserts a record.
 	Upsert(ctx context.Context, value interface{}) error
 
