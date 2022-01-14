@@ -107,6 +107,17 @@ Start the gateway by running the `emerald-web3-gateway` binary:
 emerald-web3-gateway --config gateway.yml
 ```
 
+### Wipe state to force a complete reindex
+
+To wipe the DB state and force a reindexing use the `truncate-db` subcommand:
+
+```bash
+emerald-web3-gateway truncate-db --config gateway.yml --unsafe
+```
+
+**Warning: this will wipe all existing state in the Postgres DB and can
+lead to extended downtime while the Web3 Gateway is reindexing the blocks.**
+
 ## Contributing
 
 See our [Contributing Guidelines](CONTRIBUTING.md).
