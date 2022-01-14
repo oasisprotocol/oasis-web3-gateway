@@ -145,6 +145,11 @@ func TestInitPostDb(t *testing.T) {
 	tx, err := db.GetTransaction(ctx, "hello")
 	require.NoError(err)
 	require.EqualValues(tx, legacyTx, "GetTransaction should return expected transaction")
+
+	// Reinserting the same block should fail.
+	if err = db.Insert(ctx, block3); err == nil {
+		log.Fatal("Expected insert error on duplicate block, got: no error")
+	}
 }
 
 func TestUpsert(t *testing.T) {
