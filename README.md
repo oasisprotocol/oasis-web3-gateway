@@ -86,9 +86,11 @@ gateway:
   http:
     host: <gateway_listen_interface>
     port: <gateway_listen_port>
+    cors: ["moz-extension://*", "chrome-extension://*"]
   ws:
     host: <gateway_listen_interface>
     port: <gateway_listen_websocket_port>
+    origins: ["moz-extension://*", "chrome-extension://*"]
   method_limits:
     get_logs_max_rounds: 100
 ```
