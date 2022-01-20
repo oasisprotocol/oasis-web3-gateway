@@ -60,11 +60,15 @@ type Response struct {
 	Result json.RawMessage `json:"result,omitempty"`
 }
 
-const OasisBlockTimeout = 35 * time.Second
+const (
+	OasisBlockTimeout = 35 * time.Second
+	GasLimit          = uint64(3_000_003) // Minimum gas limit required to pass all tests without gas limit detection function.
+)
 
 var (
-	db *psql.PostDB
-	w3 *server.Web3Gateway
+	db       *psql.PostDB
+	GasPrice = big.NewInt(10_000_000_000) // Minimum gas price as defined by in emerald: https://github.com/oasisprotocol/emerald-paratime/blob/07179c1d20eddad3b3c3c9373bc0c853ad57fa16/src/lib.rs#L36
+	w3       *server.Web3Gateway
 )
 
 func localClient(t *testing.T, ws bool) *ethclient.Client {
@@ -112,13 +116,17 @@ func Setup() error {
 	}
 
 	// Fund test accounts.
-	if err = InitialDeposit(rc, 1000000000000, tests.TestKey1.OasisAddress); err != nil {
+	var fundAmount quantity.Quantity
+	if err = fundAmount.UnmarshalText([]byte("10_000_000_000_000_000_000_000")); err != nil {
+		return fmt.Errorf("failed unmarshalling fund amount: %w", err)
+	}
+	if err = InitialDeposit(rc, fundAmount, tests.TestKey1.OasisAddress); err != nil {
 		return fmt.Errorf("initial deposit failed: %w", err)
 	}
-	if err = InitialDeposit(rc, 1000000000000, tests.TestKey2.OasisAddress); err != nil {
+	if err = InitialDeposit(rc, fundAmount, tests.TestKey2.OasisAddress); err != nil {
 		return fmt.Errorf("initial deposit failed: %w", err)
 	}
-	if err = InitialDeposit(rc, 1000000000000, tests.TestKey3.OasisAddress); err != nil {
+	if err = InitialDeposit(rc, fundAmount, tests.TestKey3.OasisAddress); err != nil {
 		return fmt.Errorf("initial deposit failed: %w", err)
 	}
 
@@ -195,8 +203,8 @@ func waitForDepositEvent(ch <-chan *client.BlockEvents, from types.Address, nonc
 	}
 }
 
-func InitialDeposit(rc client.RuntimeClient, amount uint64, to types.Address) error {
-	if amount == 0 {
+func InitialDeposit(rc client.RuntimeClient, amount quantity.Quantity, to types.Address) error {
+	if amount.IsZero() {
 		return fmt.Errorf("no deposit amount provided")
 	}
 	if rc == nil {
@@ -212,7 +220,7 @@ func InitialDeposit(rc client.RuntimeClient, amount uint64, to types.Address) er
 	ctx, cancelFn := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancelFn()
 
-	ba := types.NewBaseUnits(*quantity.NewFromUint64(amount), types.NativeDenomination)
+	ba := types.NewBaseUnits(amount, types.NativeDenomination)
 	txb := consAcc.Deposit(&to, ba).SetFeeConsensusMessages(1)
 	tx := *txb.GetTransaction()
 
@@ -232,7 +240,7 @@ func InitialDeposit(rc client.RuntimeClient, amount uint64, to types.Address) er
 
 	// Estimate gas.
 	// Set the starting gas to something high, so we don't run out.
-	tx.AuthInfo.Fee.Gas = 1000000
+	tx.AuthInfo.Fee.Gas = 1_000_000
 	// Estimate gas usage.
 	gas, err := core.NewV1(rc).EstimateGas(ctx, client.RoundLatest, &tx)
 	if err != nil {
@@ -262,7 +270,7 @@ func InitialDeposit(rc client.RuntimeClient, amount uint64, to types.Address) er
 		return fmt.Errorf("ensuring alice deposit runtime event: %w", err)
 	}
 
-	fmt.Printf("Successfully deposited %d tokens from %s to %s\n", amount, oasisTesting.Alice.Address, to)
+	fmt.Printf("Successfully deposited %v tokens from %s to %s\n", amount, oasisTesting.Alice.Address, to)
 
 	return nil
 }

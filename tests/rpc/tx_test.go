@@ -85,8 +85,8 @@ func testContractCreation(t *testing.T, value *big.Int) uint64 {
 	tx := types.NewTx(&types.LegacyTx{
 		Nonce:    nonce,
 		Value:    value,
-		Gas:      1000000,
-		GasPrice: big.NewInt(2),
+		Gas:      1_000_000,
+		GasPrice: GasPrice,
 		Data:     code,
 	})
 	signer := types.LatestSignerForChainID(chainID)
@@ -141,7 +141,7 @@ func TestEth_EstimateGas(t *testing.T) {
 	t.Logf("estimate gas: %v", gas)
 
 	// Create transaction
-	tx := types.NewContractCreation(nonce, big.NewInt(0), gas, big.NewInt(2), code)
+	tx := types.NewContractCreation(nonce, big.NewInt(0), gas, GasPrice, code)
 	signer := types.LatestSignerForChainID(chainID)
 	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), tests.TestKey1.Private)
 	require.Nil(t, err, "sign tx")
@@ -172,7 +172,7 @@ func TestEth_GetCode(t *testing.T) {
 	t.Logf("got nonce: %v", nonce)
 
 	// Create transaction
-	tx := types.NewContractCreation(nonce, big.NewInt(0), 500000, big.NewInt(2), code)
+	tx := types.NewContractCreation(nonce, big.NewInt(0), GasLimit, GasPrice, code)
 	signer := types.LatestSignerForChainID(chainID)
 	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), tests.TestKey1.Private)
 	require.Nil(t, err, "sign tx")
@@ -235,7 +235,7 @@ func TestEth_Call(t *testing.T) {
 	t.Logf("got nonce: %v", nonce)
 
 	// Create transaction
-	tx := types.NewContractCreation(nonce, big.NewInt(0), 500000, big.NewInt(2), code)
+	tx := types.NewContractCreation(nonce, big.NewInt(0), GasLimit, GasPrice, code)
 	signer := types.LatestSignerForChainID(chainID)
 	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), tests.TestKey1.Private)
 	require.Nil(t, err, "sign tx")
@@ -264,7 +264,6 @@ func TestEth_Call(t *testing.T) {
 		To:   &receipt.ContractAddress,
 		Data: calldata,
 	}
-
 	out, err := ec.CallContract(context.Background(), msg, nil)
 	require.NoError(t, err)
 	t.Logf("contract call return: %x", out)
@@ -297,7 +296,7 @@ func TestERC20(t *testing.T) {
 	require.Nil(t, err, "get nonce failed")
 
 	// Deploy ERC20 contract
-	tx := types.NewContractCreation(nonce, big.NewInt(0), 1000000, big.NewInt(2), code)
+	tx := types.NewContractCreation(nonce, big.NewInt(0), GasLimit, GasPrice, code)
 	signer := types.LatestSignerForChainID(chainID)
 	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), tests.TestKey1.Private)
 	require.Nil(t, err, "sign tx")
@@ -325,7 +324,7 @@ func TestERC20(t *testing.T) {
 		t.Error(err)
 	}
 
-	tx = types.NewTransaction(nonce, tokenAddr, big.NewInt(0), 1000000, big.NewInt(2), transferCall)
+	tx = types.NewTransaction(nonce, tokenAddr, big.NewInt(0), GasLimit, GasPrice, transferCall)
 	signer = types.LatestSignerForChainID(chainID)
 	signature, err = crypto.Sign(signer.Hash(tx).Bytes(), tests.TestKey1.Private)
 	require.Nil(t, err, "sign tx")

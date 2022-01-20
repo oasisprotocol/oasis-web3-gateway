@@ -21,7 +21,7 @@ import (
 
 var (
 	defaultValidatorAddr = "0x0000000000000000000000000000000088888888"
-	defaultGasLimit      = 21000 * 1000
+	defaultGasLimit      = 21_000_000
 )
 
 // Log is the Oasis Log.
