@@ -85,7 +85,7 @@ func testContractCreation(t *testing.T, value *big.Int) uint64 {
 	tx := types.NewTx(&types.LegacyTx{
 		Nonce:    nonce,
 		Value:    value,
-		Gas:      1_000_000,
+		Gas:      GasLimit,
 		GasPrice: GasPrice,
 		Data:     code,
 	})
@@ -95,6 +95,9 @@ func testContractCreation(t *testing.T, value *big.Int) uint64 {
 
 	signedTx, err := tx.WithSignature(signer, signature)
 	require.Nil(t, err, "pack tx")
+
+	balanceBefore, err := ec.BalanceAt(context.Background(), tests.TestKey1.EthAddress, nil)
+	require.NoError(t, err)
 
 	err = ec.SendTransaction(context.Background(), signedTx)
 	require.Nil(t, err, "send transaction failed")
@@ -106,6 +109,20 @@ func testContractCreation(t *testing.T, value *big.Int) uint64 {
 	require.NoError(t, err)
 
 	t.Logf("Contract address: %s", receipt.ContractAddress)
+
+	balanceAfter, err := ec.BalanceAt(context.Background(), tests.TestKey1.EthAddress, nil)
+	require.NoError(t, err)
+
+	t.Logf("Spent for gas: %s", new(big.Int).Sub(balanceBefore, balanceAfter))
+
+	// Always require that some gas was spent.
+	require.Positive(t, balanceBefore.Cmp(balanceAfter))
+
+	// If the contract deployed successfully, check that unspent gas was returned.
+	if receipt.Status == 1 {
+		minBalanceAfter := new(big.Int).Sub(balanceBefore, new(big.Int).Mul(big.NewInt(int64(GasLimit)), GasPrice))
+		require.Positive(t, balanceAfter.Cmp(minBalanceAfter))
+	}
 
 	return receipt.Status
 }
@@ -138,6 +155,7 @@ func TestEth_EstimateGas(t *testing.T) {
 	}
 	gas, err := ec.EstimateGas(context.Background(), msg)
 	require.Nil(t, err, "gas estimation")
+	require.NotZero(t, gas)
 	t.Logf("estimate gas: %v", gas)
 
 	// Create transaction

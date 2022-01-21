@@ -99,7 +99,7 @@ func submitTransaction(ctx context.Context, t *testing.T, to common.Address, amo
 func submitTestTransaction(ctx context.Context, t *testing.T) *types.Receipt {
 	data := common.FromHex("0x7f7465737432000000000000000000000000000000000000000000000000000000600057")
 	to := common.BytesToAddress(common.FromHex("0x1122334455667788990011223344556677889900"))
-	return submitTransaction(ctx, t, to, big.NewInt(1), 3000003, GasPrice, data)
+	return submitTransaction(ctx, t, to, big.NewInt(1), GasLimit, GasPrice, data)
 }
 
 func TestEth_GetBalance(t *testing.T) {
@@ -423,7 +423,7 @@ func TestEth_GetLogsMultiple(t *testing.T) {
 		tx := types.NewTx(&types.LegacyTx{
 			Nonce:    nonce,
 			Value:    big.NewInt(0),
-			Gas:      1_000_000,
+			Gas:      GasLimit,
 			GasPrice: GasPrice,
 			Data:     code,
 		})

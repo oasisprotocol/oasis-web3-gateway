@@ -62,12 +62,12 @@ type Response struct {
 
 const (
 	OasisBlockTimeout = 35 * time.Second
-	GasLimit          = uint64(3_000_003) // Minimum gas limit required to pass all tests without gas limit detection function.
+	GasLimit          = uint64(1_000_000) // Minimum gas limit required to pass all tests (not using gas estimation).
 )
 
 var (
 	db       *psql.PostDB
-	GasPrice = big.NewInt(10_000_000_000) // Minimum gas price as defined by in emerald: https://github.com/oasisprotocol/emerald-paratime/blob/07179c1d20eddad3b3c3c9373bc0c853ad57fa16/src/lib.rs#L36
+	GasPrice = big.NewInt(10_000_000_000) // Minimum gas price: https://github.com/oasisprotocol/emerald-paratime/blob/07179c1d20eddad3b3c3c9373bc0c853ad57fa16/src/lib.rs#L36
 	w3       *server.Web3Gateway
 )
 
@@ -240,7 +240,7 @@ func InitialDeposit(rc client.RuntimeClient, amount quantity.Quantity, to types.
 
 	// Estimate gas.
 	// Set the starting gas to something high, so we don't run out.
-	tx.AuthInfo.Fee.Gas = 1_000_000
+	tx.AuthInfo.Fee.Gas = GasLimit
 	// Estimate gas usage.
 	gas, err := core.NewV1(rc).EstimateGas(ctx, client.RoundLatest, &tx)
 	if err != nil {
