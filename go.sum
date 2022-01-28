@@ -1309,8 +1309,9 @@ github.com/tyler-smith/go-bip39 v1.1.0 h1:5eUemwrMargf3BSLRRCalXT93Ns6pQJIjYQN2n
 github.com/tyler-smith/go-bip39 v1.1.0/go.mod h1:gUYDtqQw1JS3ZJ8UWVcGTGqqr6YIN3CWg+kkNaLt55U=
 github.com/ugorji/go v1.1.4/go.mod h1:uQMGLiO92mf5W77hV/PUCpI3pbzQx3CRekS0kk+RGrc=
 github.com/ugorji/go/codec v0.0.0-20181204163529-d75b2dcb6bc8/go.mod h1:VFNgLljTbGfSG7qAOspJ7OScBnGdDN/yBr0sguwnwf0=
-github.com/uptrace/bun v1.0.21 h1:5ek4bnrEmZo6wvY/RHt1dJNXzOPOnrfJeZMoZfZt9Io=
 github.com/uptrace/bun v1.0.21/go.mod h1:u+QsgCgjGFwshy3euGAN1CLEO9RMf42lga5jQ/ezYsc=
+github.com/uptrace/bun v1.0.22 h1:0asZNOcM4eLq5Pgzu+LpZyJRxlt3ops+HahVkWPqxww=
+github.com/uptrace/bun v1.0.22/go.mod h1:SkbOr4hdcYqqFPw4rbc1QAnLLvDLgq+X0w8OSllj1MU=
 github.com/uptrace/bun/dialect/pgdialect v1.0.21 h1:2MoMW1qPpAQkwjNDBmQaZBAR07qpijJsw/p6gYzwdl0=
 github.com/uptrace/bun/dialect/pgdialect v1.0.21/go.mod h1:r6JgWFNXFqSqHy+Qxop0NJzHvaZQDEyz2fJBICNsv+I=
 github.com/uptrace/bun/driver/pgdriver v1.0.21 h1:A6X0aGGkFguVJThhfcq6bZlPU1KAyXRmI9Tsf33s2QE=
@@ -1698,8 +1699,9 @@ golang.org/x/sys v0.0.0-20211007075335-d3039528d8ac/go.mod h1:oPkhp1MJrh7nUepCBc
 golang.org/x/sys v0.0.0-20211123173158-ef496fb156ab/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.0.0-20211124211545-fe61309f8881/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.0.0-20211205182925-97ca703d548d/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
-golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e h1:fLOSk5Q00efkSvAm+4xcoXD+RRmLmmulPn5I3Y9F2EM=
 golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+golang.org/x/sys v0.0.0-20220114195835-da31bd327af9 h1:XfKQ4OlFl8okEOr5UvAqFRVj8pY/4yfcXrddB8qAbU0=
+golang.org/x/sys v0.0.0-20220114195835-da31bd327af9/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/term v0.0.0-20201117132131-f5c789dd3221/go.mod h1:Nr5EML6q2oocZ2LXRh80K7BxOlk5/8JxuGnuhpl+muw=
 golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1/go.mod h1:bj7SfCRtBDWHUb9snDiAeCFNEtKQo2Wmx5Cou7ajbmo=
 golang.org/x/text v0.0.0-20170915032832-14c0d48ead0c/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
