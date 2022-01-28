@@ -99,7 +99,7 @@ func submitTransaction(ctx context.Context, t *testing.T, to common.Address, amo
 func submitTestTransaction(ctx context.Context, t *testing.T) *types.Receipt {
 	data := common.FromHex("0x7f7465737432000000000000000000000000000000000000000000000000000000600057")
 	to := common.BytesToAddress(common.FromHex("0x1122334455667788990011223344556677889900"))
-	return submitTransaction(ctx, t, to, big.NewInt(1), 3000003, big.NewInt(2), data)
+	return submitTransaction(ctx, t, to, big.NewInt(1), GasLimit, GasPrice, data)
 }
 
 func TestEth_GetBalance(t *testing.T) {
@@ -150,8 +150,8 @@ func TestEth_SendRawTransaction(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
 	defer cancel()
 
-	receipt := submitTransaction(ctx, t, common.Address{1}, big.NewInt(1), 22000, big.NewInt(2), nil)
-	require.EqualValues(t, 0, receipt.Status)
+	receipt := submitTransaction(ctx, t, common.Address{1}, big.NewInt(1), GasLimit, GasPrice, nil)
+	require.EqualValues(t, 1, receipt.Status)
 }
 
 func TestEth_GetBlockByNumberAndGetBlockByHash(t *testing.T) {
@@ -250,7 +250,7 @@ func TestEth_GetTransactionByHash(t *testing.T) {
 	input := "0x7f7465737432000000000000000000000000000000000000000000000000000000600057"
 	data := common.FromHex(input)
 	to := common.BytesToAddress(common.FromHex("0x1122334455667788990011223344556677889900"))
-	receipt := submitTransaction(ctx, t, to, big.NewInt(1), 3000003, big.NewInt(2), data)
+	receipt := submitTransaction(ctx, t, to, big.NewInt(1), GasLimit, GasPrice, data)
 	require.EqualValues(t, 1, receipt.Status)
 	require.NotNil(t, receipt)
 
@@ -359,7 +359,7 @@ func TestEth_GetLogsWithFilters(t *testing.T) {
 		Nonce:    nonce,
 		Value:    big.NewInt(0),
 		Gas:      1000000,
-		GasPrice: big.NewInt(2),
+		GasPrice: GasPrice,
 		Data:     code,
 	})
 	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), tests.TestKey1.Private)
@@ -423,8 +423,8 @@ func TestEth_GetLogsMultiple(t *testing.T) {
 		tx := types.NewTx(&types.LegacyTx{
 			Nonce:    nonce,
 			Value:    big.NewInt(0),
-			Gas:      1000000,
-			GasPrice: big.NewInt(2),
+			Gas:      GasLimit,
+			GasPrice: GasPrice,
 			Data:     code,
 		})
 		signature, err := crypto.Sign(signer.Hash(tx).Bytes(), privKey)

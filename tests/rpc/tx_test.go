@@ -85,8 +85,8 @@ func testContractCreation(t *testing.T, value *big.Int) uint64 {
 	tx := types.NewTx(&types.LegacyTx{
 		Nonce:    nonce,
 		Value:    value,
-		Gas:      1000000,
-		GasPrice: big.NewInt(2),
+		Gas:      GasLimit,
+		GasPrice: GasPrice,
 		Data:     code,
 	})
 	signer := types.LatestSignerForChainID(chainID)
@@ -95,6 +95,9 @@ func testContractCreation(t *testing.T, value *big.Int) uint64 {
 
 	signedTx, err := tx.WithSignature(signer, signature)
 	require.Nil(t, err, "pack tx")
+
+	balanceBefore, err := ec.BalanceAt(context.Background(), tests.TestKey1.EthAddress, nil)
+	require.NoError(t, err)
 
 	err = ec.SendTransaction(context.Background(), signedTx)
 	require.Nil(t, err, "send transaction failed")
@@ -106,6 +109,20 @@ func testContractCreation(t *testing.T, value *big.Int) uint64 {
 	require.NoError(t, err)
 
 	t.Logf("Contract address: %s", receipt.ContractAddress)
+
+	balanceAfter, err := ec.BalanceAt(context.Background(), tests.TestKey1.EthAddress, nil)
+	require.NoError(t, err)
+
+	t.Logf("Spent for gas: %s", new(big.Int).Sub(balanceBefore, balanceAfter))
+
+	// Always require that some gas was spent.
+	require.Positive(t, balanceBefore.Cmp(balanceAfter))
+
+	// If the contract deployed successfully, check that unspent gas was returned.
+	if receipt.Status == 1 {
+		minBalanceAfter := new(big.Int).Sub(balanceBefore, new(big.Int).Mul(big.NewInt(int64(GasLimit)), GasPrice))
+		require.Positive(t, balanceAfter.Cmp(minBalanceAfter))
+	}
 
 	return receipt.Status
 }
@@ -138,10 +155,11 @@ func TestEth_EstimateGas(t *testing.T) {
 	}
 	gas, err := ec.EstimateGas(context.Background(), msg)
 	require.Nil(t, err, "gas estimation")
+	require.NotZero(t, gas)
 	t.Logf("estimate gas: %v", gas)
 
 	// Create transaction
-	tx := types.NewContractCreation(nonce, big.NewInt(0), gas, big.NewInt(2), code)
+	tx := types.NewContractCreation(nonce, big.NewInt(0), gas, GasPrice, code)
 	signer := types.LatestSignerForChainID(chainID)
 	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), tests.TestKey1.Private)
 	require.Nil(t, err, "sign tx")
@@ -172,7 +190,7 @@ func TestEth_GetCode(t *testing.T) {
 	t.Logf("got nonce: %v", nonce)
 
 	// Create transaction
-	tx := types.NewContractCreation(nonce, big.NewInt(0), 500000, big.NewInt(2), code)
+	tx := types.NewContractCreation(nonce, big.NewInt(0), GasLimit, GasPrice, code)
 	signer := types.LatestSignerForChainID(chainID)
 	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), tests.TestKey1.Private)
 	require.Nil(t, err, "sign tx")
@@ -235,7 +253,7 @@ func TestEth_Call(t *testing.T) {
 	t.Logf("got nonce: %v", nonce)
 
 	// Create transaction
-	tx := types.NewContractCreation(nonce, big.NewInt(0), 500000, big.NewInt(2), code)
+	tx := types.NewContractCreation(nonce, big.NewInt(0), GasLimit, GasPrice, code)
 	signer := types.LatestSignerForChainID(chainID)
 	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), tests.TestKey1.Private)
 	require.Nil(t, err, "sign tx")
@@ -264,7 +282,6 @@ func TestEth_Call(t *testing.T) {
 		To:   &receipt.ContractAddress,
 		Data: calldata,
 	}
-
 	out, err := ec.CallContract(context.Background(), msg, nil)
 	require.NoError(t, err)
 	t.Logf("contract call return: %x", out)
@@ -297,7 +314,7 @@ func TestERC20(t *testing.T) {
 	require.Nil(t, err, "get nonce failed")
 
 	// Deploy ERC20 contract
-	tx := types.NewContractCreation(nonce, big.NewInt(0), 1000000, big.NewInt(2), code)
+	tx := types.NewContractCreation(nonce, big.NewInt(0), GasLimit, GasPrice, code)
 	signer := types.LatestSignerForChainID(chainID)
 	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), tests.TestKey1.Private)
 	require.Nil(t, err, "sign tx")
@@ -325,7 +342,7 @@ func TestERC20(t *testing.T) {
 		t.Error(err)
 	}
 
-	tx = types.NewTransaction(nonce, tokenAddr, big.NewInt(0), 1000000, big.NewInt(2), transferCall)
+	tx = types.NewTransaction(nonce, tokenAddr, big.NewInt(0), GasLimit, GasPrice, transferCall)
 	signer = types.LatestSignerForChainID(chainID)
 	signature, err = crypto.Sign(signer.Hash(tx).Bytes(), tests.TestKey1.Private)
 	require.Nil(t, err, "sign tx")

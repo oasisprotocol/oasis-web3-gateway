@@ -70,8 +70,8 @@ func TestEth_SubscribeLogs(t *testing.T) {
 		tx := types.NewTx(&types.LegacyTx{
 			Nonce:    nonce,
 			Value:    big.NewInt(0),
-			Gas:      1000000,
-			GasPrice: big.NewInt(2),
+			Gas:      1_000_000,
+			GasPrice: GasPrice,
 			Data:     code,
 		})
 		signer := types.LatestSignerForChainID(chainID)
