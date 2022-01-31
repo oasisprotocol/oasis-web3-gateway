@@ -9,8 +9,19 @@ all: build
 
 build:
 	@$(ECHO) "$(CYAN)*** Building...$(OFF)"
-	@$(GO) build $(GOFLAGS) $(GO_EXTRA_FLAGS)
+	@$(MAKE) emerald-web3-gateway
+	@$(MAKE) docker/emerald-dev/oasis-deposit/oasis-deposit
 	@$(ECHO) "$(CYAN)*** Everything built successfully!$(OFF)"
+
+emerald-web3-gateway:
+	@$(GO) build $(GOFLAGS) $(GO_EXTRA_FLAGS)
+
+docker/emerald-dev/oasis-deposit/oasis-deposit: docker/emerald-dev/oasis-deposit/main.go
+	@cd docker/emerald-dev/oasis-deposit && $(GO) build
+
+clean:
+	@$(GO) clean
+	@cd docker/emerald-dev/oasis-deposit && $(GO) clean
 
 test:
 	@$(GO) test ./...
@@ -27,6 +38,7 @@ lint-targets := lint-go lint-go-mod-tidy lint-git
 lint-go:
 	@$(ECHO) "$(CYAN)*** Running Go linters...$(OFF)"
 	@env -u GOPATH golangci-lint run
+	@cd docker/emerald-dev/oasis-deposit && env -u GOPATH golangci-lint run
 
 lint-go-mod-tidy:
 	@$(ECHO) "$(CYAN)*** Checking go mod tidy...$(OFF)"
@@ -43,10 +55,14 @@ lint: $(lint-targets)
 release-build:
 	@goreleaser release --rm-dist
 
+docker:
+	@docker build -t emerald-dev -f docker/emerald-dev/Dockerfile .
+
 # List of targets that are not actual files.
 .PHONY: \
-	all build \
+	all build clean \
 	test \
 	fmt \
 	$(lint-targets) lint \
-	release-build
+	release-build \
+	docker
