@@ -87,7 +87,7 @@ GIT_COMMIT_EXACT_TAG := $(shell \
 )
 VERSION := $(or \
 	$(and $(call eq,$(GIT_COMMIT_EXACT_TAG),YES), $(GIT_VERSION)), \
-	0.0.0-git$(shell git describe --always --match '' --dirty=+dirty 2>/dev/null) \
+	$(shell git describe --tags --abbrev=0)-git$(shell git describe --always --match '' --dirty=+dirty 2>/dev/null) \
 )
 
 # Project's version as the linker's string value definition.
