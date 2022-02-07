@@ -33,9 +33,9 @@ jobs:
       OASIS_CORE_VERSION: 21.3.9
       OASIS_NODE: ${{ github.workspace }}/oasis_core/oasis-node
       OASIS_NET_RUNNER: ${{ github.workspace }}/oasis_core/oasis-net-runner
-      OASIS_EMERALD_VERSION: 6.2.0-rc1
+      EMERALD_PARATIME_VERSION: 6.2.0-rc1
       GATEWAY__CHAIN_ID: 42261
-      OASIS_EMERALD_PARATIME: ${{ github.workspace }}/oasis_core/emerald-paratime
+      EMERALD_PARATIME: ${{ github.workspace }}/oasis_core/emerald-paratime
       OASIS_NODE_DATADIR: /tmp/eth-runtime-test
     steps:
       - name: Checkout code
@@ -55,9 +55,9 @@ jobs:
           mv "oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-node" "${OASIS_NODE}"
           mkdir -p "$(dirname ${OASIS_NET_RUNNER})"
           mv "oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-net-runner" "${OASIS_NET_RUNNER}"
-          mkdir -p "$(dirname ${OASIS_EMERALD_PARATIME})"
-          wget "https://github.com/oasisprotocol/emerald-paratime/releases/download/v${OASIS_EMERALD_VERSION}/emerald-paratime" -O "${OASIS_EMERALD_PARATIME}"
-          chmod a+x "${OASIS_EMERALD_PARATIME}"
+          mkdir -p "$(dirname ${EMERALD_PARATIME})"
+          wget "https://github.com/oasisprotocol/emerald-paratime/releases/download/v${EMERALD_PARATIME_VERSION}/emerald-paratime" -O "${EMERALD_PARATIME}"
+          chmod a+x "${EMERALD_PARATIME}"
 
       - name: Spinup oasis-node
         run: tests/tools/spinup-oasis-stack.sh > /dev/null &
