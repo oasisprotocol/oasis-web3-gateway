@@ -167,11 +167,11 @@ func (api *PublicAPI) GetBlockTransactionCountByNumber(blockNum ethrpc.BlockNumb
 	return hexutil.Uint(n), nil
 }
 
-func (api *PublicAPI) GetStorageAt(address common.Address, position hexutil.Big, blockNum ethrpc.BlockNumber) (hexutil.Big, error) {
-	logger := api.Logger.With("method", "eth_getStorageAt", "address", address, "position", position, "block_number", blockNum)
+func (api *PublicAPI) GetStorageAt(address common.Address, position hexutil.Big, blockNrOrHash ethrpc.BlockNumberOrHash) (hexutil.Big, error) {
+	logger := api.Logger.With("method", "eth_getStorageAt", "address", address, "position", position, "block_or_hash", blockNrOrHash)
 	logger.Debug("request")
 
-	round, err := api.roundParamFromBlockNum(logger, blockNum)
+	round, err := api.getBlockRound(logger, blockNrOrHash)
 	if err != nil {
 		return hexutil.Big{}, err
 	}
@@ -193,12 +193,12 @@ func (api *PublicAPI) GetStorageAt(address common.Address, position hexutil.Big,
 }
 
 // GetBalance returns the provided account's balance up to the provided block number.
-func (api *PublicAPI) GetBalance(address common.Address, blockNum ethrpc.BlockNumber) (*hexutil.Big, error) {
-	logger := api.Logger.With("method", "eth_getBalance", "address", address, "block_number", blockNum)
+func (api *PublicAPI) GetBalance(address common.Address, blockNrOrHash ethrpc.BlockNumberOrHash) (*hexutil.Big, error) {
+	logger := api.Logger.With("method", "eth_getBalance", "address", address, "block_or_hash", blockNrOrHash)
 	logger.Debug("request")
 
 	ethmod := evm.NewV1(api.client)
-	round, err := api.roundParamFromBlockNum(logger, blockNum)
+	round, err := api.getBlockRound(logger, blockNrOrHash)
 	if err != nil {
 		return nil, err
 	}
@@ -248,14 +248,14 @@ func (api *PublicAPI) GetBlockTransactionCountByHash(blockHash common.Hash) (hex
 }
 
 // GetTransactionCount returns the number of transactions the given address has sent for the given block number.
-func (api *PublicAPI) GetTransactionCount(ethAddr common.Address, blockNum ethrpc.BlockNumber) (*hexutil.Uint64, error) {
-	logger := api.Logger.With("method", "eth_getBlockTransactionCount", "address", ethAddr, "block_number", blockNum)
+func (api *PublicAPI) GetTransactionCount(ethAddr common.Address, blockNrOrHash ethrpc.BlockNumberOrHash) (*hexutil.Uint64, error) {
+	logger := api.Logger.With("method", "eth_getBlockTransactionCount", "address", ethAddr, "block_or_hash", blockNrOrHash)
 	logger.Debug("request")
 
 	accountsMod := accounts.NewV1(api.client)
 	accountsAddr := types.NewAddressRaw(types.AddressV0Secp256k1EthContext, ethAddr[:])
 
-	round, err := api.roundParamFromBlockNum(logger, blockNum)
+	round, err := api.getBlockRound(logger, blockNrOrHash)
 	if err != nil {
 		return nil, err
 	}
@@ -269,12 +269,12 @@ func (api *PublicAPI) GetTransactionCount(ethAddr common.Address, blockNum ethrp
 }
 
 // GetCode returns the contract code at the given address and block number.
-func (api *PublicAPI) GetCode(address common.Address, blockNum ethrpc.BlockNumber) (hexutil.Bytes, error) {
-	logger := api.Logger.With("method", "eth_getCode", "address", address, "block_number", blockNum)
+func (api *PublicAPI) GetCode(address common.Address, blockNrOrHash ethrpc.BlockNumberOrHash) (hexutil.Bytes, error) {
+	logger := api.Logger.With("method", "eth_getCode", "address", address, "block_or_hash", blockNrOrHash)
 	logger.Debug("request")
 
 	ethmod := evm.NewV1(api.client)
-	round, err := api.roundParamFromBlockNum(logger, blockNum)
+	round, err := api.getBlockRound(logger, blockNrOrHash)
 	if err != nil {
 		return nil, err
 	}
@@ -322,8 +322,8 @@ func (api *PublicAPI) NewRevertError(revertErr error) *RevertError {
 
 // Call executes the given transaction on the state for the given block number.
 // This function doesn't make any changes in the evm state of blockchain.
-func (api *PublicAPI) Call(args utils.TransactionArgs, blockNum ethrpc.BlockNumber, _ *utils.StateOverride) (hexutil.Bytes, error) {
-	logger := api.Logger.With("method", "eth_Call", "block_number", blockNum)
+func (api *PublicAPI) Call(args utils.TransactionArgs, blockNrOrHash ethrpc.BlockNumberOrHash, _ *utils.StateOverride) (hexutil.Bytes, error) {
+	logger := api.Logger.With("method", "eth_call", "block_or_hash", blockNrOrHash)
 	logger.Debug("request", "args", args)
 	var (
 		amount   = []byte{0}
@@ -333,7 +333,8 @@ func (api *PublicAPI) Call(args utils.TransactionArgs, blockNum ethrpc.BlockNumb
 		// This gas cap should be enough for SimulateCall an ethereum transaction
 		gas uint64 = 30_000_000
 	)
-	round, err := api.roundParamFromBlockNum(logger, blockNum)
+
+	round, err := api.getBlockRound(logger, blockNrOrHash)
 	if err != nil {
 		return nil, err
 	}
@@ -672,4 +673,19 @@ func (api *PublicAPI) Hashrate() hexutil.Uint64 {
 	logger := api.Logger.With("method", "eth_hashrate")
 	logger.Debug("request")
 	return 0
+}
+
+// getBlockRound returns the block round from BlockNumberOrHash.
+func (api *PublicAPI) getBlockRound(logger *logging.Logger, blockNrOrHash ethrpc.BlockNumberOrHash) (uint64, error) {
+	switch {
+	// case if block number and blockhash is specified are handling by the BlockNumberOrHash type.
+	case blockNrOrHash.BlockHash == nil && blockNrOrHash.BlockNumber == nil:
+		return 0, fmt.Errorf("types BlockHash and BlockNumber cannot be both nil")
+	case blockNrOrHash.BlockHash != nil:
+		return api.backend.QueryBlockRound(*blockNrOrHash.BlockHash)
+	case blockNrOrHash.BlockNumber != nil:
+		return api.roundParamFromBlockNum(logger, *blockNrOrHash.BlockNumber)
+	default:
+		return 0, nil
+	}
 }
