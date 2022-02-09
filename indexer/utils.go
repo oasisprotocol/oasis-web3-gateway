@@ -14,8 +14,8 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 
+	"github.com/oasisprotocol/emerald-web3-gateway/db/model"
 	"github.com/oasisprotocol/emerald-web3-gateway/filters"
-	"github.com/oasisprotocol/emerald-web3-gateway/model"
 	"github.com/oasisprotocol/emerald-web3-gateway/storage"
 )
 
@@ -26,24 +26,24 @@ var (
 
 // Log is the Oasis Log.
 type Log struct {
-	Address common.Address
-	Topics  []common.Hash
-	Data    []byte
+	Address common.Address `json:"address"`
+	Topics  []common.Hash  `json:"topics"`
+	Data    []byte         `json:"data"`
 }
 
 // Logs2EthLogs converts logs in db to ethereum logs.
-func Logs2EthLogs(logs []*Log, round uint64, blockHash, txHash common.Hash, txIndex uint32) []*ethtypes.Log {
+func Logs2EthLogs(logs []*Log, round uint64, blockHash, txHash common.Hash, startIndex uint, txIndex uint32) []*ethtypes.Log {
 	ethLogs := []*ethtypes.Log{}
-	for i := range logs {
+	for i, log := range logs {
 		ethLog := &ethtypes.Log{
-			Address:     logs[i].Address,
-			Topics:      logs[i].Topics,
-			Data:        logs[i].Data,
+			Address:     log.Address,
+			Topics:      log.Topics,
+			Data:        log.Data,
 			BlockNumber: round,
 			TxHash:      txHash,
 			TxIndex:     uint(txIndex),
 			BlockHash:   blockHash,
-			Index:       uint(i),
+			Index:       startIndex + uint(i),
 			Removed:     false,
 		}
 		ethLogs = append(ethLogs, ethLog)
@@ -225,6 +225,7 @@ func (ib *indexBackend) StoreBlockData(oasisBlock *block.Block, txResults []*cli
 
 		var oasisLogs []*Log
 		resEvents := item.Events
+
 		for eventIndex, event := range resEvents {
 			if event.Code == 1 {
 				var logs []*Log
@@ -245,7 +246,7 @@ func (ib *indexBackend) StoreBlockData(oasisBlock *block.Block, txResults []*cli
 				oasisLogs = append(oasisLogs, logs...)
 			}
 		}
-		logs = append(logs, Logs2EthLogs(oasisLogs, blockNum, bhash, ethTx.Hash(), uint32(txIndex))...)
+		logs = append(logs, Logs2EthLogs(oasisLogs, blockNum, bhash, ethTx.Hash(), uint(len(logs)), uint32(txIndex))...)
 	}
 	dbLogs := eth2DbLogs(logs)
 

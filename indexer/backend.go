@@ -14,8 +14,8 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 
+	"github.com/oasisprotocol/emerald-web3-gateway/db/model"
 	"github.com/oasisprotocol/emerald-web3-gateway/filters"
-	"github.com/oasisprotocol/emerald-web3-gateway/model"
 	"github.com/oasisprotocol/emerald-web3-gateway/storage"
 )
 

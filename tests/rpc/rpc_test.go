@@ -451,6 +451,17 @@ func TestEth_GetLogsMultiple(t *testing.T) {
 		// Query logs for the block.
 		blockLogs, err := ec.FilterLogs(ctx, ethereum.FilterQuery{FromBlock: receipt.BlockNumber, ToBlock: receipt.BlockNumber})
 		require.NoError(t, err, "filter logs by block")
+
+		// All block log indexes should be unique.
+		expectedLogIdxs := make([]uint, 0, len(receipt.Logs))
+		logIdxs := make([]uint, 0, len(receipt.Logs))
+		for i, log := range blockLogs {
+			logIdxs = append(logIdxs, log.Index)
+			expectedLogIdxs = append(expectedLogIdxs, uint(i))
+		}
+		require.ElementsMatch(t, expectedLogIdxs, logIdxs, "receipt log indexes should be sequential and unique")
+
+		// Block logs should contain receipt logs.
 		for _, log := range receipt.Logs {
 			require.Contains(t, blockLogs, *log, "all receipt logs should be present in block logs")
 		}

@@ -4,7 +4,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/event"
 
-	"github.com/oasisprotocol/emerald-web3-gateway/model"
+	"github.com/oasisprotocol/emerald-web3-gateway/db/model"
 )
 
 type ChainEvent struct {

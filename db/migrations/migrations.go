@@ -1,16 +1,21 @@
-package model
+package migrations
 
 import (
 	"context"
+	"embed"
 	"fmt"
 	"strings"
 
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/migrate"
-
-	"github.com/oasisprotocol/emerald-web3-gateway/model/migrations"
 )
+
+// Migrations are all migrations.
+var Migrations *migrate.Migrations
+
+//go:embed *.sql
+var migrations embed.FS
 
 // DropTables deletes all database tables in the `public` schema of the configured database.
 //
@@ -57,7 +62,7 @@ func Migrate(ctx context.Context, db *bun.DB) error {
 	logger := logging.GetLogger("migration")
 
 	// Initialize the migrator.
-	migrator := migrate.NewMigrator(db, migrations.Migrations)
+	migrator := migrate.NewMigrator(db, Migrations)
 	if err := migrator.Init(ctx); err != nil {
 		logger.Error("failed to init migrations", "err", err)
 		return err
@@ -77,4 +82,23 @@ func Migrate(ctx context.Context, db *bun.DB) error {
 	logger.Info("migration done", "applied", status.Applied(), "last_group", status.LastGroupID(), "status", status.String())
 
 	return nil
+}
+
+func init() {
+	Migrations = migrate.NewMigrations()
+	for _, m := range []migrate.Migration{
+		// Initial.
+		{
+			Name: "20211213143752",
+			Up:   migrate.NewSQLMigrationFunc(migrations, "20211213143752_initial.up.sql"),
+		},
+		// Logs index fix migration.
+		// https://github.com/oasisprotocol/emerald-web3-gateway/pull/174
+		{
+			Name: "20220109122505",
+			Up:   LogsUp,
+		},
+	} {
+		Migrations.Add(m)
+	}
 }
