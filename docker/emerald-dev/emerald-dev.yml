@@ -1,0 +1,30 @@
+runtime_id: "8000000000000000000000000000000000000000000000000000000000000000"
+node_address: "unix:/serverdir/node/net-runner/network/client-0/internal.sock"
+
+log:
+  level: debug
+  format: json
+
+database:
+  host: "127.0.0.1"
+  port: 5432
+  db: "postgres"
+  user: "postgres"
+  password: "postgres"
+  dial_timeout: 5
+  read_timeout: 10
+  write_timeout: 5
+  max_open_conns: 0
+
+gateway:
+  chain_id: 42262
+  http:
+    host: "0.0.0.0"
+    port: 8545
+    cors: ["*"]
+  ws:
+    host: "0.0.0.0"
+    port: 8546
+    cors: ["*"]
+  method_limits:
+    get_logs_max_rounds: 100

@@ -6,18 +6,18 @@ set -euo pipefail
 # Mandatory ENV Variables:
 # - OASIS_NODE: path to oasis-node binary
 # - OASIS_NET_RUNNER: path to oasis-net-runner binary
-# - OASIS_EMERALD_PARATIME: path to emerald-paratime binary
-# - OASIS_EMERALD_VERSION: emerald version of the binary. e.g. 3.0.0
+# - EMERALD_PARATIME: path to emerald-paratime binary
+# - EMERALD_PARATIME_VERSION: emerald version of the binary. e.g. 3.0.0
 # - OASIS_NODE_DATADIR: path to temprorary oasis-node data dir e.g. /tmp/eth-runtime-test
 
 function emerald_ver {
-  echo $OASIS_EMERALD_VERSION | cut -d \- -f 1 | cut -d + -f 1 | cut -d . -f $1
+  echo $EMERALD_PARATIME_VERSION | cut -d \- -f 1 | cut -d + -f 1 | cut -d . -f $1
 }
 export FIXTURE_FILE="${OASIS_NODE_DATADIR}/fixture.json"
 export STAKING_GENESIS_FILE="$(dirname "$0")/staking_genesis.json"
 
 rm -rf "$OASIS_NODE_DATADIR"
-mkdir "$OASIS_NODE_DATADIR"
+mkdir -p "$OASIS_NODE_DATADIR"
 
 # Prepare configuration for oasis-node (fixture).
 ${OASIS_NET_RUNNER} dump-fixture \
@@ -26,7 +26,8 @@ ${OASIS_NET_RUNNER} dump-fixture \
   --fixture.default.fund_entities \
   --fixture.default.num_entities 2 \
   --fixture.default.keymanager.binary '' \
-  --fixture.default.runtime.binary "${OASIS_EMERALD_PARATIME}" \
+  --fixture.default.runtime.binary "${EMERALD_PARATIME}" \
+  --fixture.default.runtime.provisioner "unconfined" \
   --fixture.default.halt_epoch 100000 \
   --fixture.default.staking_genesis "${STAKING_GENESIS_FILE}" >"$FIXTURE_FILE"
 
