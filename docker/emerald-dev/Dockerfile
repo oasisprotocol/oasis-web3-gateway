@@ -43,7 +43,8 @@ RUN chmod a+x "${EMERALD_PARATIME}"
 # Install Postgresql and other tools packaged by Ubuntu.
 RUN apt update -qq \
  && apt dist-upgrade -qq -y \
- && apt install jq postgresql -y
+ && apt install jq postgresql -y \
+ && rm -rf /var/lib/apt/lists/*
 USER postgres
 RUN /etc/init.d/postgresql start \
  && psql --command "ALTER USER postgres WITH SUPERUSER PASSWORD 'postgres';"
