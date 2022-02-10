@@ -21,7 +21,7 @@ const batchSize = 100
 // existing storage type and methods will always be compatible with the most
 // recent db version.
 type Storage struct {
-	DB *bun.Tx
+	DB bun.IDB
 }
 
 type IndexedRoundWithTip struct {

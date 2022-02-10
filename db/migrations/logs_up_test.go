@@ -3,11 +3,8 @@ package migrations
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
-	"log"
 	"math/big"
-	"os"
 	"runtime"
 	"testing"
 	"time"
@@ -17,81 +14,54 @@ import (
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/driver/pgdriver"
 
-	"github.com/oasisprotocol/emerald-web3-gateway/conf"
-	glog "github.com/oasisprotocol/emerald-web3-gateway/log"
+	"github.com/oasisprotocol/emerald-web3-gateway/log"
 	"github.com/oasisprotocol/emerald-web3-gateway/tests"
 )
 
-func Init(ctx context.Context, cfg *conf.DatabaseConfig) (*bun.DB, error) {
-	if cfg == nil {
-		return nil, errors.New("nil configuration")
-	}
+func InitTests(t *testing.T) *bun.DB {
+	tests.MustInitConfig()
 
+	// Init DB.
+	dbCfg := tests.TestsConfig.Database
 	pgConn := pgdriver.NewConnector(
-		pgdriver.WithAddr(fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)),
-		pgdriver.WithDatabase(cfg.DB),
-		pgdriver.WithUser(cfg.User),
-		pgdriver.WithPassword(cfg.Password),
+		pgdriver.WithAddr(fmt.Sprintf("%v:%v", dbCfg.Host, dbCfg.Port)),
+		pgdriver.WithDatabase(dbCfg.DB),
+		pgdriver.WithUser(dbCfg.User),
+		pgdriver.WithPassword(dbCfg.Password),
 		pgdriver.WithTLSConfig(nil),
-		pgdriver.WithDialTimeout(time.Duration(cfg.DialTimeout)*time.Second),
-		pgdriver.WithReadTimeout(time.Duration(cfg.ReadTimeout)*time.Second),
-		pgdriver.WithWriteTimeout(time.Duration(cfg.WriteTimeout)*time.Second))
+		pgdriver.WithDialTimeout(time.Duration(dbCfg.DialTimeout)*time.Second),
+		pgdriver.WithReadTimeout(time.Duration(dbCfg.ReadTimeout)*time.Second),
+		pgdriver.WithWriteTimeout(time.Duration(dbCfg.WriteTimeout)*time.Second))
 
 	sqlDB := sql.OpenDB(pgConn)
-	maxOpenConns := cfg.MaxOpenConns
+	maxOpenConns := dbCfg.MaxOpenConns
 	if maxOpenConns == 0 {
 		maxOpenConns = 4 * runtime.GOMAXPROCS(0)
 	}
 	sqlDB.SetMaxOpenConns(maxOpenConns)
 	sqlDB.SetMaxIdleConns(maxOpenConns)
-
-	// create db
 	db := bun.NewDB(sqlDB, pgdialect.New())
 
-	return db, nil
-}
+	// Init logging.
+	_ = log.InitLogging(tests.TestsConfig)
 
-var storage *Storage
-
-func TestMain(m *testing.M) {
-	var err error
-	ctx := context.Background()
-	tests.MustInitConfig()
-	psql, err := Init(ctx, tests.TestsConfig.Database)
-	if err != nil {
-		log.Println(`It seems database failed to initialize. Do you have PostgreSQL running? If not, you can run
-docker run  -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=postgres  -p 5432:5432 -d postgres`)
-		log.Fatal("failed to initialize db:", err)
-	}
-	if err = glog.InitLogging(tests.TestsConfig); err != nil {
-		log.Fatal("failed to initialize logging:", err)
-	}
-	if err = Migrate(ctx, psql); err != nil {
-		log.Fatal("failed to run migrations:", err)
-	}
-
-	var code int
-	if err = psql.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
-		storage = &Storage{DB: &tx}
-
-		code = m.Run()
-
-		return nil
-	}); err != nil {
-		log.Fatal("failed to run test: ", err)
-	}
-
-	if err = DropTables(ctx, psql); err != nil {
-		log.Fatal("failed to cleanup db:", err)
-	}
-
-	os.Exit(code)
+	return db
 }
 
 func TestLogsMigration(t *testing.T) {
 	require := require.New(t)
 	ctx := context.Background()
 
+	psql := InitTests(t)
+	defer func() {
+		_ = DropTables(ctx, psql)
+	}()
+	require.NoError(Init(ctx, psql), "initializing migrator")
+	require.NoError(Migrate(ctx, psql), "running migrations")
+
+	storage := Storage{DB: psql}
+
+	// Prepare state.
 	tx1 := &Transaction{
 		Hash:      "world",
 		Round:     1,
@@ -201,7 +171,12 @@ func TestLogsMigration(t *testing.T) {
 	require.NoError(storage.Upsert(ctx, endRound), "end upsert")
 
 	// Run migration.
-	require.NoError(LogsUp(ctx, storage.DB), "logs up migration")
+	require.NoError(
+		psql.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+			return LogsUp(ctx, &tx)
+		}),
+		"logs up migration",
+	)
 
 	// Ensure logs updated.
 	// Round 1.
