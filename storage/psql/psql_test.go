@@ -10,7 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
 
-	"github.com/oasisprotocol/emerald-web3-gateway/model"
+	"github.com/oasisprotocol/emerald-web3-gateway/db/migrations"
+	"github.com/oasisprotocol/emerald-web3-gateway/db/model"
 	"github.com/oasisprotocol/emerald-web3-gateway/tests"
 )
 
@@ -33,7 +34,7 @@ docker run  -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_
 	// Run tests.
 	code := m.Run()
 
-	if err = model.DropTables(ctx, db.DB.(*bun.DB)); err != nil {
+	if err = migrations.DropTables(ctx, db.DB.(*bun.DB)); err != nil {
 		log.Fatal("failed to cleanup db:", err)
 	}
 
@@ -42,9 +43,8 @@ docker run  -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_
 
 func TestInitPostDb(t *testing.T) {
 	require := require.New(t)
-	var err error
 	ctx := context.Background()
-	require.NoError(err, "initialize db")
+
 	block1 := &model.Block{
 		Round:  1,
 		Hash:   "hello",
@@ -60,13 +60,13 @@ func TestInitPostDb(t *testing.T) {
 		Hash:   "hello world",
 		Header: &model.Header{},
 	}
-	if err = db.Upsert(ctx, block1); err != nil {
+	if err := db.Upsert(ctx, block1); err != nil {
 		log.Fatal("store error:", err)
 	}
-	if err = db.Upsert(ctx, block2); err != nil {
+	if err := db.Upsert(ctx, block2); err != nil {
 		log.Fatal("store error:", err)
 	}
-	if err = db.Upsert(ctx, block3); err != nil {
+	if err := db.Upsert(ctx, block3); err != nil {
 		log.Fatal("store error:", err)
 	}
 	round, err := db.GetBlockRound(ctx, block1.Hash)
@@ -154,9 +154,7 @@ func TestInitPostDb(t *testing.T) {
 
 func TestUpsert(t *testing.T) {
 	require := require.New(t)
-	var err error
 	ctx := context.Background()
-	require.NoError(err, "initialize db")
 	ir1 := &model.IndexedRoundWithTip{
 		Tip:   model.Continues,
 		Round: 1,
@@ -188,21 +186,7 @@ func TestUpsert(t *testing.T) {
 
 func TestDelete(t *testing.T) {
 	require := require.New(t)
-	var err error
 	ctx := context.Background()
-	require.NoError(err, "initialize postdb")
 
 	require.NoError(db.Delete(ctx, new(model.Block), 10), "delete")
-}
-
-func TestGetBlockHash(t *testing.T) {
-	require := require.New(t)
-	var err error
-	require.NoError(err, "initialize db")
-
-	// TODO: this fails as expected as the db doesn't contain the block.
-	//       Forgot to initialize the db with the block?
-	// hash, err := db.GetBlockHash(1)
-	// require.NoError(err, "GetBlockHash")
-	// fmt.Println("block hash:", hash)
 }

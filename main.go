@@ -17,10 +17,10 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/oasisprotocol/emerald-web3-gateway/conf"
+	"github.com/oasisprotocol/emerald-web3-gateway/db/migrations"
 	"github.com/oasisprotocol/emerald-web3-gateway/filters"
 	"github.com/oasisprotocol/emerald-web3-gateway/indexer"
 	"github.com/oasisprotocol/emerald-web3-gateway/log"
-	"github.com/oasisprotocol/emerald-web3-gateway/model"
 	"github.com/oasisprotocol/emerald-web3-gateway/rpc"
 	"github.com/oasisprotocol/emerald-web3-gateway/server"
 	"github.com/oasisprotocol/emerald-web3-gateway/storage/psql"
@@ -117,7 +117,7 @@ func truncateExec(cmd *cobra.Command, args []string) error {
 	}
 
 	// Truncate database.
-	if err := model.DropTables(ctx, db.DB.(*bun.DB)); err != nil {
+	if err := migrations.DropTables(ctx, db.DB.(*bun.DB)); err != nil {
 		logger.Error("failed to truncate db", "err", err)
 		return err
 	}

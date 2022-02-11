@@ -1,16 +1,22 @@
-package model
+package migrations
 
 import (
 	"context"
+	"embed"
 	"fmt"
 	"strings"
 
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/uptrace/bun"
-	"github.com/uptrace/bun/migrate"
 
-	"github.com/oasisprotocol/emerald-web3-gateway/model/migrations"
+	"github.com/oasisprotocol/emerald-web3-gateway/db/migrator"
 )
+
+// Migrations are all migrations.
+var Migrations *migrator.Migrations
+
+//go:embed *.sql
+var migrations embed.FS
 
 // DropTables deletes all database tables in the `public` schema of the configured database.
 //
@@ -52,20 +58,22 @@ func DropTables(ctx context.Context, db *bun.DB) error {
 	return nil
 }
 
+// Init initializes the migrator tables.
+func Init(ctx context.Context, db *bun.DB) error {
+	// Initialize the migrator.
+	migrator := migrator.NewMigrator(db, Migrations)
+	return migrator.Init(ctx)
+}
+
 // Migrate migrates the DB to latest version.
 func Migrate(ctx context.Context, db *bun.DB) error {
 	logger := logging.GetLogger("migration")
 
 	// Initialize the migrator.
-	migrator := migrate.NewMigrator(db, migrations.Migrations)
-	if err := migrator.Init(ctx); err != nil {
-		logger.Error("failed to init migrations", "err", err)
-		return err
-	}
+	migrator := migrator.NewMigrator(db, Migrations)
 
 	// Run migrations.
-	_, err := migrator.Migrate(ctx)
-	if err != nil {
+	if err := migrator.Migrate(ctx); err != nil {
 		logger.Error("failed to migrate db", "err", err)
 		return err
 	}
@@ -74,7 +82,26 @@ func Migrate(ctx context.Context, db *bun.DB) error {
 	if err != nil {
 		return err
 	}
-	logger.Info("migration done", "applied", status.Applied(), "last_group", status.LastGroupID(), "status", status.String())
+	logger.Info("migration done", "applied", status.Applied(), "status", status.String(), "unaplied", status.Unapplied())
 
 	return nil
+}
+
+func init() {
+	Migrations = migrator.NewMigrations()
+	for _, m := range []migrator.Migration{
+		// Initial.
+		{
+			Name: "20211213143752",
+			Up:   migrator.NewSQLMigrationFunc(migrations, "20211213143752_initial.up.sql"),
+		},
+		// Logs index fix migration.
+		// https://github.com/oasisprotocol/emerald-web3-gateway/pull/174
+		{
+			Name: "20220109122505",
+			Up:   LogsUp,
+		},
+	} {
+		Migrations.Add(m)
+	}
 }

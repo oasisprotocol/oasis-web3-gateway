@@ -31,10 +31,10 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
+	"github.com/oasisprotocol/emerald-web3-gateway/db/migrations"
 	"github.com/oasisprotocol/emerald-web3-gateway/filters"
 	"github.com/oasisprotocol/emerald-web3-gateway/indexer"
 	"github.com/oasisprotocol/emerald-web3-gateway/log"
-	"github.com/oasisprotocol/emerald-web3-gateway/model"
 	"github.com/oasisprotocol/emerald-web3-gateway/rpc"
 	"github.com/oasisprotocol/emerald-web3-gateway/server"
 	"github.com/oasisprotocol/emerald-web3-gateway/storage/psql"
@@ -277,7 +277,7 @@ func InitialDeposit(rc client.RuntimeClient, amount quantity.Quantity, to types.
 
 // Shutdown stops web3 gateway.
 func Shutdown() error {
-	if err := model.DropTables(context.Background(), db.DB.(*bun.DB)); err != nil {
+	if err := migrations.DropTables(context.Background(), db.DB.(*bun.DB)); err != nil {
 		return fmt.Errorf("db cleanup failed: %w", err)
 	}
 
