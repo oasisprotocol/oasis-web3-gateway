@@ -488,7 +488,7 @@ func (api *PublicAPI) GetTransactionByHash(hash common.Hash) (*utils.RPCTransact
 }
 
 // GetTransactionByBlockHashAndIndex returns the transaction for the given block hash and index.
-func (api *PublicAPI) GetTransactionByBlockHashAndIndex(blockHash common.Hash, index uint32) (*utils.RPCTransaction, error) {
+func (api *PublicAPI) GetTransactionByBlockHashAndIndex(blockHash common.Hash, index hexutil.Uint) (*utils.RPCTransaction, error) {
 	logger := api.Logger.With("method", "eth_getTransactionByBlockHashAndIndex", "block_hash", blockHash, "index", index)
 	logger.Debug("request")
 
@@ -496,8 +496,7 @@ func (api *PublicAPI) GetTransactionByBlockHashAndIndex(blockHash common.Hash, i
 	if err != nil {
 		return nil, handleStorageError(logger, err)
 	}
-	l := len(dbBlock.Transactions)
-	if uint32(l) <= index {
+	if l := uint(len(dbBlock.Transactions)); l <= uint(index) {
 		logger.Debug("invalid block transaction index", "num_txs", l)
 		return nil, ErrIndexOutOfRange
 	}
@@ -506,7 +505,7 @@ func (api *PublicAPI) GetTransactionByBlockHashAndIndex(blockHash common.Hash, i
 }
 
 // GetTransactionByBlockNumberAndIndex returns the transaction identified by number and index.
-func (api *PublicAPI) GetTransactionByBlockNumberAndIndex(blockNum ethrpc.BlockNumber, index uint32) (*utils.RPCTransaction, error) {
+func (api *PublicAPI) GetTransactionByBlockNumberAndIndex(blockNum ethrpc.BlockNumber, index hexutil.Uint) (*utils.RPCTransaction, error) {
 	logger := api.Logger.With("method", "eth_getTransactionByNumberAndIndex", "block_number", blockNum, "index", index)
 	logger.Debug("request")
 

@@ -62,6 +62,7 @@ func call(t *testing.T, method string, params interface{}) *Response {
 	return rpcRes
 }
 
+// nolint:unparam
 func submitTransaction(ctx context.Context, t *testing.T, to common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *types.Receipt {
 	ec := localClient(t, false)
 	chainID, err := ec.ChainID(context.Background())
@@ -271,6 +272,39 @@ func TestEth_GetTransactionByHash(t *testing.T) {
 	require.Nil(t, tx, "nonexistent transaction")
 	// go-ethereum returns an ethereum.NotFound error for an empty response.
 	require.EqualError(t, err, ethereum.NotFound.Error(), "nonexistent transaction")
+}
+
+func TestEth_GetTransactionByBlockAndIndex(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
+	defer cancel()
+
+	ec := localClient(t, false)
+
+	// Submit test transaction.
+	input := "0x7f7465737432000000000000000000000000000000000000000000000000000000600057"
+	data := common.FromHex(input)
+	to := common.BytesToAddress(common.FromHex("0x1122334455667788990011223344556677889900"))
+	receipt := submitTransaction(ctx, t, to, big.NewInt(1), GasLimit, GasPrice, data)
+	require.EqualValues(t, 1, receipt.Status)
+	require.NotNil(t, receipt)
+
+	tx2, _, err := ec.TransactionByHash(ctx, receipt.TxHash)
+	require.NoError(t, err)
+	require.NotNil(t, tx2)
+	// Ensure returned transaction hash equals the internally computed one by geth.
+	require.Equal(t, tx2.Hash(), receipt.TxHash)
+
+	// Test eth_getTransactionByBlockHashAndIndex.
+	rsp := make(map[string]interface{})
+	rawRsp := call(t, "eth_getTransactionByBlockHashAndIndex", []string{receipt.BlockHash.Hex(), hexutil.Uint(receipt.TransactionIndex).String()})
+	require.NoError(t, json.Unmarshal(rawRsp.Result, &rsp))
+	require.Equal(t, input, rsp["input"], "getTransactionByHash 'input' response should be correct")
+
+	// Test eth_getTransactionByBlockNumberAndIndex.
+	rsp = make(map[string]interface{})
+	rawRsp = call(t, "eth_getTransactionByBlockNumberAndIndex", []string{hexutil.EncodeBig(receipt.BlockNumber), hexutil.Uint(receipt.TransactionIndex).String()})
+	require.NoError(t, json.Unmarshal(rawRsp.Result, &rsp))
+	require.Equal(t, input, rsp["input"], "getTransactionByHash 'input' response should be correct")
 }
 
 func TestEth_GetBlockByHashRawResponses(t *testing.T) {
