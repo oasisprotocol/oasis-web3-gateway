@@ -6,7 +6,7 @@ require (
 	github.com/ethereum/go-ethereum v1.10.10-0.20211005163353-57ff2dee06a1
 	github.com/fxamacker/cbor/v2 v2.2.1-0.20200820021930-bafca87fa6db
 	github.com/gorilla/mux v1.8.0
-	github.com/gorilla/websocket v1.4.2
+	github.com/gorilla/websocket v1.5.0
 	github.com/knadh/koanf v1.4.0
 	github.com/oasisprotocol/oasis-core/go v0.2103.6
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.1.1-0.20211203131800-7bc6c485ad2f
