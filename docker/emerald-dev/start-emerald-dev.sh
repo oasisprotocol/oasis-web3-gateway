@@ -4,14 +4,14 @@
 # starts the emerald web3 gateway on top of it, and deposits to a test account on Emerald.
 # Mandatory ENV Variables:
 # - all ENV variables required by spinup-oasis-stack.sh
-# - VERSION: emerald-dev image version
-# - OASIS_CORE_VERSION: version of oasis-node
 # - EMERALD_WEB3_GATEWAY: path to emerald-web3-gateway binary
 # - EMERALD_WEB3_GATEWAY_CONFIG_FILE: path to emerald-web3-gateway config file
 # - OASIS_DEPOSIT: path to oasis-deposit binary
 
-EMERALD_WEB3_GATEWAY_VERSION=$(${EMERALD_WEB3_GATEWAY} -v | head -n1 | cut -d " " -f 3)
-echo "emerald-dev v${VERSION} (oasis-core: v${OASIS_CORE_VERSION}, emerald-paratime: v${EMERALD_PARATIME_VERSION}, emerald-web3-gateway: ${EMERALD_WEB3_GATEWAY_VERSION})"
+EMERALD_WEB3_GATEWAY_VERSION=$(${EMERALD_WEB3_GATEWAY} -v | head -n1 | cut -d " " -f 3 | sed -r 's/^v//')
+OASIS_CORE_VERSION=$(${OASIS_NODE} -v | head -n1 | cut -d " " -f 3 | sed -r 's/^v//')
+VERSION=$(cat /VERSION)
+echo "emerald-dev ${VERSION} (oasis-core: ${OASIS_CORE_VERSION}, emerald-paratime: ${EMERALD_PARATIME_VERSION}, emerald-web3-gateway: ${EMERALD_WEB3_GATEWAY_VERSION})"
 echo
 
 OASIS_NODE_SOCKET=${OASIS_NODE_DATADIR}/net-runner/network/client-0/internal.sock

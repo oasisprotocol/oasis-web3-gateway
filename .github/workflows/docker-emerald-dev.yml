@@ -1,0 +1,45 @@
+name: docker-emerald-dev
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          # We need history to determine emerald-web3-gateway version from git tag.
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_ACCESS_TOKEN }}
+
+      - name: Compute version
+        # Version emerald-dev image by date and git revision.
+        run: |
+          echo "VERSION=$(date +%Y-%m-%d-git$(git rev-parse --short HEAD))" >> $GITHUB_ENV
+
+      - name: Build and push
+        uses: docker/build-push-action@v2
+        with:
+          build-args: |
+            VERSION=${{ env.VERSION }}
+          context: .
+          file: docker/emerald-dev/Dockerfile
+          tags: |
+            oasisprotocol/emerald-dev:latest
+            oasisprotocol/emerald-dev:latest-${{ env.VERSION }}
+          push: true
+          labels: |
+            org.opencontainers.image.source=${{ github.event.repository.html_url }}
+            org.opencontainers.image.revision=${{ github.sha }}

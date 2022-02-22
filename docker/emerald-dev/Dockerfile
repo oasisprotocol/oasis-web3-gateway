@@ -5,11 +5,8 @@ RUN cd emerald-web3-gateway && make build
 
 FROM ubuntu:20.04
 
-ENV VERSION=22.1
 ENV OASIS_CORE_VERSION=21.3.9
 ENV EMERALD_PARATIME_VERSION=6.2.0
-
-ENV ETHEREUM_MNEMONIC="tray ripple elevator ramp insect butter top mouse old cinnamon panther chief"
 
 ENV OASIS_NODE=/oasis-node
 ENV OASIS_NET_RUNNER=/oasis-net-runner
@@ -19,6 +16,7 @@ ENV EMERALD_WEB3_GATEWAY=/emerald-web3-gateway
 ENV EMERALD_WEB3_GATEWAY_CONFIG_FILE=/emerald-dev.yml
 ENV OASIS_DEPOSIT=/oasis-deposit
 
+ARG VERSION
 ARG DEBIAN_FRONTEND=noninteractive
 
 # emerald-web3-gateway binary, config, spinup-* scripts and staking_genesis.json.
@@ -40,10 +38,14 @@ RUN mkdir -p "$(dirname ${EMERALD_PARATIME})"
 ADD "https://github.com/oasisprotocol/emerald-paratime/releases/download/v${EMERALD_PARATIME_VERSION}/emerald-paratime" "${EMERALD_PARATIME}"
 RUN chmod a+x "${EMERALD_PARATIME}"
 
+# Write VERSION information.
+RUN echo "${VERSION}" > /VERSION
+
 # Install Postgresql and other tools packaged by Ubuntu.
 RUN apt update -qq \
  && apt dist-upgrade -qq -y \
- && apt install jq postgresql -y
+ && apt install jq postgresql -y \
+ && rm -rf /var/lib/apt/lists/*
 USER postgres
 RUN /etc/init.d/postgresql start \
  && psql --command "ALTER USER postgres WITH SUPERUSER PASSWORD 'postgres';"

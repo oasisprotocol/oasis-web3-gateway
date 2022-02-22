@@ -56,7 +56,7 @@ release-build:
 	@goreleaser release --rm-dist
 
 docker:
-	@docker build -t emerald-dev -f docker/emerald-dev/Dockerfile .
+	@docker build -t oasisprotocol/emerald-dev:local --build-arg VERSION=local -f docker/emerald-dev/Dockerfile .
 
 # List of targets that are not actual files.
 .PHONY: \
