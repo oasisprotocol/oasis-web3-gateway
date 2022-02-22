@@ -1310,8 +1310,9 @@ github.com/tyler-smith/go-bip39 v1.1.0 h1:5eUemwrMargf3BSLRRCalXT93Ns6pQJIjYQN2n
 github.com/tyler-smith/go-bip39 v1.1.0/go.mod h1:gUYDtqQw1JS3ZJ8UWVcGTGqqr6YIN3CWg+kkNaLt55U=
 github.com/ugorji/go v1.1.4/go.mod h1:uQMGLiO92mf5W77hV/PUCpI3pbzQx3CRekS0kk+RGrc=
 github.com/ugorji/go/codec v0.0.0-20181204163529-d75b2dcb6bc8/go.mod h1:VFNgLljTbGfSG7qAOspJ7OScBnGdDN/yBr0sguwnwf0=
-github.com/uptrace/bun v1.0.22 h1:0asZNOcM4eLq5Pgzu+LpZyJRxlt3ops+HahVkWPqxww=
 github.com/uptrace/bun v1.0.22/go.mod h1:SkbOr4hdcYqqFPw4rbc1QAnLLvDLgq+X0w8OSllj1MU=
+github.com/uptrace/bun v1.0.24 h1:nKhf+Gd+ft2OKYISHXR2BAoTvl/D5JtzyVCkb2cnE3c=
+github.com/uptrace/bun v1.0.24/go.mod h1:SkbOr4hdcYqqFPw4rbc1QAnLLvDLgq+X0w8OSllj1MU=
 github.com/uptrace/bun/dialect/pgdialect v1.0.22 h1:HFPVP/217Betru2R9KXsdKltfjCTGGogAe0Jk/Uor8U=
 github.com/uptrace/bun/dialect/pgdialect v1.0.22/go.mod h1:tnjBd7a4IuieWuROMfcR9AiPo+9GaGGHIojq8g/xAmw=
 github.com/uptrace/bun/driver/pgdriver v1.0.22 h1:7Dy2Jtn4TzyH/s+YWhGhkFEKTe6jDsD3b9l7NaQAUSw=
