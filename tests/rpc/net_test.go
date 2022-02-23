@@ -20,14 +20,11 @@ func TestMain(m *testing.M) {
 	// Run tests.
 	code := m.Run()
 
-	if err := Shutdown(); err != nil {
-		log.Printf("%v", err)
-	}
 	os.Exit(code)
 }
 
 func TestNet_Version(t *testing.T) {
-	rpcRes := Call(t, "net_version", []string{})
+	rpcRes := call(t, "net_version", []string{})
 	var res string
 	err := json.Unmarshal(rpcRes.Result, &res)
 
