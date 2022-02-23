@@ -209,6 +209,7 @@ func TestEth_GetCode(t *testing.T) {
 	t.Logf("SignedTx hash: %s", signedTx.Hash().Hex())
 	t.Logf("Contract address: %s", receipt.ContractAddress)
 
+	require.EqualValues(t, uint64(103630), receipt.GasUsed, "expected contract creation gas used")
 	require.Equal(t, uint64(1), receipt.Status)
 
 	storedCode, err := ec.CodeAt(context.Background(), receipt.ContractAddress, nil)
@@ -355,6 +356,7 @@ func TestERC20(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), receipt.Status)
 	require.NotEmpty(t, receipt.Logs, "ERC20-transfer receipt should contain the emitted log")
+	require.EqualValues(t, uint64(49700), receipt.GasUsed, "ERC20-transfer expected gas use")
 
 	// Get balance of token receiver
 	balanceOfCall, err := testabi.Pack("balanceOf", common.Address{1})

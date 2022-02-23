@@ -2,6 +2,7 @@ package indexer
 
 import (
 	"encoding/hex"
+	"fmt"
 	"math/big"
 
 	"github.com/fxamacker/cbor/v2"
@@ -12,6 +13,8 @@ import (
 
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/evm"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 
 	"github.com/oasisprotocol/emerald-web3-gateway/db/model"
@@ -57,8 +60,8 @@ func convertToEthFormat(
 	transactions ethtypes.Transactions,
 	logsBloom ethtypes.Bloom,
 	txsStatus []uint8,
+	txsGasUsed []uint64,
 	results []types.CallResult,
-	gas uint64,
 ) (*model.Block, []*model.Transaction, []*model.Receipt, error) {
 	encoded := block.Header.EncodedHash()
 	bhash := common.HexToHash(encoded.Hex()).String()
@@ -86,7 +89,6 @@ func convertToEthFormat(
 		Difficulty:  big.NewInt(0).String(),
 		Number:      number.Uint64(),
 		GasLimit:    uint64(defaultGasLimit),
-		GasUsed:     gas,
 		Time:        uint64(block.Header.Timestamp),
 		Extra:       "",
 		MixDigest:   "",
@@ -144,14 +146,14 @@ func convertToEthFormat(
 		innerTxs = append(innerTxs, tx)
 
 		// receipts
-		cumulativeGasUsed += tx.Gas
+		cumulativeGasUsed += txsGasUsed[idx]
 		receipt := &model.Receipt{
 			Status:            uint(txsStatus[idx]),
 			CumulativeGasUsed: cumulativeGasUsed,
 			LogsBloom:         hex.EncodeToString(bloomData),
 			TransactionHash:   ethTx.Hash().Hex(),
 			BlockHash:         bhash,
-			GasUsed:           ethTx.Gas(),
+			GasUsed:           txsGasUsed[idx],
 			Type:              uint(ethTx.Type()),
 			Round:             block.Header.Round,
 			TransactionIndex:  uint64(idx),
@@ -170,6 +172,7 @@ func convertToEthFormat(
 		}
 		innerReceipts = append(innerReceipts, receipt)
 	}
+	innerHeader.GasUsed = cumulativeGasUsed
 
 	innerBlock := &model.Block{
 		Hash:         bhash,
@@ -182,7 +185,7 @@ func convertToEthFormat(
 }
 
 // StoreBlockData parses oasis block and stores in db.
-func (ib *indexBackend) StoreBlockData(oasisBlock *block.Block, txResults []*client.TransactionWithResults) error {
+func (ib *indexBackend) StoreBlockData(oasisBlock *block.Block, txResults []*client.TransactionWithResults) error { // nolint: gocyclo
 	encoded := oasisBlock.Header.EncodedHash()
 	bhash := common.HexToHash(encoded.Hex())
 	blockNum := oasisBlock.Header.Round
@@ -190,8 +193,8 @@ func (ib *indexBackend) StoreBlockData(oasisBlock *block.Block, txResults []*cli
 	ethTxs := ethtypes.Transactions{}
 	logs := []*ethtypes.Log{}
 	txsStatus := []uint8{}
+	txsGasUsed := []uint64{}
 	results := []types.CallResult{}
-	var gasUsed uint64
 
 	// Decode tx and get logs
 	for txIndex, item := range txResults {
@@ -201,17 +204,15 @@ func (ib *indexBackend) StoreBlockData(oasisBlock *block.Block, txResults []*cli
 			continue
 		}
 
-		// Extract raw Ethereum transaction for further processing.
-		rawEthTx := oasisTx.Body
 		// Decode the Ethereum transaction.
 		ethTx := &ethtypes.Transaction{}
-		err := rlp.DecodeBytes(rawEthTx, ethTx)
+		err := rlp.DecodeBytes(oasisTx.Body, ethTx)
 		if err != nil {
 			ib.logger.Error("Failed to decode UnverifiedTransaction", "height", blockNum, "index", txIndex, "err", err)
 			return err
 		}
 
-		status := uint8(0)
+		var status uint8
 		if txResults[txIndex].Result.IsSuccess() {
 			status = uint8(ethtypes.ReceiptStatusSuccessful)
 		} else {
@@ -219,15 +220,15 @@ func (ib *indexBackend) StoreBlockData(oasisBlock *block.Block, txResults []*cli
 		}
 		txsStatus = append(txsStatus, status)
 		results = append(results, item.Result)
-
-		gasUsed += ethTx.Gas()
 		ethTxs = append(ethTxs, ethTx)
 
+		var txGasUsed uint64
 		var oasisLogs []*Log
 		resEvents := item.Events
-
 		for eventIndex, event := range resEvents {
-			if event.Code == 1 {
+			switch {
+			case event.Module == evm.ModuleName && event.Code == 1:
+				// Manually parse EVM logs to also handle the legacy format which is not supported by the sdk.
 				var logs []*Log
 				if err = cbor.Unmarshal(event.Value, &logs); err != nil {
 					ib.logger.Debug("Failed to unmarshal event value, trying legacy format next", "index", eventIndex, "err", err)
@@ -244,15 +245,47 @@ func (ib *indexBackend) StoreBlockData(oasisBlock *block.Block, txResults []*cli
 					continue
 				}
 				oasisLogs = append(oasisLogs, logs...)
+			case event.Module == core.ModuleName:
+				events, err := core.DecodeEvent(event)
+				if err != nil {
+					ib.logger.Error("failed to decode core event", "index", eventIndex, "err", err)
+					return err
+				}
+				for _, ev := range events {
+					ce, ok := ev.(*core.Event)
+					if !ok {
+						ib.logger.Error("invalid core event", "event", ev, "index", eventIndex)
+						return fmt.Errorf("invalid core event: %v", ev)
+					}
+					if ce.GasUsed == nil {
+						continue
+					}
+					// Shouldn't happen unless something is terribly wrong.
+					if txGasUsed != 0 {
+						ib.logger.Error("multiple gas used events for a transaction", "prev_used", txGasUsed, "gas_used", ce, "index", eventIndex)
+						return fmt.Errorf("multiple GasUsedEvent for a transaction")
+					}
+					txGasUsed = ce.GasUsed.Amount
+				}
+			default:
+				// Ignore any other events.
 			}
 		}
 		logs = append(logs, Logs2EthLogs(oasisLogs, blockNum, bhash, ethTx.Hash(), uint(len(logs)), uint32(txIndex))...)
+
+		// Emerald GasUsed events were added in version 7.0.0.
+		// Default to using gas limit, which was the behaviour before.
+		if txGasUsed == 0 {
+			ib.logger.Debug("no GasUsedEvent for a transaction, defaulting to gas limit", "transaction_index", txIndex, "round", oasisBlock.Header.Round)
+			txGasUsed = ethTx.Gas()
+		}
+		txsGasUsed = append(txsGasUsed, txGasUsed)
 	}
 	dbLogs := eth2DbLogs(logs)
 
-	// Get convert block, transactions and receipts.
+	// Convert to eth block, transactions and receipts.
 	logsBloom := ethtypes.BytesToBloom(ethtypes.LogsBloom(logs))
-	blk, txs, receipts, err := convertToEthFormat(oasisBlock, ethTxs, logsBloom, txsStatus, results, gasUsed)
+	blk, txs, receipts, err := convertToEthFormat(oasisBlock, ethTxs, logsBloom, txsStatus, txsGasUsed, results)
 	if err != nil {
 		ib.logger.Debug("Failed to ConvertToEthBlock", "height", blockNum, "err", err)
 		return err
