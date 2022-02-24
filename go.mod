@@ -8,8 +8,8 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/knadh/koanf v1.4.0
-	github.com/oasisprotocol/oasis-core/go v0.2103.6
-	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.1.1-0.20211203131800-7bc6c485ad2f
+	github.com/oasisprotocol/oasis-core/go v0.2103.10
+	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.1.1-0.20220223135638-61574136102a
 	github.com/rs/cors v1.8.2
 	github.com/spf13/cobra v1.3.0
 	github.com/stretchr/testify v1.7.0
@@ -58,7 +58,7 @@ require (
 	github.com/mitchellh/go-testing-interface v1.0.0 // indirect
 	github.com/mitchellh/mapstructure v1.4.3 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
-	github.com/oasisprotocol/curve25519-voi v0.0.0-20210716083614-f38f8e8b0b84 // indirect
+	github.com/oasisprotocol/curve25519-voi v0.0.0-20211219162838-e9a669f65da9 // indirect
 	github.com/oasisprotocol/deoxysii v0.0.0-20200527154044-851aec403956 // indirect
 	github.com/oklog/run v1.0.0 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
