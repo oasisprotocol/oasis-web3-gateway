@@ -43,9 +43,13 @@ jobs:
         # Always run this step so that all linting errors can be seen at once.
         # Skip this step for dependabot pull requests.
         if: always() && github.actor != 'dependabot[bot]'
-      - name: Lint Go
-        uses: golangci/golangci-lint-action@v2
+      - name: Setup Go
+        uses: actions/setup-go@v2
         with:
-          version: v1.43
+          go-version: '1.17.x'
+      - name: Lint Go
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.44.2
         # Always run this step so that all linting errors can be seen at once.
         if: always()
