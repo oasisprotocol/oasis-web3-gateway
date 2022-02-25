@@ -165,6 +165,9 @@ func TestEth_GetBlockByNumberAndGetBlockByHash(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, number, blk1.Number())
 
+	// Ensure block gas limit is correct.
+	require.EqualValues(t, 30_000_000, blk1.GasLimit(), "expected block gas limit")
+
 	// go-ethereum's Block struct always computes block hash on-the-fly
 	// instead of simply returning the hash from BlockBy* API responses.
 	// Computing it this way will not work in Oasis because of other non-ethereum
