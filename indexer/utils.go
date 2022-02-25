@@ -22,10 +22,7 @@ import (
 	"github.com/oasisprotocol/emerald-web3-gateway/storage"
 )
 
-var (
-	defaultValidatorAddr = "0x0000000000000000000000000000000088888888"
-	defaultGasLimit      = 21_000_000
-)
+var defaultValidatorAddr = "0x0000000000000000000000000000000088888888"
 
 // Log is the Oasis Log.
 type Log struct {
@@ -62,6 +59,7 @@ func convertToEthFormat(
 	txsStatus []uint8,
 	txsGasUsed []uint64,
 	results []types.CallResult,
+	blockGasLimit uint64,
 ) (*model.Block, []*model.Transaction, []*model.Receipt, error) {
 	encoded := block.Header.EncodedHash()
 	bhash := common.HexToHash(encoded.Hex()).String()
@@ -88,7 +86,7 @@ func convertToEthFormat(
 		Bloom:       string(bloomData),
 		Difficulty:  big.NewInt(0).String(),
 		Number:      number.Uint64(),
-		GasLimit:    uint64(defaultGasLimit),
+		GasLimit:    blockGasLimit,
 		Time:        uint64(block.Header.Timestamp),
 		Extra:       "",
 		MixDigest:   "",
@@ -185,7 +183,7 @@ func convertToEthFormat(
 }
 
 // StoreBlockData parses oasis block and stores in db.
-func (ib *indexBackend) StoreBlockData(oasisBlock *block.Block, txResults []*client.TransactionWithResults) error { // nolint: gocyclo
+func (ib *indexBackend) StoreBlockData(oasisBlock *block.Block, txResults []*client.TransactionWithResults, blockGasLimit uint64) error { // nolint: gocyclo
 	encoded := oasisBlock.Header.EncodedHash()
 	bhash := common.HexToHash(encoded.Hex())
 	blockNum := oasisBlock.Header.Round
@@ -285,7 +283,7 @@ func (ib *indexBackend) StoreBlockData(oasisBlock *block.Block, txResults []*cli
 
 	// Convert to eth block, transactions and receipts.
 	logsBloom := ethtypes.BytesToBloom(ethtypes.LogsBloom(logs))
-	blk, txs, receipts, err := convertToEthFormat(oasisBlock, ethTxs, logsBloom, txsStatus, txsGasUsed, results)
+	blk, txs, receipts, err := convertToEthFormat(oasisBlock, ethTxs, logsBloom, txsStatus, txsGasUsed, results, blockGasLimit)
 	if err != nil {
 		ib.logger.Debug("Failed to ConvertToEthBlock", "height", blockNum, "err", err)
 		return err

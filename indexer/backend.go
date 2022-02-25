@@ -77,6 +77,7 @@ type Backend interface {
 	Index(
 		oasisBlock *block.Block,
 		txResults []*client.TransactionWithResults,
+		blockGasLimit uint64,
 	) error
 
 	// Prune removes indexed data for rounds equal to or earlier than the passed round.
@@ -97,10 +98,10 @@ type indexBackend struct {
 }
 
 // Index indexes oasis block.
-func (ib *indexBackend) Index(oasisBlock *block.Block, txResults []*client.TransactionWithResults) error {
+func (ib *indexBackend) Index(oasisBlock *block.Block, txResults []*client.TransactionWithResults, blockGasLimit uint64) error {
 	round := oasisBlock.Header.Round
 
-	err := ib.StoreBlockData(oasisBlock, txResults)
+	err := ib.StoreBlockData(oasisBlock, txResults, blockGasLimit)
 	if err != nil {
 		ib.logger.Error("generateEthBlock failed", "err", err)
 		return err
