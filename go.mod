@@ -13,7 +13,7 @@ require (
 	github.com/rs/cors v1.8.2
 	github.com/spf13/cobra v1.3.0
 	github.com/stretchr/testify v1.7.0
-	github.com/uptrace/bun v1.1.0
+	github.com/uptrace/bun v1.1.1
 	github.com/uptrace/bun/dialect/pgdialect v1.1.0
 	github.com/uptrace/bun/driver/pgdriver v1.1.0
 	golang.org/x/crypto v0.0.0-20220214200702-86341886e292
