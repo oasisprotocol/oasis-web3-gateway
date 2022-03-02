@@ -44,7 +44,7 @@ jobs:
       OASIS_NODE_DATADIR: /tmp/eth-runtime-test
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Go 1.17
         uses: actions/setup-go@v2.2.0
