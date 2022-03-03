@@ -35,10 +35,10 @@ jobs:
         ports:
           - 5432:5432
     env:
-      OASIS_CORE_VERSION: 21.3.10
+      OASIS_CORE_VERSION: "22.0"
       OASIS_NODE: ${{ github.workspace }}/oasis_core/oasis-node
       OASIS_NET_RUNNER: ${{ github.workspace }}/oasis_core/oasis-net-runner
-      EMERALD_PARATIME_VERSION: 7.0.0-rc1
+      EMERALD_PARATIME_VERSION: 7.0.0-rc2
       GATEWAY__CHAIN_ID: 42261
       EMERALD_PARATIME: ${{ github.workspace }}/oasis_core/emerald-paratime
       OASIS_NODE_DATADIR: /tmp/eth-runtime-test
@@ -53,7 +53,7 @@ jobs:
 
       - name: Install prerequisites
         run: |
-          sudo apt update && sudo apt install bubblewrap -y
+          sudo apt update && sudo apt install bubblewrap unzip -y
           wget "https://github.com/oasisprotocol/oasis-core/releases/download/v${OASIS_CORE_VERSION}/oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz"
           tar xfvz "oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz"
           mkdir -p "$(dirname ${OASIS_NODE})"
@@ -61,13 +61,13 @@ jobs:
           mkdir -p "$(dirname ${OASIS_NET_RUNNER})"
           mv "oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-net-runner" "${OASIS_NET_RUNNER}"
           mkdir -p "$(dirname ${EMERALD_PARATIME})"
-          wget "https://github.com/oasisprotocol/emerald-paratime/releases/download/v${EMERALD_PARATIME_VERSION}/emerald-paratime" -O "${EMERALD_PARATIME}"
+          wget "https://github.com/oasisprotocol/emerald-paratime/releases/download/v${EMERALD_PARATIME_VERSION}/emerald-paratime.orc" -O "${EMERALD_PARATIME}.orc"
+          unzip "${EMERALD_PARATIME}.orc"
+          mv runtime.elf "${EMERALD_PARATIME}"
           chmod a+x "${EMERALD_PARATIME}"
 
       - name: Spinup oasis-node
         run: tests/tools/spinup-oasis-stack.sh > /dev/null &
-
-      - run: go build
 
       - name: Unit tests with coverage
         run: go test -race -coverpkg=./... -coverprofile=coverage.txt -covermode=atomic -v ./...
