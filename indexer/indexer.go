@@ -3,12 +3,15 @@ package indexer
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync/atomic"
 	"time"
 
 	"github.com/oasisprotocol/oasis-core/go/common"
 	"github.com/oasisprotocol/oasis-core/go/common/service"
+	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
 
 	"github.com/oasisprotocol/emerald-web3-gateway/filters"
 	"github.com/oasisprotocol/emerald-web3-gateway/storage"
@@ -38,6 +41,10 @@ type Service struct {
 
 	backend Backend
 	client  client.RuntimeClient
+	core    core.V1
+
+	queryBlockGasLimit bool
+	blockGasLimit      uint64
 
 	ctx       context.Context
 	cancelCtx context.CancelFunc
@@ -60,14 +67,34 @@ func (s *Service) indexBlock(round uint64) error {
 		return ErrGetBlockFailed
 	}
 
+	if s.blockGasLimit == 0 || s.queryBlockGasLimit {
+		// Query parameters for block gas limit.
+		var params *core.Parameters
+		params, err = s.core.Parameters(s.ctx, round)
+		if err != nil {
+			return fmt.Errorf("querying block gas limit: %w", err)
+		}
+		s.blockGasLimit = params.MaxBatchGas
+	}
+
 	txs, err := s.client.GetTransactionsWithResults(s.ctx, blk.Header.Round)
 	if err != nil {
 		return ErrGetTransactionsFailed
 	}
 
-	err = s.backend.Index(blk, txs)
+	err = s.backend.Index(blk, txs, s.blockGasLimit)
 	if err != nil {
 		return ErrIndexedFailed
+	}
+
+	switch {
+	case blk.Header.HeaderType == block.EpochTransition:
+		// Epoch transition block, ensure block gas is queried on next normal round.
+		s.queryBlockGasLimit = true
+	case s.queryBlockGasLimit && blk.Header.HeaderType == block.Normal:
+		// Block gas was queried, no need to query it until next epoch.
+		s.queryBlockGasLimit = false
+	default:
 	}
 
 	return nil
@@ -277,6 +304,7 @@ func New(
 		runtimeID:             runtimeID,
 		backend:               backend,
 		client:                client,
+		core:                  core.NewV1(client),
 		ctx:                   ctx,
 		cancelCtx:             cancelCtx,
 		enablePruning:         enablePruning,
