@@ -338,8 +338,24 @@ func (ib *indexBackend) StoreBlockData(oasisBlock *block.Block, txResults []*cli
 					return err
 				}
 			default:
-				if err = s.Insert(ib.ctx, receipt); err != nil {
-					return err
+				earlierReceipt, earlierReceiptErr := s.GetTransactionReceipt(ib.ctx, receipt.TransactionHash)
+				if earlierReceiptErr != nil {
+					if !errors.Is(earlierReceiptErr, sql.ErrNoRows) {
+						return err
+					}
+					// First encounter of this receipt, continue to upsert.
+				} else {
+					if earlierReceipt.Status != uint(ethtypes.ReceiptStatusFailed) {
+						ib.logger.Error("duplicate receipt",
+							"earlier_receipt", earlierReceipt,
+							"receipt", receipt,
+						)
+						return fmt.Errorf("duplicate receipt tx hash %s in rounds %d and %d", receipt.TransactionHash, earlierReceipt.Round, receipt.Round)
+					}
+					// Replacing a failed encounter of this receipt, continue to upsert.
+				}
+				if upsertErr := s.Upsert(ib.ctx, receipt); upsertErr != nil {
+					return upsertErr
 				}
 			}
 		}
