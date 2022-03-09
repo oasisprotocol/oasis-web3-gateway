@@ -53,10 +53,10 @@ RELEASE_BRANCH ?= main
 
 # Determine project's version from git.
 # NOTE: This computes the project's version from the latest version tag
-# reachable from the given $(RELEASE_BRANCH) and does not search for version
+# reachable from current git commit and does not search for version
 # tags across the whole $(GIT_ORIGIN_REMOTE) repository.
 GIT_VERSION := $(subst v,,$(shell \
-	git describe --tags --match 'v*' --abbrev=0 2>/dev/null $(GIT_ORIGIN_REMOTE)/$(RELEASE_BRANCH) || \
+	git describe --tags --match 'v*' --abbrev=0 2>/dev/null HEAD || \
 	echo undefined \
 ))
 
@@ -66,7 +66,7 @@ GIT_VERSION := $(subst v,,$(shell \
 # Else, the project version is the Punch version appended with git commit and
 # dirty state info.
 GIT_COMMIT_EXACT_TAG := $(shell \
-	git describe --tags --match 'v*' --exact-match &>/dev/null $(GIT_ORIGIN_REMOTE)/$(RELEASE_BRANCH) && echo YES || echo NO \
+	git describe --tags --match 'v*' --exact-match &>/dev/null HEAD && echo YES || echo NO \
 )
 
 # Go binary to use for all Go commands.
@@ -79,12 +79,6 @@ GO := env -u GOPATH $(OASIS_GO)
 # binaries which is required for deterministic builds.
 GOFLAGS ?= -trimpath -v
 
-# Determine project's version.
-# If the current git commit is exactly a tag, then the tag is the project version.
-# Else, the project version is the git commit and dirty state info.
-GIT_COMMIT_EXACT_TAG := $(shell \
-	git describe --tags --match 'v*' --exact-match &>/dev/null $(GIT_ORIGIN_REMOTE)/$(RELEASE_BRANCH) && echo YES || echo NO \
-)
 VERSION := $(or \
 	$(and $(call eq,$(GIT_COMMIT_EXACT_TAG),YES), $(GIT_VERSION)), \
 	$(shell git describe --tags --abbrev=0)-git$(shell git describe --always --match '' --dirty=+dirty 2>/dev/null) \
