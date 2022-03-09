@@ -1,7 +1,9 @@
 package indexer
 
 import (
+	"database/sql"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"math/big"
 
@@ -304,6 +306,19 @@ func (ib *indexBackend) StoreBlockData(oasisBlock *block.Block, txResults []*cli
 					return err
 				}
 			default:
+				prevTx, err := s.GetTransaction(ib.ctx, tx.Hash)
+				switch {
+				case errors.Is(err, sql.ErrNoRows):
+					// This is normal.
+				case err != nil:
+					return err
+				default:
+					// Previously had the same tx.
+					ib.logger.Debug("Duplicate transaction",
+						"tx", tx,
+						"prev_tx", prevTx,
+					)
+				}
 				if err = s.Insert(ib.ctx, tx); err != nil {
 					return err
 				}
