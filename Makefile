@@ -16,7 +16,7 @@ build:
 emerald-web3-gateway:
 	@$(GO) build $(GOFLAGS) $(GO_EXTRA_FLAGS)
 
-docker/emerald-dev/oasis-deposit/oasis-deposit: docker/emerald-dev/oasis-deposit/main.go
+docker/emerald-dev/oasis-deposit/oasis-deposit:
 	@cd docker/emerald-dev/oasis-deposit && $(GO) build
 
 clean:
@@ -60,7 +60,10 @@ docker:
 
 # List of targets that are not actual files.
 .PHONY: \
-	all build clean \
+	all build \
+	emerald-web3-gateway \
+	docker/emerald-dev/oasis-deposit/oasis-deposit \
+	clean \
 	test \
 	fmt \
 	$(lint-targets) lint \
