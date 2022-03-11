@@ -6,7 +6,7 @@ RUN cd emerald-web3-gateway && make build
 FROM ubuntu:20.04
 
 ENV OASIS_CORE_VERSION=22.0
-ENV EMERALD_PARATIME_VERSION=7.0.0-rc2
+ENV EMERALD_PARATIME_VERSION=7.1.0-rc1
 
 ENV OASIS_NODE=/oasis-node
 ENV OASIS_NET_RUNNER=/oasis-net-runner
