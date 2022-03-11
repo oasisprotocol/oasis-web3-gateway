@@ -185,7 +185,7 @@ func main() {
 	rtc := client.New(conn, runtimeID)
 	consAcc := consAccClient.NewV1(rtc)
 
-	ctx, cancelFn := context.WithTimeout(context.Background(), 120*time.Second)
+	ctx, cancelFn := context.WithTimeout(context.Background(), 300*time.Second)
 	defer cancelFn()
 
 	toAddresses := []string{*to}
