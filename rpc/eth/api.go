@@ -322,7 +322,7 @@ func (api *PublicAPI) NewRevertError(revertErr error) *RevertError {
 
 // Call executes the given transaction on the state for the given block number.
 // This function doesn't make any changes in the evm state of blockchain.
-func (api *PublicAPI) Call(args utils.TransactionArgs, blockNrOrHash ethrpc.BlockNumberOrHash, _ *utils.StateOverride) (hexutil.Bytes, error) {
+func (api *PublicAPI) Call(ctx context.Context, args utils.TransactionArgs, blockNrOrHash ethrpc.BlockNumberOrHash, _ *utils.StateOverride) (hexutil.Bytes, error) {
 	logger := api.Logger.With("method", "eth_call", "block_or_hash", blockNrOrHash)
 	logger.Debug("request", "args", args)
 	var (
@@ -379,12 +379,13 @@ func (api *PublicAPI) Call(args utils.TransactionArgs, blockNrOrHash ethrpc.Bloc
 	}
 
 	logger.Debug("response", "args", args, "resp", res)
+	logger.Info("executed call", "user_agent", ctx.Value("User-Agent"))
 
 	return res, nil
 }
 
 // SendRawTransaction send a raw Ethereum transaction.
-func (api *PublicAPI) SendRawTransaction(data hexutil.Bytes) (common.Hash, error) {
+func (api *PublicAPI) SendRawTransaction(ctx context.Context, data hexutil.Bytes) (common.Hash, error) {
 	logger := api.Logger.With("method", "eth_sendRawTransaction")
 	logger.Debug("request", "length", len(data))
 
@@ -409,11 +410,14 @@ func (api *PublicAPI) SendRawTransaction(data hexutil.Bytes) (common.Hash, error
 		return ethTx.Hash(), err
 	}
 
-	return ethTx.Hash(), nil
+	txHash := ethTx.Hash()
+	logger.Info("submitted transaction", "user_agent", ctx.Value("User-Agent"), "tx_hash", txHash)
+
+	return txHash, nil
 }
 
 // EstimateGas returns an estimate of gas usage for the given transaction .
-func (api *PublicAPI) EstimateGas(args utils.TransactionArgs, blockNum *ethrpc.BlockNumber) (hexutil.Uint64, error) {
+func (api *PublicAPI) EstimateGas(ctx context.Context, args utils.TransactionArgs, blockNum *ethrpc.BlockNumber) (hexutil.Uint64, error) {
 	logger := api.Logger.With("method", "eth_estimateGas", "block_number", blockNum)
 	logger.Debug("request", "args", args)
 
@@ -457,6 +461,7 @@ func (api *PublicAPI) EstimateGas(args utils.TransactionArgs, blockNum *ethrpc.B
 	}
 
 	logger.Debug("result", "gas", gas)
+	logger.Info("estimated gas", "user_agent", ctx.Value("User-Agent"))
 
 	return hexutil.Uint64(gas), nil
 }
