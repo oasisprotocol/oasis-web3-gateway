@@ -379,6 +379,7 @@ func (api *PublicAPI) Call(args utils.TransactionArgs, blockNrOrHash ethrpc.Bloc
 	}
 
 	logger.Debug("response", "args", args, "resp", res)
+	logger.Info("executed call", "user_agent", api.ctx.Value("User-Agent"))
 
 	return res, nil
 }
@@ -409,7 +410,10 @@ func (api *PublicAPI) SendRawTransaction(data hexutil.Bytes) (common.Hash, error
 		return ethTx.Hash(), err
 	}
 
-	return ethTx.Hash(), nil
+	txHash := ethTx.Hash()
+	logger.Info("submitted transaction", "user_agent", api.ctx.Value("User-Agent"), "tx_hash", txHash)
+
+	return txHash, nil
 }
 
 // EstimateGas returns an estimate of gas usage for the given transaction .
@@ -457,6 +461,7 @@ func (api *PublicAPI) EstimateGas(args utils.TransactionArgs, blockNum *ethrpc.B
 	}
 
 	logger.Debug("result", "gas", gas)
+	logger.Info("estimated gas", "user_agent", api.ctx.Value("User-Agent"))
 
 	return hexutil.Uint64(gas), nil
 }
