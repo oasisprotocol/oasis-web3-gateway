@@ -1240,8 +1240,9 @@ github.com/ugorji/go v1.1.4/go.mod h1:uQMGLiO92mf5W77hV/PUCpI3pbzQx3CRekS0kk+RGr
 github.com/ugorji/go v1.1.7/go.mod h1:kZn38zHttfInRq0xu/PH0az30d+z6vm202qpg1oXVMw=
 github.com/ugorji/go/codec v0.0.0-20181204163529-d75b2dcb6bc8/go.mod h1:VFNgLljTbGfSG7qAOspJ7OScBnGdDN/yBr0sguwnwf0=
 github.com/ugorji/go/codec v1.1.7/go.mod h1:Ax+UKWsSmolVDwsd+7N3ZtXu+yMGCf907BLYF3GoBXY=
-github.com/uptrace/bun v1.1.1 h1:PfvV07uaPL5BmwOgR3TNd1IjjMKlbizU4ryaXo9sAaQ=
 github.com/uptrace/bun v1.1.1/go.mod h1:SkbOr4hdcYqqFPw4rbc1QAnLLvDLgq+X0w8OSllj1MU=
+github.com/uptrace/bun v1.1.2 h1:TJp848il25+Xt5faRcrUcHnURcAGiqg+QHnmn+WRVM8=
+github.com/uptrace/bun v1.1.2/go.mod h1:SkbOr4hdcYqqFPw4rbc1QAnLLvDLgq+X0w8OSllj1MU=
 github.com/uptrace/bun/dialect/pgdialect v1.1.1 h1:OCN69NCq5vFeFRQxxC8n7owGd3DxUmFO6QZFBaqiIWs=
 github.com/uptrace/bun/dialect/pgdialect v1.1.1/go.mod h1:5w8ZdHEuUQkpY791+oDLK8r9aZGGLTiU+GwjLhTN4uw=
 github.com/uptrace/bun/driver/pgdriver v1.1.1 h1:3WZ2PTATlZ93DSDYu7EdnKHyoztrBtebgvf1r3sDQ6s=
