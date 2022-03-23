@@ -35,7 +35,7 @@ jobs:
         ports:
           - 5432:5432
     env:
-      OASIS_CORE_VERSION: "22.0"
+      OASIS_CORE_VERSION: "22.0.2"
       OASIS_NODE: ${{ github.workspace }}/oasis_core/oasis-node
       OASIS_NET_RUNNER: ${{ github.workspace }}/oasis_core/oasis-net-runner
       EMERALD_PARATIME_VERSION: 7.1.0-rc1

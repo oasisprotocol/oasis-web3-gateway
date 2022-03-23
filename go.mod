@@ -8,8 +8,8 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/knadh/koanf v1.4.0
-	github.com/oasisprotocol/oasis-core/go v0.2200.0
-	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.2.1-0.20220302162740-428db6cbfb7b
+	github.com/oasisprotocol/oasis-core/go v0.2200.2
+	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.2.1-0.20220321110407-a1147dd2c331
 	github.com/rs/cors v1.8.2
 	github.com/spf13/cobra v1.4.0
 	github.com/stretchr/testify v1.7.1
@@ -48,6 +48,7 @@ require (
 	github.com/holiman/bloomfilter/v2 v2.0.3 // indirect
 	github.com/holiman/uint256 v1.2.0 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
+	github.com/ipfs/go-log/v2 v2.5.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/magiconair/properties v1.8.5 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
@@ -84,8 +85,10 @@ require (
 	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc // indirect
 	github.com/vmihailenco/msgpack/v5 v5.3.5 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
-	github.com/whyrusleeping/go-logging v0.0.1 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
+	go.uber.org/atomic v1.9.0 // indirect
+	go.uber.org/multierr v1.7.0 // indirect
+	go.uber.org/zap v1.19.1 // indirect
 	golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2 // indirect
 	golang.org/x/sys v0.0.0-20220319134239-a9b59b0215f8 // indirect
 	golang.org/x/text v0.3.7 // indirect
