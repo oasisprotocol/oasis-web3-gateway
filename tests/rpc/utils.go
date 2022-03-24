@@ -22,6 +22,7 @@ import (
 	oasisTesting "github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -125,12 +126,21 @@ func Setup() error {
 
 	// Initialize db.
 	ctx := context.Background()
-	db, err = psql.InitDB(ctx, tests.TestsConfig.Database)
+	db, err = psql.InitDB(ctx, tests.TestsConfig.Database, true)
 	if err != nil {
 		return fmt.Errorf("failed to initialize DB: %w", err)
 	}
 	if err = db.RunMigrations(ctx); err != nil {
 		return fmt.Errorf("failed to migrate DB: %w", err)
+	}
+	if err = db.DB.(*bun.DB).DB.Close(); err != nil {
+		return fmt.Errorf("failed to close migrations DB: %w", err)
+	}
+
+	// Initialize db again, now with configured timeouts.
+	db, err = psql.InitDB(ctx, tests.TestsConfig.Database, false)
+	if err != nil {
+		return err
 	}
 
 	// Create Indexer.

@@ -20,27 +20,50 @@ import (
 	"github.com/oasisprotocol/emerald-web3-gateway/storage"
 )
 
+// Long timeout used when database is opened with long timeouts option enabled.
+// XXX: the driver does not support unlimited timeouts, so set long enough that
+// should cover all reasonable future cases.
+var longReadWriteTimeout = time.Hour * 12
+
 type PostDB struct {
 	DB bun.IDB
 }
 
 // InitDB creates postgresql db instance.
-func InitDB(ctx context.Context, cfg *conf.DatabaseConfig) (*PostDB, error) {
+func InitDB(ctx context.Context, cfg *conf.DatabaseConfig, longTimeouts bool) (*PostDB, error) {
 	if cfg == nil {
 		return nil, errors.New("nil configuration")
 	}
 
-	pgConn := pgdriver.NewConnector(
+	readTimeout := time.Duration(cfg.ReadTimeout) * time.Second
+	writeTimeout := time.Duration(cfg.WriteTimeout) * time.Second
+	opts := []pgdriver.Option{
 		pgdriver.WithAddr(fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)),
 		pgdriver.WithDatabase(cfg.DB),
 		pgdriver.WithUser(cfg.User),
 		pgdriver.WithPassword(cfg.Password),
 		pgdriver.WithTLSConfig(nil),
-		pgdriver.WithDialTimeout(time.Duration(cfg.DialTimeout)*time.Second),
-		pgdriver.WithReadTimeout(time.Duration(cfg.ReadTimeout)*time.Second),
-		pgdriver.WithWriteTimeout(time.Duration(cfg.WriteTimeout)*time.Second))
+		pgdriver.WithDialTimeout(time.Duration(cfg.DialTimeout) * time.Second),
+	}
 
-	// open
+	// Set read/write timeouts.
+	switch longTimeouts {
+	case false:
+		opts = append(opts,
+			pgdriver.WithReadTimeout(readTimeout),
+			pgdriver.WithWriteTimeout(writeTimeout),
+		)
+	case true:
+		// Increase write/read timeouts if DB is being opened for migrations/manual actions.
+		if longReadWriteTimeout > readTimeout {
+			opts = append(opts, pgdriver.WithReadTimeout(longReadWriteTimeout))
+		}
+		if longReadWriteTimeout > writeTimeout {
+			opts = append(opts, pgdriver.WithWriteTimeout(longReadWriteTimeout))
+		}
+	}
+
+	pgConn := pgdriver.NewConnector(opts...)
 	sqlDB := sql.OpenDB(pgConn)
 	maxOpenConns := cfg.MaxOpenConns
 	if maxOpenConns == 0 {
