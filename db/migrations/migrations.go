@@ -101,6 +101,12 @@ func init() {
 			Name: "20220109122505",
 			Up:   LogsUp,
 		},
+		// Add missing receipt on round index, used in pruning.
+		// https://github.com/oasisprotocol/emerald-web3-gateway/issues/227
+		{
+			Name: "20220324091030",
+			Up:   migrator.NewSQLMigrationFunc(migrations, "20220324091030_receipt_round_index.up.sql"),
+		},
 	} {
 		Migrations.Add(m)
 	}
