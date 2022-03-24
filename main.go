@@ -110,7 +110,7 @@ func truncateExec(cmd *cobra.Command, args []string) error {
 	}
 
 	// Initialize db.
-	db, err := psql.InitDB(ctx, cfg.Database)
+	db, err := psql.InitDB(ctx, cfg.Database, true)
 	if err != nil {
 		logger.Error("failed to initialize db", "err", err)
 		return err
@@ -141,7 +141,7 @@ func migrateExec(cmd *cobra.Command, args []string) error {
 	logger := logging.GetLogger("migrate-db")
 
 	// Initialize db.
-	db, err := psql.InitDB(ctx, cfg.Database)
+	db, err := psql.InitDB(ctx, cfg.Database, true)
 	if err != nil {
 		logger.Error("failed to initialize db", "err", err)
 		return err
@@ -188,8 +188,8 @@ func runRoot() error {
 	// Create the runtime client with account module query helpers.
 	rc := client.New(conn, runtimeID)
 
-	// Initialize db
-	db, err := psql.InitDB(ctx, cfg.Database)
+	// Initialize db for migrations (higher timeouts).
+	db, err := psql.InitDB(ctx, cfg.Database, true)
 	if err != nil {
 		logger.Error("failed to initialize db", "err", err)
 		return err
@@ -197,6 +197,16 @@ func runRoot() error {
 	// Run migrations.
 	if err = db.RunMigrations(ctx); err != nil {
 		return fmt.Errorf("failed to migrate DB: %w", err)
+	}
+	if err = db.DB.(*bun.DB).DB.Close(); err != nil {
+		return fmt.Errorf("failed to close migrations DB: %w", err)
+	}
+
+	// Initialize db again, now with configured timeouts.
+	db, err = psql.InitDB(ctx, cfg.Database, false)
+	if err != nil {
+		logger.Error("failed to initialize db", "err", err)
+		return err
 	}
 
 	// Create Indexer
