@@ -18,6 +18,11 @@ type Config struct {
 	NodeAddress   string `koanf:"node_address"`
 	EnablePruning bool   `koanf:"enable_pruning"`
 	PruningStep   uint64 `koanf:"pruning_step"`
+	// IndexingStart. Skip indexing before this block number. Use this to avoid trying to index
+	// blocks that the node doesn't have data for, such as by skipping them in checkpoint sync.
+	// For sensible reasons, indexing may actually start at an even later block, such as if
+	// this block is already indexed or the node indicates that it doesn't have this block.
+	IndexingStart uint64 `koanf:"indexing_start"`
 
 	Log      *LogConfig      `koanf:"log"`
 	Database *DatabaseConfig `koanf:"database"`
