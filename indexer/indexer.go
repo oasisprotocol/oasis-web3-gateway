@@ -38,6 +38,7 @@ type Service struct {
 	runtimeID     common.Namespace
 	enablePruning bool
 	pruningStep   uint64
+	indexingStart uint64
 
 	backend Backend
 	client  client.RuntimeClient
@@ -230,6 +231,11 @@ func (s *Service) indexingWorker() {
 			startAt = lastIndexed + 1
 		}
 
+		// If a special indexing_start is set, skip ahead to that.
+		if s.indexingStart > startAt {
+			startAt = s.indexingStart
+		}
+
 		// Get last retained round on the node.
 		lastRetainedBlock, err := s.client.GetLastRetainedBlock(s.ctx)
 		if err != nil {
@@ -286,6 +292,7 @@ func New(
 	storage storage.Storage,
 	enablePruning bool,
 	pruningStep uint64,
+	indexingStart uint64,
 ) (*Service, Backend, filters.SubscribeBackend, error) {
 	subBackend, err := filters.NewSubscribeBackend(storage)
 	if err != nil {
@@ -309,6 +316,7 @@ func New(
 		cancelCtx:             cancelCtx,
 		enablePruning:         enablePruning,
 		pruningStep:           pruningStep,
+		indexingStart:         indexingStart,
 	}
 	s.Logger = s.Logger.With("runtime_id", s.runtimeID.String())
 

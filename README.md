@@ -65,6 +65,7 @@ runtime_id: <emerald_paratime_id>
 node_address: "unix:<path-to-oasis-node-unix-socket>"
 enable_pruning: false
 pruning_step: 100000
+indexing_start: 0
 
 log:
   level: debug
