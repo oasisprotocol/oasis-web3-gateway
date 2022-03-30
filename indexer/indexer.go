@@ -315,10 +315,16 @@ func New(
 	indexingStart uint64,
 ) (*Service, Backend, error) {
 	ctx, cancelCtx := context.WithCancel(ctxBackend)
+	cachingBackend, err := newCachingBackend(ctx, backend)
+	if err != nil {
+		cancelCtx()
+		return nil, nil, err
+	}
+
 	s := &Service{
 		BaseBackgroundService: *service.NewBaseBackgroundService("gateway/indexer"),
 		runtimeID:             runtimeID,
-		backend:               backend,
+		backend:               cachingBackend,
 		client:                client,
 		core:                  core.NewV1(client),
 		ctx:                   ctx,
