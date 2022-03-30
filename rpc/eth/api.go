@@ -52,8 +52,57 @@ const (
 	revertErrorPrefix = "reverted: "
 )
 
-// PublicAPI is the eth_ prefixed set of APIs in the Web3 JSON-RPC spec.
-type PublicAPI struct {
+// API is the eth_ prefixed set of APIs in the Web3 JSON-RPC spec.
+type API interface {
+	// GetBlockByNumber returns the block identified by number.
+	GetBlockByNumber(ctx context.Context, blockNum ethrpc.BlockNumber, fullTx bool) (map[string]interface{}, error)
+	// GetBlockTransactionCountByNumber returns the number of transactions in the block.
+	GetBlockTransactionCountByNumber(ctx context.Context, blockNum ethrpc.BlockNumber) (hexutil.Uint, error)
+	// GetStorageAt returns the storage value at the provided position.
+	GetStorageAt(ctx context.Context, address common.Address, position hexutil.Big, blockNrOrHash ethrpc.BlockNumberOrHash) (hexutil.Big, error)
+	// GetBalance returns the provided account's balance up to the provided block number.
+	GetBalance(ctx context.Context, address common.Address, blockNrOrHash ethrpc.BlockNumberOrHash) (*hexutil.Big, error)
+	// ChainId return the EIP-155 chain id for the current network.
+	ChainId() (*hexutil.Big, error)
+	// GasPrice returns a suggestion for a gas price for legacy transactions.
+	GasPrice(ctx context.Context) (*hexutil.Big, error)
+	// GetBlockTransactionCountByHash returns the number of transactions in the block identified by hash.
+	GetBlockTransactionCountByHash(ctx context.Context, blockHash common.Hash) (hexutil.Uint, error)
+	// GetTransactionCount returns the number of transactions the given address has sent for the given block number.
+	GetTransactionCount(ctx context.Context, ethAddr common.Address, blockNrOrHash ethrpc.BlockNumberOrHash) (*hexutil.Uint64, error)
+	// GetCode returns the contract code at the given address and block number.
+	GetCode(ctx context.Context, address common.Address, blockNrOrHash ethrpc.BlockNumberOrHash) (hexutil.Bytes, error)
+	// Call executes the given transaction on the state for the given block number.
+	Call(ctx context.Context, args utils.TransactionArgs, blockNrOrHash ethrpc.BlockNumberOrHash, _ *utils.StateOverride) (hexutil.Bytes, error)
+	// SendRawTransaction send a raw Ethereum transaction.
+	SendRawTransaction(ctx context.Context, data hexutil.Bytes) (common.Hash, error)
+	// EstimateGas returns an estimate of gas usage for the given transaction.
+	EstimateGas(ctx context.Context, args utils.TransactionArgs, blockNum *ethrpc.BlockNumber) (hexutil.Uint64, error)
+	// GetBlockByHash returns the block identified by hash.
+	GetBlockByHash(ctx context.Context, blockHash common.Hash, fullTx bool) (map[string]interface{}, error)
+	// GetTransactionByHash returns the transaction identified by hash.
+	GetTransactionByHash(ctx context.Context, hash common.Hash) (*utils.RPCTransaction, error)
+	// GetTransactionByBlockHashAndIndex returns the transaction for the given block hash and index.
+	GetTransactionByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) (*utils.RPCTransaction, error)
+	// GetTransactionByBlockNumberAndIndex returns the transaction identified by number and index.
+	GetTransactionByBlockNumberAndIndex(ctx context.Context, blockNum ethrpc.BlockNumber, index hexutil.Uint) (*utils.RPCTransaction, error)
+	// GetTransactionReceipt returns the transaction receipt by hash.
+	GetTransactionReceipt(ctx context.Context, txHash common.Hash) (map[string]interface{}, error)
+	// GetLogs returns the ethereum logs.
+	GetLogs(ctx context.Context, filter filters.FilterCriteria) ([]*ethtypes.Log, error)
+	// GetBlockHash returns the block hash by the given number.
+	GetBlockHash(ctx context.Context, blockNum ethrpc.BlockNumber, _ bool) (common.Hash, error)
+	// BlockNumber returns the latest block number.
+	BlockNumber(ctx context.Context) (hexutil.Uint64, error)
+	// Accounts returns the list of accounts available to this node.
+	Accounts() ([]common.Address, error)
+	// Mining returns whether or not this node is currently mining.
+	Mining() bool
+	// Hashrate returns the current node's hashrate.
+	Hashrate() hexutil.Uint64
+}
+
+type publicAPI struct {
 	client       client.RuntimeClient
 	backend      indexer.Backend
 	chainID      uint32
@@ -68,8 +117,8 @@ func NewPublicAPI(
 	chainID uint32,
 	backend indexer.Backend,
 	methodLimits *conf.MethodLimits,
-) *PublicAPI {
-	return &PublicAPI{
+) API {
+	return &publicAPI{
 		client:       client,
 		chainID:      chainID,
 		Logger:       logger,
@@ -94,7 +143,7 @@ func handleStorageError(logger *logging.Logger, err error) error {
 }
 
 // roundParamFromBlockNum converts special BlockNumber values to the corresponding special round numbers.
-func (api *PublicAPI) roundParamFromBlockNum(ctx context.Context, logger *logging.Logger, blockNum ethrpc.BlockNumber) (uint64, error) {
+func (api *publicAPI) roundParamFromBlockNum(ctx context.Context, logger *logging.Logger, blockNum ethrpc.BlockNumber) (uint64, error) {
 	switch blockNum {
 	case ethrpc.PendingBlockNumber:
 		// Oasis does not expose a pending block. Use the latest.
@@ -129,8 +178,7 @@ func (api *PublicAPI) roundParamFromBlockNum(ctx context.Context, logger *loggin
 	}
 }
 
-// GetBlockByNumber returns the block identified by number.
-func (api *PublicAPI) GetBlockByNumber(ctx context.Context, blockNum ethrpc.BlockNumber, fullTx bool) (map[string]interface{}, error) {
+func (api *publicAPI) GetBlockByNumber(ctx context.Context, blockNum ethrpc.BlockNumber, fullTx bool) (map[string]interface{}, error) {
 	logger := api.Logger.With("method", "eth_getBlockByNumber", "block_number", blockNum, "full_tx", fullTx)
 	logger.Debug("request")
 
@@ -147,8 +195,7 @@ func (api *PublicAPI) GetBlockByNumber(ctx context.Context, blockNum ethrpc.Bloc
 	return utils.ConvertToEthBlock(blk, fullTx), nil
 }
 
-// GetBlockTransactionCountByNumber returns the number of transactions in the block.
-func (api *PublicAPI) GetBlockTransactionCountByNumber(ctx context.Context, blockNum ethrpc.BlockNumber) (hexutil.Uint, error) {
+func (api *publicAPI) GetBlockTransactionCountByNumber(ctx context.Context, blockNum ethrpc.BlockNumber) (hexutil.Uint, error) {
 	logger := api.Logger.With("method", "eth_getBlockTransactionCountByNumber", "block_number", blockNum)
 	logger.Debug("request")
 
@@ -164,7 +211,7 @@ func (api *PublicAPI) GetBlockTransactionCountByNumber(ctx context.Context, bloc
 	return hexutil.Uint(n), nil
 }
 
-func (api *PublicAPI) GetStorageAt(ctx context.Context, address common.Address, position hexutil.Big, blockNrOrHash ethrpc.BlockNumberOrHash) (hexutil.Big, error) {
+func (api *publicAPI) GetStorageAt(ctx context.Context, address common.Address, position hexutil.Big, blockNrOrHash ethrpc.BlockNumberOrHash) (hexutil.Big, error) {
 	logger := api.Logger.With("method", "eth_getStorageAt", "address", address, "position", position, "block_or_hash", blockNrOrHash)
 	logger.Debug("request")
 
@@ -189,8 +236,7 @@ func (api *PublicAPI) GetStorageAt(ctx context.Context, address common.Address, 
 	return hexutil.Big(resultBI), nil
 }
 
-// GetBalance returns the provided account's balance up to the provided block number.
-func (api *PublicAPI) GetBalance(ctx context.Context, address common.Address, blockNrOrHash ethrpc.BlockNumberOrHash) (*hexutil.Big, error) {
+func (api *publicAPI) GetBalance(ctx context.Context, address common.Address, blockNrOrHash ethrpc.BlockNumberOrHash) (*hexutil.Big, error) {
 	logger := api.Logger.With("method", "eth_getBalance", "address", address, "block_or_hash", blockNrOrHash)
 	logger.Debug("request")
 
@@ -209,15 +255,13 @@ func (api *PublicAPI) GetBalance(ctx context.Context, address common.Address, bl
 }
 
 // nolint:revive,stylecheck
-// ChainId return the EIP-155 chain id for the current network.
-func (api *PublicAPI) ChainId() (*hexutil.Big, error) {
+func (api *publicAPI) ChainId() (*hexutil.Big, error) {
 	logger := api.Logger.With("method", "eth_chainId")
 	logger.Debug("request")
 	return (*hexutil.Big)(big.NewInt(int64(api.chainID))), nil
 }
 
-// GasPrice returns a suggestion for a gas price for legacy transactions.
-func (api *PublicAPI) GasPrice(ctx context.Context) (*hexutil.Big, error) {
+func (api *publicAPI) GasPrice(ctx context.Context) (*hexutil.Big, error) {
 	logger := api.Logger.With("method", "eth_gasPrice")
 	logger.Debug("request")
 
@@ -231,8 +275,7 @@ func (api *PublicAPI) GasPrice(ctx context.Context) (*hexutil.Big, error) {
 	return (*hexutil.Big)(nativeMGP.ToBigInt()), nil
 }
 
-// GetBlockTransactionCountByHash returns the number of transactions in the block identified by hash.
-func (api *PublicAPI) GetBlockTransactionCountByHash(ctx context.Context, blockHash common.Hash) (hexutil.Uint, error) {
+func (api *publicAPI) GetBlockTransactionCountByHash(ctx context.Context, blockHash common.Hash) (hexutil.Uint, error) {
 	logger := api.Logger.With("method", "eth_getBlockTransactionCountByHash", "block_hash", blockHash.Hex())
 	logger.Debug("request")
 
@@ -244,8 +287,7 @@ func (api *PublicAPI) GetBlockTransactionCountByHash(ctx context.Context, blockH
 	return hexutil.Uint(n), nil
 }
 
-// GetTransactionCount returns the number of transactions the given address has sent for the given block number.
-func (api *PublicAPI) GetTransactionCount(ctx context.Context, ethAddr common.Address, blockNrOrHash ethrpc.BlockNumberOrHash) (*hexutil.Uint64, error) {
+func (api *publicAPI) GetTransactionCount(ctx context.Context, ethAddr common.Address, blockNrOrHash ethrpc.BlockNumberOrHash) (*hexutil.Uint64, error) {
 	logger := api.Logger.With("method", "eth_getBlockTransactionCount", "address", ethAddr, "block_or_hash", blockNrOrHash)
 	logger.Debug("request")
 
@@ -265,8 +307,7 @@ func (api *PublicAPI) GetTransactionCount(ctx context.Context, ethAddr common.Ad
 	return (*hexutil.Uint64)(&nonce), nil
 }
 
-// GetCode returns the contract code at the given address and block number.
-func (api *PublicAPI) GetCode(ctx context.Context, address common.Address, blockNrOrHash ethrpc.BlockNumberOrHash) (hexutil.Bytes, error) {
+func (api *publicAPI) GetCode(ctx context.Context, address common.Address, blockNrOrHash ethrpc.BlockNumberOrHash) (hexutil.Bytes, error) {
 	logger := api.Logger.With("method", "eth_getCode", "address", address, "block_or_hash", blockNrOrHash)
 	logger.Debug("request")
 
@@ -295,7 +336,7 @@ func (e *RevertError) ErrorData() interface{} {
 }
 
 // NewRevertError returns an revert error with ABI encoded revert reason.
-func (api *PublicAPI) NewRevertError(revertErr error) *RevertError {
+func (api *publicAPI) NewRevertError(revertErr error) *RevertError {
 	// ABI encoded function.
 	abiReason := []byte{0x08, 0xc3, 0x79, 0xa0} // Keccak256("Error(string)")
 
@@ -317,9 +358,7 @@ func (api *PublicAPI) NewRevertError(revertErr error) *RevertError {
 	}
 }
 
-// Call executes the given transaction on the state for the given block number.
-// This function doesn't make any changes in the evm state of blockchain.
-func (api *PublicAPI) Call(ctx context.Context, args utils.TransactionArgs, blockNrOrHash ethrpc.BlockNumberOrHash, _ *utils.StateOverride) (hexutil.Bytes, error) {
+func (api *publicAPI) Call(ctx context.Context, args utils.TransactionArgs, blockNrOrHash ethrpc.BlockNumberOrHash, _ *utils.StateOverride) (hexutil.Bytes, error) {
 	logger := api.Logger.With("method", "eth_call", "block_or_hash", blockNrOrHash)
 	logger.Debug("request", "args", args)
 	var (
@@ -380,8 +419,7 @@ func (api *PublicAPI) Call(ctx context.Context, args utils.TransactionArgs, bloc
 	return res, nil
 }
 
-// SendRawTransaction send a raw Ethereum transaction.
-func (api *PublicAPI) SendRawTransaction(ctx context.Context, data hexutil.Bytes) (common.Hash, error) {
+func (api *publicAPI) SendRawTransaction(ctx context.Context, data hexutil.Bytes) (common.Hash, error) {
 	logger := api.Logger.With("method", "eth_sendRawTransaction")
 	logger.Debug("request", "length", len(data))
 
@@ -409,8 +447,7 @@ func (api *PublicAPI) SendRawTransaction(ctx context.Context, data hexutil.Bytes
 	return ethTx.Hash(), nil
 }
 
-// EstimateGas returns an estimate of gas usage for the given transaction .
-func (api *PublicAPI) EstimateGas(ctx context.Context, args utils.TransactionArgs, blockNum *ethrpc.BlockNumber) (hexutil.Uint64, error) {
+func (api *publicAPI) EstimateGas(ctx context.Context, args utils.TransactionArgs, blockNum *ethrpc.BlockNumber) (hexutil.Uint64, error) {
 	logger := api.Logger.With("method", "eth_estimateGas", "block_number", blockNum)
 	logger.Debug("request", "args", args)
 
@@ -458,8 +495,7 @@ func (api *PublicAPI) EstimateGas(ctx context.Context, args utils.TransactionArg
 	return hexutil.Uint64(gas), nil
 }
 
-// GetBlockByHash returns the block identified by hash.
-func (api *PublicAPI) GetBlockByHash(ctx context.Context, blockHash common.Hash, fullTx bool) (map[string]interface{}, error) {
+func (api *publicAPI) GetBlockByHash(ctx context.Context, blockHash common.Hash, fullTx bool) (map[string]interface{}, error) {
 	logger := api.Logger.With("method", "eth_getBlockByHash", "block_hash", blockHash, "full_tx", fullTx)
 	logger.Debug("request")
 
@@ -471,8 +507,7 @@ func (api *PublicAPI) GetBlockByHash(ctx context.Context, blockHash common.Hash,
 	return utils.ConvertToEthBlock(blk, fullTx), nil
 }
 
-// GetTransactionByHash returns the transaction identified by hash.
-func (api *PublicAPI) GetTransactionByHash(ctx context.Context, hash common.Hash) (*utils.RPCTransaction, error) {
+func (api *publicAPI) GetTransactionByHash(ctx context.Context, hash common.Hash) (*utils.RPCTransaction, error) {
 	logger := api.Logger.With("method", "eth_getTransactionByHash", "hash", hash)
 	logger.Debug("request")
 
@@ -484,8 +519,7 @@ func (api *PublicAPI) GetTransactionByHash(ctx context.Context, hash common.Hash
 	return utils.NewRPCTransaction(dbTx), nil
 }
 
-// GetTransactionByBlockHashAndIndex returns the transaction for the given block hash and index.
-func (api *PublicAPI) GetTransactionByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) (*utils.RPCTransaction, error) {
+func (api *publicAPI) GetTransactionByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) (*utils.RPCTransaction, error) {
 	logger := api.Logger.With("method", "eth_getTransactionByBlockHashAndIndex", "block_hash", blockHash, "index", index)
 	logger.Debug("request")
 
@@ -501,8 +535,7 @@ func (api *PublicAPI) GetTransactionByBlockHashAndIndex(ctx context.Context, blo
 	return utils.NewRPCTransaction(dbBlock.Transactions[index]), nil
 }
 
-// GetTransactionByBlockNumberAndIndex returns the transaction identified by number and index.
-func (api *PublicAPI) GetTransactionByBlockNumberAndIndex(ctx context.Context, blockNum ethrpc.BlockNumber, index hexutil.Uint) (*utils.RPCTransaction, error) {
+func (api *publicAPI) GetTransactionByBlockNumberAndIndex(ctx context.Context, blockNum ethrpc.BlockNumber, index hexutil.Uint) (*utils.RPCTransaction, error) {
 	logger := api.Logger.With("method", "eth_getTransactionByNumberAndIndex", "block_number", blockNum, "index", index)
 	logger.Debug("request")
 
@@ -518,8 +551,7 @@ func (api *PublicAPI) GetTransactionByBlockNumberAndIndex(ctx context.Context, b
 	return api.GetTransactionByBlockHashAndIndex(ctx, blockHash, index)
 }
 
-// GetTransactionReceipt returns the transaction receipt by hash.
-func (api *PublicAPI) GetTransactionReceipt(ctx context.Context, txHash common.Hash) (map[string]interface{}, error) {
+func (api *publicAPI) GetTransactionReceipt(ctx context.Context, txHash common.Hash) (map[string]interface{}, error) {
 	logger := api.Logger.With("method", "eth_getTransactionReceipt", "hash", txHash)
 	logger.Debug("request")
 
@@ -532,7 +564,7 @@ func (api *PublicAPI) GetTransactionReceipt(ctx context.Context, txHash common.H
 }
 
 // getStartEndRounds is a helper for fetching start and end rounds parameters.
-func (api *PublicAPI) getStartEndRounds(ctx context.Context, logger *logging.Logger, filter filters.FilterCriteria) (uint64, uint64, error) {
+func (api *publicAPI) getStartEndRounds(ctx context.Context, logger *logging.Logger, filter filters.FilterCriteria) (uint64, uint64, error) {
 	if filter.BlockHash != nil {
 		round, err := api.backend.QueryBlockRound(ctx, *filter.BlockHash)
 		if err != nil {
@@ -561,8 +593,7 @@ func (api *PublicAPI) getStartEndRounds(ctx context.Context, logger *logging.Log
 	return start, end, nil
 }
 
-// GetLogs returns the ethereum logs.
-func (api *PublicAPI) GetLogs(ctx context.Context, filter filters.FilterCriteria) ([]*ethtypes.Log, error) {
+func (api *publicAPI) GetLogs(ctx context.Context, filter filters.FilterCriteria) ([]*ethtypes.Log, error) {
 	logger := api.Logger.With("method", "eth_getLogs")
 	logger.Debug("request", "filter", filter)
 
@@ -620,8 +651,7 @@ func (api *PublicAPI) GetLogs(ctx context.Context, filter filters.FilterCriteria
 	return filtered, nil
 }
 
-// GetBlockHash returns the block hash by the given number.
-func (api *PublicAPI) GetBlockHash(ctx context.Context, blockNum ethrpc.BlockNumber, _ bool) (common.Hash, error) {
+func (api *publicAPI) GetBlockHash(ctx context.Context, blockNum ethrpc.BlockNumber, _ bool) (common.Hash, error) {
 	logger := api.Logger.With("method", "eth_getBlockHash", "block_num", blockNum)
 	logger.Debug("request")
 
@@ -632,8 +662,7 @@ func (api *PublicAPI) GetBlockHash(ctx context.Context, blockNum ethrpc.BlockNum
 	return api.backend.QueryBlockHash(ctx, round)
 }
 
-// BlockNumber returns the latest block number.
-func (api *PublicAPI) BlockNumber(ctx context.Context) (hexutil.Uint64, error) {
+func (api *publicAPI) BlockNumber(ctx context.Context) (hexutil.Uint64, error) {
 	logger := api.Logger.With("method", "eth_getBlockNumber")
 	logger.Debug("request")
 
@@ -648,8 +677,7 @@ func (api *PublicAPI) BlockNumber(ctx context.Context) (hexutil.Uint64, error) {
 	return hexutil.Uint64(blockNumber), nil
 }
 
-// Accounts returns the list of accounts available to this node.
-func (api *PublicAPI) Accounts() ([]common.Address, error) {
+func (api *publicAPI) Accounts() ([]common.Address, error) {
 	logger := api.Logger.With("method", "eth_getAccounts")
 	logger.Debug("request")
 
@@ -657,22 +685,20 @@ func (api *PublicAPI) Accounts() ([]common.Address, error) {
 	return addresses, nil
 }
 
-// Mining returns whether or not this node is currently mining. Always false.
-func (api *PublicAPI) Mining() bool {
+func (api *publicAPI) Mining() bool {
 	logger := api.Logger.With("method", "eth_mining")
 	logger.Debug("request")
 	return false
 }
 
-// Hashrate returns the current node's hashrate. Always 0.
-func (api *PublicAPI) Hashrate() hexutil.Uint64 {
+func (api *publicAPI) Hashrate() hexutil.Uint64 {
 	logger := api.Logger.With("method", "eth_hashrate")
 	logger.Debug("request")
 	return 0
 }
 
 // getBlockRound returns the block round from BlockNumberOrHash.
-func (api *PublicAPI) getBlockRound(ctx context.Context, logger *logging.Logger, blockNrOrHash ethrpc.BlockNumberOrHash) (uint64, error) {
+func (api *publicAPI) getBlockRound(ctx context.Context, logger *logging.Logger, blockNrOrHash ethrpc.BlockNumberOrHash) (uint64, error) {
 	switch {
 	// case if block number and blockhash is specified are handling by the BlockNumberOrHash type.
 	case blockNrOrHash.BlockHash == nil && blockNrOrHash.BlockNumber == nil:

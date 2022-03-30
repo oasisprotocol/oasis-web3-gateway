@@ -112,6 +112,9 @@ type GatewayConfig struct {
 	// HTTP is the gateway http endpoint config.
 	HTTP *GatewayHTTPConfig `koanf:"http"`
 
+	// Monitoring is the gateway prometheus configuration.
+	Monitoring *GatewayMonitoringConfig `koanf:"monitoring"`
+
 	// WS is the gateway websocket endpoint config.
 	WS *GatewayWSConfig `koanf:"ws"`
 
@@ -120,6 +123,36 @@ type GatewayConfig struct {
 
 	// MethodLimits is the gateway method limits config.
 	MethodLimits *MethodLimits `koanf:"method_limits"`
+}
+
+// GatewayMonitoringConfig is the gateway prometheus configuration.
+type GatewayMonitoringConfig struct {
+	// Host is the host interface on which to start the prometheus http server. Disabled if unset.
+	Host string `koanf:"host"`
+
+	// Port is the port number on which to start the prometheus http server.
+	Port int `koanf:"port"`
+}
+
+// Enabled returns true if monitoring is configured.
+func (cfg *GatewayMonitoringConfig) Enabled() bool {
+	if cfg == nil {
+		return false
+	}
+	if cfg.Host == "" {
+		return false
+	}
+	return true
+}
+
+// Address returns the prometheus listen address.
+//
+// Returns empty string if monitoring is not configured.
+func (cfg *GatewayMonitoringConfig) Address() string {
+	if !cfg.Enabled() {
+		return ""
+	}
+	return fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
 }
 
 // Validate validates the gateway configuration.
