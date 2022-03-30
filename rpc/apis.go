@@ -43,7 +43,7 @@ func GetRPCAPIs(
 		ethRpc.API{
 			Namespace: "eth",
 			Version:   "1.0",
-			Service:   eth.NewPublicAPI(ctx, client, logging.GetLogger("eth_rpc"), config.ChainID, backend, config.MethodLimits),
+			Service:   eth.NewPublicAPI(client, logging.GetLogger("eth_rpc"), config.ChainID, backend, config.MethodLimits),
 			Public:    true,
 		},
 		ethRpc.API{
@@ -55,7 +55,7 @@ func GetRPCAPIs(
 		ethRpc.API{
 			Namespace: "eth",
 			Version:   "1.0",
-			Service:   filters.NewPublicAPI(ctx, client, logging.GetLogger("eth_filters"), backend, eventSystem),
+			Service:   filters.NewPublicAPI(client, logging.GetLogger("eth_filters"), backend, eventSystem),
 			Public:    true,
 		},
 	)

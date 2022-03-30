@@ -144,10 +144,14 @@ func Setup() error {
 	}
 
 	// Create Indexer.
-	f := indexer.NewIndexBackend()
-	indx, backend, subBackend, err := indexer.New(ctx, f, rc, runtimeID, db, tests.TestsConfig.EnablePruning, tests.TestsConfig.PruningStep, tests.TestsConfig.IndexingStart)
+	subBackend, err := filters.NewSubscribeBackend(db)
 	if err != nil {
-		return fmt.Errorf("failed to create indexer: %w", err)
+		return err
+	}
+	backend := indexer.NewIndexBackend(runtimeID, db, subBackend)
+	indx, backend, err := indexer.New(ctx, backend, rc, runtimeID, db, tests.TestsConfig.EnablePruning, tests.TestsConfig.PruningStep, tests.TestsConfig.IndexingStart)
+	if err != nil {
+		return err
 	}
 	indx.Start()
 

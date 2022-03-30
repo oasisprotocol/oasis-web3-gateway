@@ -35,37 +35,34 @@ type Result struct {
 // that match the query.
 type Results map[uint64][]Result
 
-// BackendFactory is the indexer backend factory interface.
-type BackendFactory func(ctx context.Context, runtimeID common.Namespace, storage storage.Storage, sb filters.SubscribeBackend) (Backend, error)
-
 // QueryableBackend is the read-only indexer backend interface.
 type QueryableBackend interface {
 	// QueryBlockRound queries block round by block hash.
-	QueryBlockRound(blockHash ethcommon.Hash) (uint64, error)
+	QueryBlockRound(ctx context.Context, blockHash ethcommon.Hash) (uint64, error)
 
 	// QueryBlockHash queries block hash by round.
-	QueryBlockHash(round uint64) (ethcommon.Hash, error)
+	QueryBlockHash(ctx context.Context, round uint64) (ethcommon.Hash, error)
 
 	// QueryLastIndexedRound query continues indexed block round.
-	QueryLastIndexedRound() (uint64, error)
+	QueryLastIndexedRound(ctx context.Context) (uint64, error)
 
 	// QueryLastRetainedRound query the minimum round not pruned.
-	QueryLastRetainedRound() (uint64, error)
+	QueryLastRetainedRound(ctx context.Context) (uint64, error)
 
 	// QueryTransaction queries ethereum transaction by hash.
-	QueryTransaction(ethTxHash ethcommon.Hash) (*model.Transaction, error)
+	QueryTransaction(ctx context.Context, ethTxHash ethcommon.Hash) (*model.Transaction, error)
 }
 
 // GetEthInfoBackend is a backend for handling ethereum data.
 type GetEthInfoBackend interface {
-	GetBlockByRound(round uint64) (*model.Block, error)
-	GetBlockByHash(blockHash ethcommon.Hash) (*model.Block, error)
-	GetBlockTransactionCountByRound(round uint64) (int, error)
-	GetBlockTransactionCountByHash(blockHash ethcommon.Hash) (int, error)
-	GetTransactionByBlockHashAndIndex(blockHash ethcommon.Hash, txIndex int) (*model.Transaction, error)
-	GetTransactionReceipt(txHash ethcommon.Hash) (map[string]interface{}, error)
-	BlockNumber() (uint64, error)
-	GetLogs(startRound, endRound uint64) ([]*model.Log, error)
+	GetBlockByRound(ctx context.Context, round uint64) (*model.Block, error)
+	GetBlockByHash(ctx context.Context, blockHash ethcommon.Hash) (*model.Block, error)
+	GetBlockTransactionCountByRound(ctx context.Context, round uint64) (int, error)
+	GetBlockTransactionCountByHash(ctx context.Context, blockHash ethcommon.Hash) (int, error)
+	GetTransactionByBlockHashAndIndex(ctx context.Context, blockHash ethcommon.Hash, txIndex int) (*model.Transaction, error)
+	GetTransactionReceipt(ctx context.Context, txHash ethcommon.Hash) (map[string]interface{}, error)
+	BlockNumber(ctx context.Context) (uint64, error)
+	GetLogs(ctx context.Context, startRound, endRound uint64) ([]*model.Log, error)
 }
 
 // Backend is the indexer backend interface.
@@ -75,22 +72,17 @@ type Backend interface {
 
 	// Index indexes a block.
 	Index(
+		ctx context.Context,
 		oasisBlock *block.Block,
 		txResults []*client.TransactionWithResults,
 		blockGasLimit uint64,
 	) error
 
 	// Prune removes indexed data for rounds equal to or earlier than the passed round.
-	Prune(round uint64) error
-
-	// Close performs backend-specific cleanup. The backend should not be used anymore after calling
-	// this method.
-	Close()
+	Prune(ctx context.Context, round uint64) error
 }
 
 type indexBackend struct {
-	ctx context.Context
-
 	runtimeID common.Namespace
 	logger    *logging.Logger
 	storage   storage.Storage
@@ -98,10 +90,10 @@ type indexBackend struct {
 }
 
 // Index indexes oasis block.
-func (ib *indexBackend) Index(oasisBlock *block.Block, txResults []*client.TransactionWithResults, blockGasLimit uint64) error {
+func (ib *indexBackend) Index(ctx context.Context, oasisBlock *block.Block, txResults []*client.TransactionWithResults, blockGasLimit uint64) error {
 	round := oasisBlock.Header.Round
 
-	err := ib.StoreBlockData(oasisBlock, txResults, blockGasLimit)
+	err := ib.StoreBlockData(ctx, oasisBlock, txResults, blockGasLimit)
 	if err != nil {
 		ib.logger.Error("generateEthBlock failed", "err", err)
 		return err
@@ -113,33 +105,33 @@ func (ib *indexBackend) Index(oasisBlock *block.Block, txResults []*client.Trans
 }
 
 // Prune prunes data in db.
-func (ib *indexBackend) Prune(round uint64) error {
-	return ib.storage.RunInTransaction(ib.ctx, func(s storage.Storage) error {
-		if err := ib.storeLastRetainedRound(round); err != nil {
+func (ib *indexBackend) Prune(ctx context.Context, round uint64) error {
+	return ib.storage.RunInTransaction(ctx, func(s storage.Storage) error {
+		if err := ib.storeLastRetainedRound(ctx, round); err != nil {
 			return err
 		}
 
-		if err := ib.storage.Delete(ib.ctx, new(model.Block), round); err != nil {
+		if err := ib.storage.Delete(ctx, new(model.Block), round); err != nil {
 			return err
 		}
 
-		if err := ib.storage.Delete(ib.ctx, new(model.Log), round); err != nil {
+		if err := ib.storage.Delete(ctx, new(model.Log), round); err != nil {
 			return err
 		}
 
-		if err := ib.storage.Delete(ib.ctx, new(model.Transaction), round); err != nil {
+		if err := ib.storage.Delete(ctx, new(model.Transaction), round); err != nil {
 			return err
 		}
 
-		return ib.storage.Delete(ib.ctx, new(model.Receipt), round)
+		return ib.storage.Delete(ctx, new(model.Receipt), round)
 	})
 }
 
 // blockNumberFromRound converts a round to a blocknumber.
-func (ib *indexBackend) blockNumberFromRound(round uint64) (number uint64, err error) {
+func (ib *indexBackend) blockNumberFromRound(ctx context.Context, round uint64) (number uint64, err error) {
 	switch round {
 	case client.RoundLatest:
-		number, err = ib.BlockNumber()
+		number, err = ib.BlockNumber(ctx)
 	default:
 		number = round
 	}
@@ -147,8 +139,8 @@ func (ib *indexBackend) blockNumberFromRound(round uint64) (number uint64, err e
 }
 
 // QueryBlockRound returns block number for the provided hash.
-func (ib *indexBackend) QueryBlockRound(blockHash ethcommon.Hash) (uint64, error) {
-	round, err := ib.storage.GetBlockRound(ib.ctx, blockHash.String())
+func (ib *indexBackend) QueryBlockRound(ctx context.Context, blockHash ethcommon.Hash) (uint64, error) {
+	round, err := ib.storage.GetBlockRound(ctx, blockHash.String())
 	if err != nil {
 		ib.logger.Error("Can't find matched block")
 		return 0, err
@@ -158,14 +150,14 @@ func (ib *indexBackend) QueryBlockRound(blockHash ethcommon.Hash) (uint64, error
 }
 
 // QueryBlockHash returns the block hash for the provided round.
-func (ib *indexBackend) QueryBlockHash(round uint64) (ethcommon.Hash, error) {
+func (ib *indexBackend) QueryBlockHash(ctx context.Context, round uint64) (ethcommon.Hash, error) {
 	var blockHash string
 	var err error
 	switch round {
 	case client.RoundLatest:
-		blockHash, err = ib.storage.GetLatestBlockHash(ib.ctx)
+		blockHash, err = ib.storage.GetLatestBlockHash(ctx)
 	default:
-		blockHash, err = ib.storage.GetBlockHash(ib.ctx, round)
+		blockHash, err = ib.storage.GetBlockHash(ctx, round)
 	}
 
 	if err != nil {
@@ -176,8 +168,8 @@ func (ib *indexBackend) QueryBlockHash(round uint64) (ethcommon.Hash, error) {
 }
 
 // QueryLastIndexedRound returns the last indexed round.
-func (ib *indexBackend) QueryLastIndexedRound() (uint64, error) {
-	indexedRound, err := ib.storage.GetLastIndexedRound(ib.ctx)
+func (ib *indexBackend) QueryLastIndexedRound(ctx context.Context) (uint64, error) {
+	indexedRound, err := ib.storage.GetLastIndexedRound(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -186,18 +178,18 @@ func (ib *indexBackend) QueryLastIndexedRound() (uint64, error) {
 }
 
 // storeLastRetainedRound stores the last retained round.
-func (ib *indexBackend) storeLastRetainedRound(round uint64) error {
+func (ib *indexBackend) storeLastRetainedRound(ctx context.Context, round uint64) error {
 	r := &model.IndexedRoundWithTip{
 		Tip:   model.LastRetained,
 		Round: round,
 	}
 
-	return ib.storage.Upsert(ib.ctx, r)
+	return ib.storage.Upsert(ctx, r)
 }
 
 // QueryLastRetainedRound returns the last retained round.
-func (ib *indexBackend) QueryLastRetainedRound() (uint64, error) {
-	lastRetainedRound, err := ib.storage.GetLastRetainedRound(ib.ctx)
+func (ib *indexBackend) QueryLastRetainedRound(ctx context.Context) (uint64, error) {
+	lastRetainedRound, err := ib.storage.GetLastRetainedRound(ctx)
 	if err != nil {
 		return 0, ErrGetLastRetainedRound
 	}
@@ -205,8 +197,8 @@ func (ib *indexBackend) QueryLastRetainedRound() (uint64, error) {
 }
 
 // QueryTransaction returns transaction by transaction hash.
-func (ib *indexBackend) QueryTransaction(txHash ethcommon.Hash) (*model.Transaction, error) {
-	tx, err := ib.storage.GetTransaction(ib.ctx, txHash.String())
+func (ib *indexBackend) QueryTransaction(ctx context.Context, txHash ethcommon.Hash) (*model.Transaction, error) {
+	tx, err := ib.storage.GetTransaction(ctx, txHash.String())
 	if err != nil {
 		return nil, err
 	}
@@ -214,12 +206,12 @@ func (ib *indexBackend) QueryTransaction(txHash ethcommon.Hash) (*model.Transact
 }
 
 // GetBlockByRound returns a block for the provided round.
-func (ib *indexBackend) GetBlockByRound(round uint64) (*model.Block, error) {
-	blockNumber, err := ib.blockNumberFromRound(round)
+func (ib *indexBackend) GetBlockByRound(ctx context.Context, round uint64) (*model.Block, error) {
+	blockNumber, err := ib.blockNumberFromRound(ctx, round)
 	if err != nil {
 		return nil, err
 	}
-	blk, err := ib.storage.GetBlockByNumber(ib.ctx, blockNumber)
+	blk, err := ib.storage.GetBlockByNumber(ctx, blockNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -228,8 +220,8 @@ func (ib *indexBackend) GetBlockByRound(round uint64) (*model.Block, error) {
 }
 
 // GetBlockByHash returns a block by bock hash.
-func (ib *indexBackend) GetBlockByHash(blockHash ethcommon.Hash) (*model.Block, error) {
-	blk, err := ib.storage.GetBlockByHash(ib.ctx, blockHash.String())
+func (ib *indexBackend) GetBlockByHash(ctx context.Context, blockHash ethcommon.Hash) (*model.Block, error) {
+	blk, err := ib.storage.GetBlockByHash(ctx, blockHash.String())
 	if err != nil {
 		return nil, err
 	}
@@ -238,27 +230,27 @@ func (ib *indexBackend) GetBlockByHash(blockHash ethcommon.Hash) (*model.Block, 
 }
 
 // GetBlockTransactionCountByRound returns the count of block transactions for the provided round.
-func (ib *indexBackend) GetBlockTransactionCountByRound(round uint64) (int, error) {
-	blockNumber, err := ib.blockNumberFromRound(round)
+func (ib *indexBackend) GetBlockTransactionCountByRound(ctx context.Context, round uint64) (int, error) {
+	blockNumber, err := ib.blockNumberFromRound(ctx, round)
 	if err != nil {
 		return 0, err
 	}
-	return ib.storage.GetBlockTransactionCountByNumber(ib.ctx, blockNumber)
+	return ib.storage.GetBlockTransactionCountByNumber(ctx, blockNumber)
 }
 
 // GetBlockTransactionCountByHash returns the count of block transactions by block hash.
-func (ib *indexBackend) GetBlockTransactionCountByHash(blockHash ethcommon.Hash) (int, error) {
-	return ib.storage.GetBlockTransactionCountByHash(ib.ctx, blockHash.String())
+func (ib *indexBackend) GetBlockTransactionCountByHash(ctx context.Context, blockHash ethcommon.Hash) (int, error) {
+	return ib.storage.GetBlockTransactionCountByHash(ctx, blockHash.String())
 }
 
 // GetTransactionByBlockHashAndIndex returns transaction by the block hash and transaction index.
-func (ib *indexBackend) GetTransactionByBlockHashAndIndex(blockHash ethcommon.Hash, txIndex int) (*model.Transaction, error) {
-	return ib.storage.GetBlockTransaction(ib.ctx, blockHash.String(), txIndex)
+func (ib *indexBackend) GetTransactionByBlockHashAndIndex(ctx context.Context, blockHash ethcommon.Hash, txIndex int) (*model.Transaction, error) {
+	return ib.storage.GetBlockTransaction(ctx, blockHash.String(), txIndex)
 }
 
 // GetTransactionReceipt returns the receipt for the given tx.
-func (ib *indexBackend) GetTransactionReceipt(txHash ethcommon.Hash) (map[string]interface{}, error) {
-	dbReceipt, err := ib.storage.GetTransactionReceipt(ib.ctx, txHash.String())
+func (ib *indexBackend) GetTransactionReceipt(ctx context.Context, txHash ethcommon.Hash) (map[string]interface{}, error) {
+	dbReceipt, err := ib.storage.GetTransactionReceipt(ctx, txHash.String())
 	if err != nil {
 		return nil, err
 	}
@@ -315,24 +307,18 @@ func (ib *indexBackend) GetTransactionReceipt(txHash ethcommon.Hash) (map[string
 }
 
 // BlockNumber returns the latest block.
-func (ib *indexBackend) BlockNumber() (uint64, error) {
-	return ib.storage.GetLatestBlockNumber(ib.ctx)
+func (ib *indexBackend) BlockNumber(ctx context.Context) (uint64, error) {
+	return ib.storage.GetLatestBlockNumber(ctx)
 }
 
 // GetLogs returns logs from db.
-func (ib *indexBackend) GetLogs(startRound, endRound uint64) ([]*model.Log, error) {
-	return ib.storage.GetLogs(ib.ctx, startRound, endRound)
+func (ib *indexBackend) GetLogs(ctx context.Context, startRound, endRound uint64) ([]*model.Log, error) {
+	return ib.storage.GetLogs(ctx, startRound, endRound)
 }
 
-// Close closes postgresql backend.
-func (ib *indexBackend) Close() {
-	ib.logger.Info("Indexer backend closed!")
-}
-
-// newPsqlBackend creates a Backend.
-func newIndexBackend(ctx context.Context, runtimeID common.Namespace, storage storage.Storage, sb filters.SubscribeBackend) (Backend, error) {
+// NewIndexBackend returns a new index backend.
+func NewIndexBackend(runtimeID common.Namespace, storage storage.Storage, sb filters.SubscribeBackend) Backend {
 	b := &indexBackend{
-		ctx:       ctx,
 		runtimeID: runtimeID,
 		logger:    logging.GetLogger("indexer"),
 		storage:   storage,
@@ -341,10 +327,5 @@ func newIndexBackend(ctx context.Context, runtimeID common.Namespace, storage st
 
 	b.logger.Info("New indexer backend")
 
-	return b, nil
-}
-
-// NewIndexBackend returns a PsqlBackend.
-func NewIndexBackend() BackendFactory {
-	return newIndexBackend
+	return b
 }
