@@ -13,7 +13,6 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
 
-	"github.com/oasisprotocol/emerald-web3-gateway/filters"
 	"github.com/oasisprotocol/emerald-web3-gateway/storage"
 )
 
@@ -23,7 +22,9 @@ const (
 	healthCheckInterval              = 10 * time.Second
 	healthCheckIndexerDriftThreshold = 10
 
-	blockIndexTimeout = 60 * time.Second
+	blockIndexTimeout      = 60 * time.Second
+	pruneIterationTimeout  = 60 * time.Second
+	healthIterationTimeout = 60 * time.Second
 )
 
 // ErrNotHealthy is the error returned if the gateway is unhealthy.
@@ -81,7 +82,7 @@ func (s *Service) indexBlock(ctx context.Context, round uint64) error {
 		return fmt.Errorf("querying transactions with results: %w", err)
 	}
 
-	err = s.backend.Index(blk, txs, s.blockGasLimit)
+	err = s.backend.Index(ctx, blk, txs, s.blockGasLimit)
 	if err != nil {
 		return fmt.Errorf("indexing block: %w", err)
 	}
@@ -125,35 +126,40 @@ func (s *Service) healthWorker() {
 		case <-s.ctx.Done():
 			return
 		case <-time.After(healthCheckInterval):
-			// Query last indexed round.
-			lastIndexed, err := s.backend.QueryLastIndexedRound()
-			if err != nil {
-				s.Logger.Error("failed to query last indexed round",
-					"err", err,
-				)
-				s.updateHealth(false)
-				continue
-			}
+			func() {
+				ctx, cancel := context.WithTimeout(s.ctx, healthIterationTimeout)
+				defer cancel()
 
-			// Query latest round on the node.
-			latestBlk, err := s.client.GetBlock(s.ctx, client.RoundLatest)
-			if err != nil {
-				s.Logger.Error("failed to query latest block",
-					"err", err,
-				)
-				s.updateHealth(false)
-				continue
-			}
-			latestRound := latestBlk.Header.Round
+				// Query last indexed round.
+				lastIndexed, err := s.backend.QueryLastIndexedRound(ctx)
+				if err != nil {
+					s.Logger.Error("failed to query last indexed round",
+						"err", err,
+					)
+					s.updateHealth(false)
+					return
+				}
 
-			s.Logger.Debug("checking health", "latest_round", latestRound, "latest_indexed", lastIndexed)
-			switch {
-			case latestRound >= lastIndexed:
-				s.updateHealth(latestRound-lastIndexed <= healthCheckIndexerDriftThreshold)
-			default:
-				// Indexer in front of node - not healthy.
-				s.updateHealth(false)
-			}
+				// Query latest round on the node.
+				latestBlk, err := s.client.GetBlock(ctx, client.RoundLatest)
+				if err != nil {
+					s.Logger.Error("failed to query latest block",
+						"err", err,
+					)
+					s.updateHealth(false)
+					return
+				}
+				latestRound := latestBlk.Header.Round
+
+				s.Logger.Debug("checking health", "latest_round", latestRound, "latest_indexed", lastIndexed)
+				switch {
+				case latestRound >= lastIndexed:
+					s.updateHealth(latestRound-lastIndexed <= healthCheckIndexerDriftThreshold)
+				default:
+					// Indexer in front of node - not healthy.
+					s.updateHealth(false)
+				}
+			}()
 		}
 	}
 }
@@ -167,23 +173,29 @@ func (s *Service) pruningWorker() {
 		case <-s.ctx.Done():
 			return
 		case <-time.After(pruningCheckInterval):
-			lastIndexed, err := s.backend.QueryLastIndexedRound()
-			if err != nil {
-				s.Logger.Error("failed to query last indexed round",
-					"err", err,
-				)
-				continue
-			}
+			func() {
+				ctx, cancel := context.WithTimeout(s.ctx, pruneIterationTimeout)
+				defer cancel()
 
-			if lastIndexed > s.pruningStep {
-				round := lastIndexed - s.pruningStep
-				if err := s.backend.Prune(round); err != nil {
-					s.Logger.Error("failed to prune round",
+				lastIndexed, err := s.backend.QueryLastIndexedRound(ctx)
+				if err != nil {
+					s.Logger.Error("failed to query last indexed round",
 						"err", err,
-						"round", round,
 					)
+					return
 				}
-			}
+
+				if lastIndexed > s.pruningStep {
+					round := lastIndexed - s.pruningStep
+					if err := s.backend.Prune(ctx, round); err != nil {
+						s.Logger.Error("failed to prune round",
+							"err", err,
+							"round", round,
+						)
+						return
+					}
+				}
+			}()
 		}
 	}
 }
@@ -197,75 +209,82 @@ func (s *Service) indexingWorker() {
 		case <-time.After(indexerLoopDelay):
 		}
 
-		// Query latest round available at the node.
-		latest, err := s.getRoundLatest()
-		if err != nil {
-			s.Logger.Info("failed to query latest round",
-				"err", err,
-			)
-			continue
-		}
+		func() {
+			ctx, cancel := context.WithTimeout(s.ctx, blockIndexTimeout)
+			defer cancel()
 
-		var startAt uint64
-		// Get last indexed round.
-		lastIndexed, err := s.backend.QueryLastIndexedRound()
-		switch {
-		case errors.Is(err, storage.ErrNoRoundsIndexed):
-			// No rounds indexed, start at 0.
-			startAt = 0
-		case err != nil:
-			s.Logger.Error("failed to query last indexed round",
-				"err", err,
-			)
-			continue
-		default:
-			if latest < lastIndexed {
-				panic("This is a new chain, please clear the db first!")
+			// Query latest round available at the node.
+			latest, err := s.getRoundLatest()
+			if err != nil {
+				s.Logger.Info("failed to query latest round",
+					"err", err,
+				)
+				return
 			}
-			// Latest round already indexed.
-			if latest == lastIndexed {
-				continue
-			}
-			startAt = lastIndexed + 1
-		}
 
-		// If a special indexing_start is set, skip ahead to that.
-		if s.indexingStart > startAt {
-			startAt = s.indexingStart
-		}
-
-		// Get last retained round on the node.
-		lastRetainedBlock, err := s.client.GetLastRetainedBlock(s.ctx)
-		if err != nil {
-			s.Logger.Error("failed to retrieve last retained round",
-				"err", err,
-			)
-			continue
-		}
-		// Adjust startAt round in case node pruned missing rounds.
-		if lastRetainedBlock.Header.Round > startAt {
-			startAt = lastRetainedBlock.Header.Round
-		}
-
-		for round := startAt; round <= latest; round++ {
-			select {
-			case <-s.ctx.Done():
+			var startAt uint64
+			// Get last indexed round.
+			lastIndexed, err := s.backend.QueryLastIndexedRound(ctx)
+			switch {
+			case errors.Is(err, storage.ErrNoRoundsIndexed):
+				// No rounds indexed, start at 0.
+				startAt = 0
+			case err != nil:
+				s.Logger.Error("failed to query last indexed round",
+					"err", err,
+				)
 				return
 			default:
+				if latest < lastIndexed {
+					panic("This is a new chain, please clear the db first!")
+				}
+				// Latest round already indexed.
+				if latest == lastIndexed {
+					return
+				}
+				startAt = lastIndexed + 1
 			}
 
-			indexCtx, cancel := context.WithTimeout(s.ctx, blockIndexTimeout)
-			// Try to index block.
-			if err = s.indexBlock(indexCtx, round); err != nil {
-				s.Logger.Warn("failed to index block",
-					"err", err,
-					"round", round,
-				)
-				cancel()
-				break
+			// If a special indexing_start is set, skip ahead to that.
+			if s.indexingStart > startAt {
+				startAt = s.indexingStart
 			}
+
+			// Get last retained round on the node.
+			lastRetainedBlock, err := s.client.GetLastRetainedBlock(ctx)
+			if err != nil {
+				s.Logger.Error("failed to retrieve last retained round",
+					"err", err,
+				)
+				return
+			}
+			// Adjust startAt round in case node pruned missing rounds.
+			if lastRetainedBlock.Header.Round > startAt {
+				startAt = lastRetainedBlock.Header.Round
+			}
+			// Following code uses a new context with new timeout.
 			cancel()
-		}
+
+			for round := startAt; round <= latest; round++ {
+				select {
+				case <-s.ctx.Done():
+					return
+				default:
+				}
+
+				indexCtx, cancel := context.WithTimeout(s.ctx, blockIndexTimeout)
+				// Try to index block.
+				if err = s.indexBlock(indexCtx, round); err != nil {
+					s.Logger.Warn("failed to index block",
+						"err", err,
+						"round", round,
+					)
+					cancel()
+					break
+				}
+				cancel()
+			}
+		}()
 	}
 }
 
@@ -287,26 +306,15 @@ func (s *Service) Stop() {
 // New creates a new indexer service.
 func New(
 	ctxBackend context.Context,
-	backendFactory BackendFactory,
+	backend Backend,
 	client client.RuntimeClient,
 	runtimeID common.Namespace,
 	storage storage.Storage,
 	enablePruning bool,
 	pruningStep uint64,
 	indexingStart uint64,
-) (*Service, Backend, filters.SubscribeBackend, error) {
-	subBackend, err := filters.NewSubscribeBackend(storage)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
+) (*Service, Backend, error) {
 	ctx, cancelCtx := context.WithCancel(ctxBackend)
-	backend, err := backendFactory(ctx, runtimeID, storage, subBackend)
-	if err != nil {
-		cancelCtx()
-		return nil, nil, nil, err
-	}
-
 	s := &Service{
 		BaseBackgroundService: *service.NewBaseBackgroundService("gateway/indexer"),
 		runtimeID:             runtimeID,
@@ -321,5 +329,5 @@ func New(
 	}
 	s.Logger = s.Logger.With("runtime_id", s.runtimeID.String())
 
-	return s, backend, subBackend, nil
+	return s, backend, nil
 }

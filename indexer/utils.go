@@ -1,6 +1,7 @@
 package indexer
 
 import (
+	"context"
 	"database/sql"
 	"encoding/hex"
 	"errors"
@@ -185,7 +186,7 @@ func convertToEthFormat(
 }
 
 // StoreBlockData parses oasis block and stores in db.
-func (ib *indexBackend) StoreBlockData(oasisBlock *block.Block, txResults []*client.TransactionWithResults, blockGasLimit uint64) error { // nolint: gocyclo
+func (ib *indexBackend) StoreBlockData(ctx context.Context, oasisBlock *block.Block, txResults []*client.TransactionWithResults, blockGasLimit uint64) error { // nolint: gocyclo
 	encoded := oasisBlock.Header.EncodedHash()
 	bhash := common.HexToHash(encoded.Hex())
 	blockNum := oasisBlock.Header.Round
@@ -291,7 +292,7 @@ func (ib *indexBackend) StoreBlockData(oasisBlock *block.Block, txResults []*cli
 		return err
 	}
 
-	if err = ib.storage.RunInTransaction(ib.ctx, func(s storage.Storage) error {
+	if err = ib.storage.RunInTransaction(ctx, func(s storage.Storage) error {
 		// Store txs.
 		for _, tx := range txs {
 			switch tx.Status {
@@ -300,11 +301,11 @@ func (ib *indexBackend) StoreBlockData(oasisBlock *block.Block, txResults []*cli
 				// transaction is re-proposed at a later block. The duplicate transaction fails,
 				// but it is still included in the block. The gateway should drop these
 				// transactions to remain compatible with ETH semantics.
-				if err = s.InsertIfNotExists(ib.ctx, tx); err != nil {
+				if err = s.InsertIfNotExists(ctx, tx); err != nil {
 					return err
 				}
 			default:
-				earlierTx, earlierTxErr := s.GetTransaction(ib.ctx, tx.Hash)
+				earlierTx, earlierTxErr := s.GetTransaction(ctx, tx.Hash)
 				if earlierTxErr != nil {
 					if !errors.Is(earlierTxErr, sql.ErrNoRows) {
 						return err
@@ -320,7 +321,7 @@ func (ib *indexBackend) StoreBlockData(oasisBlock *block.Block, txResults []*cli
 					}
 					// Replacing a failed encounter of this tx, continue to upsert.
 				}
-				if upsertErr := s.Upsert(ib.ctx, tx); upsertErr != nil {
+				if upsertErr := s.Upsert(ctx, tx); upsertErr != nil {
 					return upsertErr
 				}
 			}
@@ -334,11 +335,11 @@ func (ib *indexBackend) StoreBlockData(oasisBlock *block.Block, txResults []*cli
 				// transaction is re-proposed at a later block. The duplicate transaction fails,
 				// but it is still included in the block. The gateway should drop these
 				// transactions to remain compatible with ETH semantics.
-				if err = s.InsertIfNotExists(ib.ctx, receipt); err != nil {
+				if err = s.InsertIfNotExists(ctx, receipt); err != nil {
 					return err
 				}
 			default:
-				earlierReceipt, earlierReceiptErr := s.GetTransactionReceipt(ib.ctx, receipt.TransactionHash)
+				earlierReceipt, earlierReceiptErr := s.GetTransactionReceipt(ctx, receipt.TransactionHash)
 				if earlierReceiptErr != nil {
 					if !errors.Is(earlierReceiptErr, sql.ErrNoRows) {
 						return err
@@ -354,7 +355,7 @@ func (ib *indexBackend) StoreBlockData(oasisBlock *block.Block, txResults []*cli
 					}
 					// Replacing a failed encounter of this receipt, continue to upsert.
 				}
-				if upsertErr := s.Upsert(ib.ctx, receipt); upsertErr != nil {
+				if upsertErr := s.Upsert(ctx, receipt); upsertErr != nil {
 					return upsertErr
 				}
 			}
@@ -362,14 +363,14 @@ func (ib *indexBackend) StoreBlockData(oasisBlock *block.Block, txResults []*cli
 
 		// Store logs.
 		for _, log := range dbLogs {
-			if err = s.Insert(ib.ctx, log); err != nil {
+			if err = s.Insert(ctx, log); err != nil {
 				ib.logger.Error("Failed to store logs", "height", blockNum, "log", log, "err", err)
 				return err
 			}
 		}
 
 		// Store block.
-		if err = s.Insert(ib.ctx, blk); err != nil {
+		if err = s.Insert(ctx, blk); err != nil {
 			return err
 		}
 
@@ -378,7 +379,7 @@ func (ib *indexBackend) StoreBlockData(oasisBlock *block.Block, txResults []*cli
 			Tip:   model.Continues,
 			Round: blk.Round,
 		}
-		return s.Upsert(ib.ctx, r)
+		return s.Upsert(ctx, r)
 	}); err != nil {
 		return err
 	}

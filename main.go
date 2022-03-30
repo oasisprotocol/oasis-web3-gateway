@@ -209,9 +209,13 @@ func runRoot() error {
 		return err
 	}
 
-	// Create Indexer
-	f := indexer.NewIndexBackend()
-	indx, backend, subBackend, err := indexer.New(ctx, f, rc, runtimeID, db, cfg.EnablePruning, cfg.PruningStep, cfg.IndexingStart)
+	// Create Indexer.
+	subBackend, err := filters.NewSubscribeBackend(db)
+	if err != nil {
+		return err
+	}
+	backend := indexer.NewIndexBackend(runtimeID, db, subBackend)
+	indx, backend, err := indexer.New(ctx, backend, rc, runtimeID, db, cfg.EnablePruning, cfg.PruningStep, cfg.IndexingStart)
 	if err != nil {
 		logger.Error("failed to create indexer", err)
 		return err
