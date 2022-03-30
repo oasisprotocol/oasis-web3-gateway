@@ -12,6 +12,7 @@ import (
 	"github.com/oasisprotocol/emerald-web3-gateway/indexer"
 	"github.com/oasisprotocol/emerald-web3-gateway/rpc/eth"
 	"github.com/oasisprotocol/emerald-web3-gateway/rpc/eth/filters"
+	ethmetrics "github.com/oasisprotocol/emerald-web3-gateway/rpc/eth/metrics"
 	"github.com/oasisprotocol/emerald-web3-gateway/rpc/net"
 	"github.com/oasisprotocol/emerald-web3-gateway/rpc/txpool"
 	"github.com/oasisprotocol/emerald-web3-gateway/rpc/web3"
@@ -27,35 +28,49 @@ func GetRPCAPIs(
 ) []ethRpc.API {
 	var apis []ethRpc.API
 
+	web3Service := web3.NewPublicAPI()
+	ethService := eth.NewPublicAPI(client, logging.GetLogger("eth_rpc"), config.ChainID, backend, config.MethodLimits)
+	netService := net.NewPublicAPI(config.ChainID)
+	txpoolService := txpool.NewPublicAPI()
+	filtersService := filters.NewPublicAPI(client, logging.GetLogger("eth_filters"), backend, eventSystem)
+
+	if config.Monitoring.Enabled() {
+		web3Service = web3.NewMetricsWrapper(web3Service)
+		netService = net.NewMetricsWrapper(netService)
+		ethService = ethmetrics.NewMetricsWrapper(ethService, logging.GetLogger("eth_rpc_metrics"), backend)
+		txpoolService = txpool.NewMetricsWrapper(txpoolService)
+		filtersService = filters.NewMetricsWrapper(filtersService)
+	}
+
 	apis = append(apis,
 		ethRpc.API{
 			Namespace: "web3",
 			Version:   "1.0",
-			Service:   web3.NewPublicAPI(),
+			Service:   web3Service,
 			Public:    true,
 		},
 		ethRpc.API{
 			Namespace: "net",
 			Version:   "1.0",
-			Service:   net.NewPublicAPI(config.ChainID),
+			Service:   netService,
 			Public:    true,
 		},
 		ethRpc.API{
 			Namespace: "eth",
 			Version:   "1.0",
-			Service:   eth.NewPublicAPI(client, logging.GetLogger("eth_rpc"), config.ChainID, backend, config.MethodLimits),
+			Service:   ethService,
 			Public:    true,
 		},
 		ethRpc.API{
 			Namespace: "txpool",
 			Version:   "1.0",
-			Service:   txpool.NewPublicAPI(),
+			Service:   txpoolService,
 			Public:    true,
 		},
 		ethRpc.API{
 			Namespace: "eth",
 			Version:   "1.0",
-			Service:   filters.NewPublicAPI(client, logging.GetLogger("eth_filters"), backend, eventSystem),
+			Service:   filtersService,
 			Public:    true,
 		},
 	)
