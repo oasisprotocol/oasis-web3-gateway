@@ -393,6 +393,11 @@ func (ib *indexBackend) StoreBlockData(ctx context.Context, oasisBlock *block.Bl
 	ib.subscribe.ChainChan() <- chainEvent
 	ib.logger.Debug("sent chain event to event system", "height", blockNum)
 
+	// Notify the observer if any.
+	if ib.observer != nil {
+		ib.observer.OnBlockIndexed(blk)
+	}
+
 	return nil
 }
 

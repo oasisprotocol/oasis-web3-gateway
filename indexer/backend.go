@@ -80,6 +80,15 @@ type Backend interface {
 
 	// Prune removes indexed data for rounds equal to or earlier than the passed round.
 	Prune(ctx context.Context, round uint64) error
+
+	// SetObserver sets the intrusive backend observer.
+	SetObserver(BackendObserver)
+}
+
+// BackendObserver is the intrusive backend observer interaface.
+type BackendObserver interface {
+	OnBlockIndexed(*model.Block)
+	OnLastRetainedRound(uint64)
 }
 
 type indexBackend struct {
@@ -87,6 +96,12 @@ type indexBackend struct {
 	logger    *logging.Logger
 	storage   storage.Storage
 	subscribe filters.SubscribeBackend
+	observer  BackendObserver
+}
+
+// SetObserver sets the intrusive backend observer.
+func (ib *indexBackend) SetObserver(ob BackendObserver) {
+	ib.observer = ob
 }
 
 // Index indexes oasis block.
