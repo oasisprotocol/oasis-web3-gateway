@@ -22,14 +22,12 @@ const (
 	pruningCheckInterval             = 60 * time.Second
 	healthCheckInterval              = 10 * time.Second
 	healthCheckIndexerDriftThreshold = 10
+
+	blockIndexTimeout = 60 * time.Second
 )
 
-var (
-	ErrGetBlockFailed        = errors.New("get block failed")
-	ErrGetTransactionsFailed = errors.New("get transactions failed")
-	ErrIndexedFailed         = errors.New("index block failed")
-	ErrNotHealthy            = errors.New("not healthy")
-)
+// ErrNotHealthy is the error returned if the gateway is unhealthy.
+var ErrNotHealthy = errors.New("not healthy")
 
 // Service is an indexer service.
 type Service struct {
@@ -62,30 +60,30 @@ func (s *Service) Health() error {
 }
 
 // indexBlock indexes given block number.
-func (s *Service) indexBlock(round uint64) error {
-	blk, err := s.client.GetBlock(s.ctx, round)
+func (s *Service) indexBlock(ctx context.Context, round uint64) error {
+	blk, err := s.client.GetBlock(ctx, round)
 	if err != nil {
-		return ErrGetBlockFailed
+		return fmt.Errorf("querying block: %w", err)
 	}
 
 	if s.blockGasLimit == 0 || s.queryBlockGasLimit {
 		// Query parameters for block gas limit.
 		var params *core.Parameters
-		params, err = s.core.Parameters(s.ctx, round)
+		params, err = s.core.Parameters(ctx, round)
 		if err != nil {
-			return fmt.Errorf("querying block gas limit: %w", err)
+			return fmt.Errorf("querying block parameters: %w", err)
 		}
 		s.blockGasLimit = params.MaxBatchGas
 	}
 
-	txs, err := s.client.GetTransactionsWithResults(s.ctx, blk.Header.Round)
+	txs, err := s.client.GetTransactionsWithResults(ctx, blk.Header.Round)
 	if err != nil {
-		return ErrGetTransactionsFailed
+		return fmt.Errorf("querying transactions with results: %w", err)
 	}
 
 	err = s.backend.Index(blk, txs, s.blockGasLimit)
 	if err != nil {
-		return ErrIndexedFailed
+		return fmt.Errorf("indexing block: %w", err)
 	}
 
 	switch {
@@ -256,14 +254,17 @@ func (s *Service) indexingWorker() {
 			default:
 			}
 
+			indexCtx, cancel := context.WithTimeout(s.ctx, blockIndexTimeout)
 			// Try to index block.
-			if err = s.indexBlock(round); err != nil {
+			if err = s.indexBlock(indexCtx, round); err != nil {
 				s.Logger.Warn("failed to index block",
 					"err", err,
 					"round", round,
 				)
+				cancel()
 				break
 			}
+			cancel()
 		}
 	}
 }
