@@ -17,7 +17,6 @@ import (
 
 // PublicAPI is the eth_ prefixed set of APIs in the Web3 JSON-RPC spec.
 type PublicFilterAPI struct {
-	ctx     context.Context
 	client  client.RuntimeClient
 	backend indexer.Backend
 	Logger  *logging.Logger
@@ -26,14 +25,12 @@ type PublicFilterAPI struct {
 
 // NewPublicAPI creates an instance of the public ETH Web3 API with filter func.
 func NewPublicAPI(
-	ctx context.Context,
 	client client.RuntimeClient,
 	logger *logging.Logger,
 	backend indexer.Backend,
 	eventSystem *eventFilters.EventSystem,
 ) *PublicFilterAPI {
 	return &PublicFilterAPI{
-		ctx:     ctx,
 		client:  client,
 		Logger:  logger,
 		backend: backend,
