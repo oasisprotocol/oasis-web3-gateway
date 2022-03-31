@@ -13,6 +13,7 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
 
+	"github.com/oasisprotocol/emerald-web3-gateway/conf"
 	"github.com/oasisprotocol/emerald-web3-gateway/storage"
 )
 
@@ -310,12 +311,10 @@ func New(
 	client client.RuntimeClient,
 	runtimeID common.Namespace,
 	storage storage.Storage,
-	enablePruning bool,
-	pruningStep uint64,
-	indexingStart uint64,
+	cfg *conf.Config,
 ) (*Service, Backend, error) {
 	ctx, cancelCtx := context.WithCancel(ctxBackend)
-	cachingBackend, err := newCachingBackend(ctx, backend)
+	cachingBackend, err := newCachingBackend(ctx, backend, cfg.Cache)
 	if err != nil {
 		cancelCtx()
 		return nil, nil, err
@@ -329,9 +328,9 @@ func New(
 		core:                  core.NewV1(client),
 		ctx:                   ctx,
 		cancelCtx:             cancelCtx,
-		enablePruning:         enablePruning,
-		pruningStep:           pruningStep,
-		indexingStart:         indexingStart,
+		enablePruning:         cfg.EnablePruning,
+		pruningStep:           cfg.PruningStep,
+		indexingStart:         cfg.IndexingStart,
 	}
 	s.Logger = s.Logger.With("runtime_id", s.runtimeID.String())
 
