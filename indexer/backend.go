@@ -2,12 +2,9 @@ package indexer
 
 import (
 	"context"
-	"encoding/hex"
 	"errors"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/oasisprotocol/oasis-core/go/common"
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/hash"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
@@ -87,7 +84,7 @@ type Backend interface {
 
 // BackendObserver is the intrusive backend observer interaface.
 type BackendObserver interface {
-	OnBlockIndexed(*model.Block)
+	OnBlockIndexed(*model.Block, []*model.Transaction, []*model.Receipt)
 	OnLastRetainedRound(uint64)
 }
 
@@ -270,55 +267,7 @@ func (ib *indexBackend) GetTransactionReceipt(ctx context.Context, txHash ethcom
 		return nil, err
 	}
 
-	ethLogs := []*ethtypes.Log{}
-	for _, dbLog := range dbReceipt.Logs {
-		topics := []ethcommon.Hash{}
-		for _, dbTopic := range dbLog.Topics {
-			tp := ethcommon.HexToHash(dbTopic)
-			topics = append(topics, tp)
-		}
-
-		data, _ := hex.DecodeString(dbLog.Data)
-		log := &ethtypes.Log{
-			Address:     ethcommon.HexToAddress(dbLog.Address),
-			Topics:      topics,
-			Data:        data,
-			BlockNumber: dbLog.Round,
-			TxHash:      ethcommon.HexToHash(dbLog.TxHash),
-			TxIndex:     dbLog.TxIndex,
-			BlockHash:   ethcommon.HexToHash(dbLog.BlockHash),
-			Index:       dbLog.Index,
-			Removed:     dbLog.Removed,
-		}
-
-		ethLogs = append(ethLogs, log)
-	}
-
-	receipt := map[string]interface{}{
-		"status":            hexutil.Uint(dbReceipt.Status),
-		"cumulativeGasUsed": hexutil.Uint64(dbReceipt.CumulativeGasUsed),
-		"logsBloom":         ethtypes.BytesToBloom(ethtypes.LogsBloom(ethLogs)),
-		"logs":              ethLogs,
-		"transactionHash":   dbReceipt.TransactionHash,
-		"gasUsed":           hexutil.Uint64(dbReceipt.GasUsed),
-		"type":              hexutil.Uint64(dbReceipt.Type),
-		"blockHash":         dbReceipt.BlockHash,
-		"blockNumber":       hexutil.Uint64(dbReceipt.Round),
-		"transactionIndex":  hexutil.Uint64(dbReceipt.TransactionIndex),
-		"from":              nil,
-		"to":                nil,
-		"contractAddress":   nil,
-	}
-	if dbReceipt.FromAddr != "" {
-		receipt["from"] = dbReceipt.FromAddr
-	}
-	if dbReceipt.ToAddr != "" {
-		receipt["to"] = dbReceipt.ToAddr
-	}
-	if dbReceipt.ContractAddress != "" {
-		receipt["contractAddress"] = dbReceipt.ContractAddress
-	}
-	return receipt, nil
+	return db2EthReceipt(dbReceipt), nil
 }
 
 // BlockNumber returns the latest block.

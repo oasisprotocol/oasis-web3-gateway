@@ -6,6 +6,15 @@ type AccessTuple struct {
 	StorageKeys []string
 }
 
+// Size returns the size of an AccessTuple in bytes.
+func (at *AccessTuple) Size() int {
+	sz := len(at.Address)
+	for i := range at.StorageKeys {
+		sz += len(at.StorageKeys[i])
+	}
+	return sz
+}
+
 // Continues is the latest Indexed Block Round.
 const Continues string = "continues"
 
@@ -18,6 +27,15 @@ type IndexedRoundWithTip struct {
 }
 
 type AccessList []AccessTuple
+
+// Size returns the size of an AccessList in bytes.
+func (al AccessList) Size() int {
+	var sz int
+	for i := range al {
+		sz += al[i].Size()
+	}
+	return sz
+}
 
 // Transaction is ethereum transaction.
 type Transaction struct {
@@ -39,6 +57,31 @@ type Transaction struct {
 	Data       string
 	AccessList AccessList
 	V, R, S    string
+}
+
+// Size returns the approximate size of a Transaction in bytes.
+func (tx *Transaction) Size() int {
+	sz := len(tx.Hash)
+	sz++    // Type
+	sz += 8 // Status
+	sz += len(tx.ChainID)
+	sz += len(tx.BlockHash)
+	sz += 8 // Round
+	sz += 4 // Index
+	sz += 8 // Gas
+	sz += len(tx.GasPrice)
+	sz += len(tx.GasTipCap)
+	sz += len(tx.GasFeeCap)
+	sz += 8 // Nonce
+	sz += len(tx.FromAddr)
+	sz += len(tx.ToAddr)
+	sz += len(tx.Value)
+	sz += len(tx.Data)
+	sz += tx.AccessList.Size()
+	sz += len(tx.V)
+	sz += len(tx.R)
+	sz += len(tx.S)
+	return sz
 }
 
 // Block represents ethereum block.
@@ -82,6 +125,22 @@ type Log struct {
 	Removed   bool
 }
 
+// Size returns the approximate size of a Log in bytes.
+func (l *Log) Size() int {
+	sz := len(l.Address)
+	for i := range l.Topics {
+		sz += len(l.Topics[i])
+	}
+	sz += len(l.Data)
+	sz += 8 // Round
+	sz += len(l.BlockHash)
+	sz += len(l.TxHash)
+	sz += 8 // TxIndex
+	sz += 8 // Index
+	sz++    // Removed
+	return sz
+}
+
 type Receipt struct {
 	Status            uint
 	CumulativeGasUsed uint64
@@ -96,4 +155,24 @@ type Receipt struct {
 	FromAddr          string
 	ToAddr            string
 	ContractAddress   string
+}
+
+// Size returns the approximate size of a Receipt in bytes.
+func (r *Receipt) Size() int {
+	sz := 8 // Status
+	sz += 8 // CumulativeGasUsed
+	sz += len(r.LogsBloom)
+	for i := range r.Logs {
+		sz += r.Logs[i].Size()
+	}
+	sz += len(r.TransactionHash)
+	sz += len(r.BlockHash)
+	sz += 8 // GasUsed
+	sz += 8 // Type
+	sz += 8 // Round (BlockNumber)
+	sz += 8 // TransactionIndex (wtf, Transaction.Index is a uint32)
+	sz += len(r.FromAddr)
+	sz += len(r.ToAddr)
+	sz += len(r.ContractAddress)
+	return sz
 }
