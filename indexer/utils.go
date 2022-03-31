@@ -11,6 +11,7 @@ import (
 	"github.com/fxamacker/cbor/v2"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 
@@ -292,9 +293,11 @@ func (ib *indexBackend) StoreBlockData(ctx context.Context, oasisBlock *block.Bl
 		return err
 	}
 
+	upsertedTxes := make([]*model.Transaction, 0, len(txs))
+	upsertedReceipts := make([]*model.Receipt, 0, len(receipts))
 	if err = ib.storage.RunInTransaction(ctx, func(s storage.Storage) error {
 		// Store txs.
-		for _, tx := range txs {
+		for i, tx := range txs {
 			switch tx.Status {
 			case uint(ethtypes.ReceiptStatusFailed):
 				// In the Emerald Paratime it can happen that an already committed
@@ -324,11 +327,12 @@ func (ib *indexBackend) StoreBlockData(ctx context.Context, oasisBlock *block.Bl
 				if upsertErr := s.Upsert(ctx, tx); upsertErr != nil {
 					return upsertErr
 				}
+				upsertedTxes = append(upsertedTxes, txs[i])
 			}
 		}
 
 		// Store receipts.
-		for _, receipt := range receipts {
+		for i, receipt := range receipts {
 			switch receipt.Status {
 			case uint(ethtypes.ReceiptStatusFailed):
 				// In the Emerald Paratime it can happen that an already committed
@@ -358,6 +362,7 @@ func (ib *indexBackend) StoreBlockData(ctx context.Context, oasisBlock *block.Bl
 				if upsertErr := s.Upsert(ctx, receipt); upsertErr != nil {
 					return upsertErr
 				}
+				upsertedReceipts = append(upsertedReceipts, receipts[i])
 			}
 		}
 
@@ -395,7 +400,7 @@ func (ib *indexBackend) StoreBlockData(ctx context.Context, oasisBlock *block.Bl
 
 	// Notify the observer if any.
 	if ib.observer != nil {
-		ib.observer.OnBlockIndexed(blk)
+		ib.observer.OnBlockIndexed(blk, upsertedTxes, upsertedReceipts)
 	}
 
 	return nil
@@ -425,4 +430,57 @@ func eth2DbLogs(ethLogs []*ethtypes.Log) []*model.Log {
 	}
 
 	return res
+}
+
+// db2EthReceipt converts model.Receipt to the GetTransactipReceipt format.
+func db2EthReceipt(dbReceipt *model.Receipt) map[string]interface{} {
+	ethLogs := make([]*ethtypes.Log, 0, len(dbReceipt.Logs))
+	for _, dbLog := range dbReceipt.Logs {
+		topics := make([]common.Hash, 0, len(dbLog.Topics))
+		for _, dbTopic := range dbLog.Topics {
+			tp := common.HexToHash(dbTopic)
+			topics = append(topics, tp)
+		}
+
+		data, _ := hex.DecodeString(dbLog.Data)
+		log := &ethtypes.Log{
+			Address:     common.HexToAddress(dbLog.Address),
+			Topics:      topics,
+			Data:        data,
+			BlockNumber: dbLog.Round,
+			TxHash:      common.HexToHash(dbLog.TxHash),
+			TxIndex:     dbLog.TxIndex,
+			BlockHash:   common.HexToHash(dbLog.BlockHash),
+			Index:       dbLog.Index,
+			Removed:     dbLog.Removed,
+		}
+
+		ethLogs = append(ethLogs, log)
+	}
+
+	receipt := map[string]interface{}{
+		"status":            hexutil.Uint(dbReceipt.Status),
+		"cumulativeGasUsed": hexutil.Uint64(dbReceipt.CumulativeGasUsed),
+		"logsBloom":         ethtypes.BytesToBloom(ethtypes.LogsBloom(ethLogs)),
+		"logs":              ethLogs,
+		"transactionHash":   dbReceipt.TransactionHash,
+		"gasUsed":           hexutil.Uint64(dbReceipt.GasUsed),
+		"type":              hexutil.Uint64(dbReceipt.Type),
+		"blockHash":         dbReceipt.BlockHash,
+		"blockNumber":       hexutil.Uint64(dbReceipt.Round),
+		"transactionIndex":  hexutil.Uint64(dbReceipt.TransactionIndex),
+		"from":              nil,
+		"to":                nil,
+		"contractAddress":   nil,
+	}
+	if dbReceipt.FromAddr != "" {
+		receipt["from"] = dbReceipt.FromAddr
+	}
+	if dbReceipt.ToAddr != "" {
+		receipt["to"] = dbReceipt.ToAddr
+	}
+	if dbReceipt.ContractAddress != "" {
+		receipt["contractAddress"] = dbReceipt.ContractAddress
+	}
+	return receipt
 }

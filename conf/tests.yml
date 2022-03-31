@@ -5,6 +5,11 @@ log:
   level: debug
   format: json
 
+cache:
+  block_size: 10
+  tx_size: 10485760
+  tx_receipt_size: 10485760
+
 database:
   host: "127.0.0.1"
   port: 5432
