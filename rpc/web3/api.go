@@ -9,20 +9,25 @@ import (
 	"github.com/oasisprotocol/emerald-web3-gateway/version"
 )
 
-// PublicAPI is the web3_ prefixed set of APIs in the Web3 JSON-RPC spec.
-type PublicAPI struct{}
-
-// NewPublicAPI creates an instance of the Web3 API.
-func NewPublicAPI() *PublicAPI {
-	return &PublicAPI{}
+// API is the web3_ prefixed set of APIs in the Web3 JSON-RPC spec.
+type API interface {
+	// Sha3 returns the keccak-256 hash of the passed-in input.
+	Sha3(input hexutil.Bytes) hexutil.Bytes
+	// ClientVersion returns the current client info.
+	ClientVersion() string
 }
 
-// Sha3 returns the keccak-256 hash of the passed-in input.
-func (a *PublicAPI) Sha3(input hexutil.Bytes) hexutil.Bytes {
+type publicAPI struct{}
+
+// NewPublicAPI creates an instance of the Web3 API.
+func NewPublicAPI() API {
+	return &publicAPI{}
+}
+
+func (a *publicAPI) Sha3(input hexutil.Bytes) hexutil.Bytes {
 	return crypto.Keccak256(input)
 }
 
-// ClientVersion returns the current client info.
-func (a *PublicAPI) ClientVersion() string {
+func (a *publicAPI) ClientVersion() string {
 	return fmt.Sprintf("oasis/%s/%s", version.Software, version.Toolchain)
 }
