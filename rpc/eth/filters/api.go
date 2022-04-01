@@ -15,8 +15,15 @@ import (
 	"github.com/oasisprotocol/emerald-web3-gateway/indexer"
 )
 
-// PublicAPI is the eth_ prefixed set of APIs in the Web3 JSON-RPC spec.
-type PublicFilterAPI struct {
+// API is the eth_ prefixed set of APIs in the filtering Web3 JSON-RPC spec.
+type API interface {
+	// NewHeads send a notification each time a new (header) block is appended to the chain.
+	NewHeads(ctx context.Context) (*ethrpc.Subscription, error)
+	// Logs creates a subscription that fires for all new log that match the given filter criteria.
+	Logs(ctx context.Context, crit ethfilters.FilterCriteria) (*ethrpc.Subscription, error)
+}
+
+type publicFilterAPI struct {
 	client  client.RuntimeClient
 	backend indexer.Backend
 	Logger  *logging.Logger
@@ -29,8 +36,8 @@ func NewPublicAPI(
 	logger *logging.Logger,
 	backend indexer.Backend,
 	eventSystem *eventFilters.EventSystem,
-) *PublicFilterAPI {
-	return &PublicFilterAPI{
+) API {
+	return &publicFilterAPI{
 		client:  client,
 		Logger:  logger,
 		backend: backend,
@@ -38,7 +45,7 @@ func NewPublicAPI(
 	}
 }
 
-func (api *PublicFilterAPI) NewHeads(ctx context.Context) (*ethrpc.Subscription, error) {
+func (api *publicFilterAPI) NewHeads(ctx context.Context) (*ethrpc.Subscription, error) {
 	notifier, supported := ethrpc.NotifierFromContext(ctx)
 	if !supported {
 		return &ethrpc.Subscription{}, ethrpc.ErrNotificationsUnsupported
@@ -71,7 +78,7 @@ func (api *PublicFilterAPI) NewHeads(ctx context.Context) (*ethrpc.Subscription,
 	return rpcSub, nil
 }
 
-func (api *PublicFilterAPI) Logs(ctx context.Context, crit ethfilters.FilterCriteria) (*ethrpc.Subscription, error) {
+func (api *publicFilterAPI) Logs(ctx context.Context, crit ethfilters.FilterCriteria) (*ethrpc.Subscription, error) {
 	notifier, supported := ethrpc.NotifierFromContext(ctx)
 	if !supported {
 		return &ethrpc.Subscription{}, ethrpc.ErrNotificationsUnsupported

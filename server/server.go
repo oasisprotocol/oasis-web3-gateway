@@ -4,10 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
+	"net/http"
 	"sync"
+	"time"
 
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/gorilla/mux"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/oasisprotocol/emerald-web3-gateway/conf"
 	"github.com/oasisprotocol/emerald-web3-gateway/storage"
@@ -114,6 +119,26 @@ func New(ctx context.Context, conf *conf.GatewayConfig) (*Web3Gateway, error) {
 	return server, nil
 }
 
+func startPrometheusServer(address string) error {
+	router := mux.NewRouter()
+	router.Handle("/metrics", promhttp.Handler())
+
+	server := &http.Server{
+		Addr:         address,
+		Handler:      router,
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 30 * time.Second,
+	}
+
+	ln, err := net.Listen("tcp", address)
+	if err != nil {
+		return err
+	}
+	go func() { _ = server.Serve(ln) }()
+
+	return nil
+}
+
 // Start Web3Gateway can only be started once.
 func (srv *Web3Gateway) Start() error {
 	srv.startStopLock.Lock()
@@ -139,7 +164,14 @@ func (srv *Web3Gateway) Start() error {
 		srv.doClose(nil)
 		return err
 	}
-	return err
+
+	if srv.config.Monitoring.Enabled() {
+		address := srv.config.Monitoring.Address()
+		srv.logger.Info("starting prometheus metrics server", "address", address)
+		return startPrometheusServer(address)
+	}
+
+	return nil
 }
 
 // Close stops the Web3Gateway Server and releases resources acquired in
