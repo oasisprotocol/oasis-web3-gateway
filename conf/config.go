@@ -25,6 +25,7 @@ type Config struct {
 	IndexingStart uint64 `koanf:"indexing_start"`
 
 	Log      *LogConfig      `koanf:"log"`
+	Cache    *CacheConfig    `koanf:"cache"`
 	Database *DatabaseConfig `koanf:"database"`
 	Gateway  *GatewayConfig  `koanf:"gateway"`
 }
@@ -72,6 +73,16 @@ func (cfg *LogConfig) Validate() error {
 	}
 	var level logging.Level
 	return level.Set(cfg.Level)
+}
+
+// CacheConfig contains the cache configuration.
+type CacheConfig struct {
+	// BlockSize is the size of the block cache in BLOCKS.
+	BlockSize uint64 `koanf:"block_size"`
+	// TxSize is the size of the transaction cache in bytes.
+	TxSize uint64 `koanf:"tx_size"`
+	// TxReceiptSize is the size of the transaction receipt cache in bytes.
+	TxReceiptSize uint64 `koanf:"tx_receipt_size"`
 }
 
 // DatabaseConfig is the postgresql database configuration.

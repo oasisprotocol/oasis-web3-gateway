@@ -215,7 +215,7 @@ func runRoot() error {
 		return err
 	}
 	backend := indexer.NewIndexBackend(runtimeID, db, subBackend)
-	indx, backend, err := indexer.New(ctx, backend, rc, runtimeID, db, cfg.EnablePruning, cfg.PruningStep, cfg.IndexingStart)
+	indx, backend, err := indexer.New(ctx, backend, rc, runtimeID, db, cfg)
 	if err != nil {
 		logger.Error("failed to create indexer", err)
 		return err

@@ -149,7 +149,7 @@ func Setup() error {
 		return err
 	}
 	backend := indexer.NewIndexBackend(runtimeID, db, subBackend)
-	indx, backend, err := indexer.New(ctx, backend, rc, runtimeID, db, tests.TestsConfig.EnablePruning, tests.TestsConfig.PruningStep, tests.TestsConfig.IndexingStart)
+	indx, backend, err := indexer.New(ctx, backend, rc, runtimeID, db, tests.TestsConfig)
 	if err != nil {
 		return err
 	}
