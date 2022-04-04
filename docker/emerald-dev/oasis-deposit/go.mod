@@ -3,12 +3,18 @@ module github.com/oasisprotocol/web3-tests/test/tools/oasis-deposit
 go 1.17
 
 require (
-	github.com/oasisprotocol/oasis-core/go v0.2200.0
-	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.2.1-0.20220310175446-5025bc91ec6a
-	google.golang.org/grpc v1.44.0
+	github.com/oasisprotocol/oasis-core/go v0.2201.4
+	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.2.1-0.20220428010221-7a9f51c30e7f
+	google.golang.org/grpc v1.45.0
 )
 
-require github.com/mattn/go-colorable v0.1.12 // indirect
+require (
+	github.com/ipfs/go-log/v2 v2.5.0 // indirect
+	github.com/mattn/go-colorable v0.1.12 // indirect
+	go.uber.org/atomic v1.9.0 // indirect
+	go.uber.org/multierr v1.7.0 // indirect
+	go.uber.org/zap v1.19.1 // indirect
+)
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -57,7 +63,6 @@ require (
 	github.com/subosito/gotenv v1.2.0 // indirect
 	github.com/tendermint/tendermint v0.34.15 // indirect
 	github.com/tyler-smith/go-bip39 v1.1.0
-	github.com/whyrusleeping/go-logging v0.0.1 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	golang.org/x/crypto v0.0.0-20210915214749-c084706c2272 // indirect
 	golang.org/x/net v0.0.0-20211005001312-d4b1ae081e3b // indirect
