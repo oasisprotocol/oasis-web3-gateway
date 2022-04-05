@@ -84,4 +84,4 @@ jobs:
           path: ${{ env.OASIS_NODE_DATADIR }}/**/*.log
 
       - name: Upload to codecov.io
-        uses: codecov/codecov-action@v2.1.0
+        uses: codecov/codecov-action@v3
