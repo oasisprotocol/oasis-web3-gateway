@@ -31,6 +31,7 @@ import (
 	"github.com/oasisprotocol/emerald-web3-gateway/log"
 	"github.com/oasisprotocol/emerald-web3-gateway/rpc"
 	"github.com/oasisprotocol/emerald-web3-gateway/server"
+	"github.com/oasisprotocol/emerald-web3-gateway/storage"
 	"github.com/oasisprotocol/emerald-web3-gateway/storage/psql"
 	"github.com/oasisprotocol/emerald-web3-gateway/tests"
 )
@@ -138,18 +139,23 @@ func Setup() error {
 	}
 
 	// Initialize db again, now with configured timeouts.
-	db, err = psql.InitDB(ctx, tests.TestsConfig.Database, false)
+	var storage storage.Storage
+	storage, err = psql.InitDB(ctx, tests.TestsConfig.Database, false)
 	if err != nil {
 		return err
+	}
+	// Monitoring if enabled.
+	if tests.TestsConfig.Gateway.Monitoring.Enabled() {
+		storage = psql.NewMetricsWrapper(storage)
 	}
 
 	// Create Indexer.
-	subBackend, err := filters.NewSubscribeBackend(db)
+	subBackend, err := filters.NewSubscribeBackend(storage)
 	if err != nil {
 		return err
 	}
-	backend := indexer.NewIndexBackend(runtimeID, db, subBackend)
-	indx, backend, err := indexer.New(ctx, backend, rc, runtimeID, db, tests.TestsConfig)
+	backend := indexer.NewIndexBackend(runtimeID, storage, subBackend)
+	indx, backend, err := indexer.New(ctx, backend, rc, runtimeID, storage, tests.TestsConfig)
 	if err != nil {
 		return err
 	}
