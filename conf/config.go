@@ -83,6 +83,8 @@ type CacheConfig struct {
 	TxSize uint64 `koanf:"tx_size"`
 	// TxReceiptSize is the size of the transaction receipt cache in bytes.
 	TxReceiptSize uint64 `koanf:"tx_receipt_size"`
+	// Metrics enables the cache metrics collection.
+	Metrics bool `koanf:"metrics"`
 }
 
 // DatabaseConfig is the postgresql database configuration.

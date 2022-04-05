@@ -16,6 +16,12 @@ database:
   write_timeout: 5
   max_open_conns: 0
 
+cache:
+  block_size: 10
+  tx_size: 10485760
+  tx_receipt_size: 10485760
+  metrics: true
+
 gateway:
   chain_id: 42261
   http:
