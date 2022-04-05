@@ -12,6 +12,8 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"github.com/oasisprotocol/emerald-web3-gateway/conf"
 	"github.com/oasisprotocol/emerald-web3-gateway/storage"
@@ -26,6 +28,12 @@ const (
 	blockIndexTimeout      = 60 * time.Second
 	pruneIterationTimeout  = 60 * time.Second
 	healthIterationTimeout = 60 * time.Second
+)
+
+var (
+	metricBlockIndexed = promauto.NewGauge(prometheus.GaugeOpts{Name: "oasis_emerald_web3_gateway_block_indexed", Help: "Indexed block heights."})
+	metricBlockPruned  = promauto.NewGauge(prometheus.GaugeOpts{Name: "oasis_emerald_web3_gateway_block_pruned", Help: "Pruned block heights."})
+	metricHealthy      = promauto.NewGauge(prometheus.GaugeOpts{Name: "oasis_emerald_web3_gateway_health", Help: "1 if gateway healthcheck is reporting as healthy, 0 otherwise."})
 )
 
 // ErrNotHealthy is the error returned if the gateway is unhealthy.
@@ -87,6 +95,7 @@ func (s *Service) indexBlock(ctx context.Context, round uint64) error {
 	if err != nil {
 		return fmt.Errorf("indexing block: %w", err)
 	}
+	metricBlockIndexed.Set(float64(blk.Header.Round))
 
 	switch {
 	case blk.Header.HeaderType == block.EpochTransition:
@@ -114,8 +123,10 @@ func (s *Service) getRoundLatest() (uint64, error) {
 func (s *Service) updateHealth(healthy bool) {
 	if healthy {
 		atomic.StoreUint32(&s.health, 1)
+		metricHealthy.Set(float64(1))
 	} else {
 		atomic.StoreUint32(&s.health, 0)
+		metricHealthy.Set(float64(0))
 	}
 }
 
@@ -195,6 +206,7 @@ func (s *Service) pruningWorker() {
 						)
 						return
 					}
+					metricBlockPruned.Set(float64(round))
 				}
 			}()
 		}
