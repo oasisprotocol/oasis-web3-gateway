@@ -346,5 +346,5 @@ func New(
 	}
 	s.Logger = s.Logger.With("runtime_id", s.runtimeID.String())
 
-	return s, backend, nil
+	return s, cachingBackend, nil
 }

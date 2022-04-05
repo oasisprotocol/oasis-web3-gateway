@@ -55,20 +55,53 @@ func Logs2EthLogs(logs []*Log, round uint64, blockHash, txHash common.Hash, star
 	return ethLogs
 }
 
-// convertToEthFormat converts oasis block to ethereum block.
-func convertToEthFormat(
+// ethToModelLogs converts ethereum logs to DB model logs.
+func ethToModelLogs(ethLogs []*ethtypes.Log) ([]*model.Log, map[string][]*model.Log) {
+	res := make([]*model.Log, 0, len(ethLogs))
+	txLogs := make(map[string][]*model.Log)
+
+	for _, log := range ethLogs {
+		topics := make([]string, 0, len(log.Topics))
+		for _, tp := range log.Topics {
+			topics = append(topics, tp.Hex())
+		}
+
+		txHash := log.TxHash.Hex()
+		log := &model.Log{
+			Address:   log.Address.Hex(),
+			Topics:    topics,
+			Data:      hex.EncodeToString(log.Data),
+			Round:     log.BlockNumber,
+			BlockHash: log.BlockHash.Hex(),
+			TxHash:    txHash,
+			TxIndex:   log.TxIndex,
+			Index:     log.Index,
+			Removed:   log.Removed,
+		}
+		res = append(res, log)
+		txLogs[txHash] = append(txLogs[txHash], log)
+	}
+
+	return res, txLogs
+}
+
+// blockToModels converts block data to DB model objects.
+func blockToModels(
 	block *block.Block,
 	transactions ethtypes.Transactions,
-	logsBloom ethtypes.Bloom,
+	logs []*ethtypes.Log,
 	txsStatus []uint8,
 	txsGasUsed []uint64,
 	results []types.CallResult,
 	blockGasLimit uint64,
-) (*model.Block, []*model.Transaction, []*model.Receipt, error) {
+) (*model.Block, []*model.Transaction, []*model.Receipt, []*model.Log, error) {
+	dbLogs, txLogs := ethToModelLogs(logs)
+
 	encoded := block.Header.EncodedHash()
 	bhash := common.HexToHash(encoded.Hex()).String()
 	bprehash := block.Header.PreviousHash.Hex()
 	bshash := block.Header.StateRoot.Hex()
+	logsBloom := ethtypes.BytesToBloom(ethtypes.LogsBloom(logs))
 	bloomData, _ := logsBloom.MarshalText()
 	baseFee := big.NewInt(10)
 	number := big.NewInt(0)
@@ -152,6 +185,7 @@ func convertToEthFormat(
 		receipt := &model.Receipt{
 			Status:            uint(txsStatus[idx]),
 			CumulativeGasUsed: cumulativeGasUsed,
+			Logs:              txLogs[ethTx.Hash().Hex()],
 			LogsBloom:         hex.EncodeToString(bloomData),
 			TransactionHash:   ethTx.Hash().Hex(),
 			BlockHash:         bhash,
@@ -168,7 +202,7 @@ func convertToEthFormat(
 		if tx.ToAddr == "" && results[idx].IsSuccess() {
 			var out []byte
 			if err := cbor.Unmarshal(results[idx].Ok, &out); err != nil {
-				return nil, nil, nil, err
+				return nil, nil, nil, nil, err
 			}
 			receipt.ContractAddress = common.BytesToAddress(out).Hex()
 		}
@@ -183,7 +217,7 @@ func convertToEthFormat(
 		Transactions: innerTxs,
 	}
 
-	return innerBlock, innerTxs, innerReceipts, nil
+	return innerBlock, innerTxs, innerReceipts, dbLogs, nil
 }
 
 // StoreBlockData parses oasis block and stores in db.
@@ -283,16 +317,15 @@ func (ib *indexBackend) StoreBlockData(ctx context.Context, oasisBlock *block.Bl
 		}
 		txsGasUsed = append(txsGasUsed, txGasUsed)
 	}
-	dbLogs := eth2DbLogs(logs)
 
-	// Convert to eth block, transactions and receipts.
-	logsBloom := ethtypes.BytesToBloom(ethtypes.LogsBloom(logs))
-	blk, txs, receipts, err := convertToEthFormat(oasisBlock, ethTxs, logsBloom, txsStatus, txsGasUsed, results, blockGasLimit)
+	// Convert to DB models.
+	blk, txs, receipts, dbLogs, err := blockToModels(oasisBlock, ethTxs, logs, txsStatus, txsGasUsed, results, blockGasLimit)
 	if err != nil {
 		ib.logger.Debug("Failed to ConvertToEthBlock", "height", blockNum, "err", err)
 		return err
 	}
 
+	// Store indexed models.
 	upsertedTxes := make([]*model.Transaction, 0, len(txs))
 	upsertedReceipts := make([]*model.Receipt, 0, len(receipts))
 	if err = ib.storage.RunInTransaction(ctx, func(s storage.Storage) error {
@@ -404,32 +437,6 @@ func (ib *indexBackend) StoreBlockData(ctx context.Context, oasisBlock *block.Bl
 	}
 
 	return nil
-}
-
-// eth2DbLogs converts ethereum log to model log.
-func eth2DbLogs(ethLogs []*ethtypes.Log) []*model.Log {
-	res := make([]*model.Log, 0, len(ethLogs))
-
-	for _, log := range ethLogs {
-		topics := make([]string, 0, len(log.Topics))
-		for _, tp := range log.Topics {
-			topics = append(topics, tp.Hex())
-		}
-
-		res = append(res, &model.Log{
-			Address:   log.Address.Hex(),
-			Topics:    topics,
-			Data:      hex.EncodeToString(log.Data),
-			Round:     log.BlockNumber,
-			BlockHash: log.BlockHash.Hex(),
-			TxHash:    log.TxHash.Hex(),
-			TxIndex:   log.TxIndex,
-			Index:     log.Index,
-			Removed:   log.Removed,
-		})
-	}
-
-	return res
 }
 
 // db2EthReceipt converts model.Receipt to the GetTransactipReceipt format.
