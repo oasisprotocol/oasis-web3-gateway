@@ -9,6 +9,7 @@ cache:
   block_size: 10
   tx_size: 10485760
   tx_receipt_size: 10485760
+  metrics: true
 
 database:
   host: "127.0.0.1"

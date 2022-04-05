@@ -6,15 +6,38 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/dgraph-io/ristretto"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"github.com/oasisprotocol/emerald-web3-gateway/conf"
 	"github.com/oasisprotocol/emerald-web3-gateway/db/model"
 	"github.com/oasisprotocol/emerald-web3-gateway/storage"
+)
+
+const periodicMetricsInterval = 60 * time.Second
+
+var (
+	// Cache hit metrics.
+	metricCacheHits     = promauto.NewGaugeVec(prometheus.GaugeOpts{Name: "oasis_emerald_web3_gateway_cache_hits", Help: "Number of cache hits."}, []string{"cache"})
+	metricCacheMisses   = promauto.NewGaugeVec(prometheus.GaugeOpts{Name: "oasis_emerald_web3_gateway_cache_misses", Help: "Number of cache misses."}, []string{"cache"})
+	metricCacheHitRatio = promauto.NewGaugeVec(prometheus.GaugeOpts{Name: "oasis_emerald_web3_cache_hit_ratio", Help: "Percent of Hits over all accesses (Hits + Misses)."}, []string{"cache"})
+	// Cache keys metrics.
+	metricCacheKeysAdded   = promauto.NewGaugeVec(prometheus.GaugeOpts{Name: "oasis_emerald_web3_cache_keys_added", Help: "Number of times an item was added to the cache."}, []string{"cache"})
+	metricCacheKeysUpdated = promauto.NewGaugeVec(prometheus.GaugeOpts{Name: "oasis_emerald_web3_cache_keys_updated", Help: "Number of times a cache item was updated."}, []string{"cache"})
+	metricCacheKeysEvicted = promauto.NewGaugeVec(prometheus.GaugeOpts{Name: "oasis_emerald_web3_cache_keys_evicted", Help: "Total number of cache keys evicted."}, []string{"cache"})
+	// Mean,Min,Max of item life expectancies.
+	//
+	// These metrics should be replaced by a single prometheus histogram (or a statistic) metric,
+	// but there is no way to transform the underlying Histogram the cache uses to a prometheus histogram.
+	metricCacheExpectancyMean = promauto.NewGaugeVec(prometheus.GaugeOpts{Name: "oasis_emerald_web3_cache_life_expectancy_mean", Help: "Mean item life expectancy in seconds."}, []string{"cache"})
+	metricCacheExpectancyMin  = promauto.NewGaugeVec(prometheus.GaugeOpts{Name: "oasis_emerald_web3_cache_life_expectancy_min", Help: "Min item life expectancy in seconds."}, []string{"cache"})
+	metricCacheExpectancyMax  = promauto.NewGaugeVec(prometheus.GaugeOpts{Name: "oasis_emerald_web3_cache_life_expectancy_max", Help: "Max item life expectancy in seconds."}, []string{"cache"})
 )
 
 // cachingBackend is a Backend that interposes a cache above an existing
@@ -421,6 +444,37 @@ func (cb *cachingBackend) onRejectOrEvictBlock(
 	cb.logsByBlockNumber.Delete(blk.Round)
 }
 
+func collectPromMetrics(cache string, m *ristretto.Metrics) {
+	// Hits.
+	metricCacheHits.WithLabelValues(cache).Set(float64(m.Hits()))
+	metricCacheMisses.WithLabelValues(cache).Set(float64(m.Misses()))
+	metricCacheHitRatio.WithLabelValues(cache).Set(m.Ratio())
+
+	// Keys.
+	metricCacheKeysAdded.WithLabelValues(cache).Set(float64(m.KeysAdded()))
+	metricCacheKeysUpdated.WithLabelValues(cache).Set(float64(m.KeysUpdated()))
+	metricCacheKeysEvicted.WithLabelValues(cache).Set(float64(m.KeysEvicted()))
+
+	// Life expectancy.
+	expectancy := m.LifeExpectancySeconds()
+	metricCacheExpectancyMean.WithLabelValues(cache).Set(expectancy.Mean())
+	metricCacheExpectancyMin.WithLabelValues(cache).Set(float64(expectancy.Min))
+	metricCacheExpectancyMax.WithLabelValues(cache).Set(float64(expectancy.Max))
+}
+
+func (cb *cachingBackend) metricsWorker(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(periodicMetricsInterval):
+			collectPromMetrics("blocks", cb.blockByNumber.Metrics)
+			collectPromMetrics("transactions", cb.txByHashHex.Metrics)
+			collectPromMetrics("transaction_receipts", cb.receiptByTxHashHex.Metrics)
+		}
+	}
+}
+
 func newCachingBackend(
 	ctx context.Context,
 	backend Backend,
@@ -459,6 +513,7 @@ func newCachingBackend(
 		OnEvict:            cb.onRejectOrEvictBlock,
 		OnReject:           cb.onRejectOrEvictBlock,
 		IgnoreInternalCost: true,
+		Metrics:            cfg.Metrics,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("indexer: failed to create block by number cache: %w", err)
@@ -470,6 +525,7 @@ func newCachingBackend(
 		NumCounters: int64(cfg.TxSize * 10),
 		MaxCost:     int64(cfg.TxSize),
 		BufferItems: bufferItems,
+		Metrics:     cfg.Metrics,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("indexer: failed to create tx by hash cache: %w", err)
@@ -481,6 +537,7 @@ func newCachingBackend(
 		NumCounters: int64(cfg.TxReceiptSize * 10),
 		MaxCost:     int64(cfg.TxReceiptSize),
 		BufferItems: bufferItems,
+		Metrics:     cfg.Metrics,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("indexer: failed to create receipt by tx hash cache: %w", err)
@@ -494,6 +551,10 @@ func newCachingBackend(
 	cb.lastIndexedRound, _ = backend.QueryLastIndexedRound(ctx)
 	if cb.lastRetainedRound, err = backend.QueryLastRetainedRound(ctx); err == nil {
 		cb.lastRetainedRoundValid = 1
+	}
+
+	if cfg.Metrics {
+		go cb.metricsWorker(ctx)
 	}
 
 	go func() {
