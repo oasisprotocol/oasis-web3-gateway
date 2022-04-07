@@ -10,6 +10,7 @@ import (
 
 	"github.com/dgraph-io/ristretto"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/oasisprotocol/oasis-core/go/common/pubsub"
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/prometheus/client_golang/prometheus"
@@ -64,28 +65,26 @@ func (cb *cachingBackend) SetObserver(
 }
 
 func (cb *cachingBackend) OnBlockIndexed(
-	blk *model.Block,
-	upsertedTxes []*model.Transaction,
-	upsertedReceipts []*model.Receipt,
+	blk *BlockData,
 ) {
 	// A new block was indexed, insert it into the cache.
-	cb.cacheBlock(blk)
+	cb.cacheBlock(blk.Block)
 
 	// WARNING: Don't even think of de-duplicating the per-block
 	// transaction data with the transactions in the tx cache.
 	//
 	// Transactions/receipts can get replaced and that would do
 	// bad things in certain edge cases.
-	for i := range upsertedTxes {
-		cb.cacheTx(upsertedTxes[i])
+	for i := range blk.Block.Transactions {
+		cb.cacheTx(blk.Block.Transactions[i])
 	}
-	for i := range upsertedReceipts {
-		cb.cacheReceipt(upsertedReceipts[i])
+	for i := range blk.Receipts {
+		cb.cacheReceipt(blk.Receipts[i])
 	}
-	cb.cacheLogsByBlockNumber(blk.Round, upsertedReceipts)
+	cb.cacheLogsByBlockNumber(blk.Block.Round, blk.Receipts)
 
-	if blk.Round > atomic.LoadUint64(&cb.lastIndexedRound) {
-		atomic.StoreUint64(&cb.lastIndexedRound, blk.Round)
+	if blk.Block.Round > atomic.LoadUint64(&cb.lastIndexedRound) {
+		atomic.StoreUint64(&cb.lastIndexedRound, blk.Block.Round)
 	}
 }
 
@@ -338,6 +337,10 @@ func (cb *cachingBackend) GetLogs(
 	}
 
 	return cb.inner.GetLogs(ctx, startRound, endRound)
+}
+
+func (cb *cachingBackend) WatchBlocks(ctx context.Context, buffer int64) (<-chan *BlockData, pubsub.ClosableSubscription, error) {
+	return cb.inner.WatchBlocks(ctx, buffer)
 }
 
 func (cb *cachingBackend) cacheBlock(

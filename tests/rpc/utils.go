@@ -27,6 +27,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/oasisprotocol/emerald-web3-gateway/filters"
+	"github.com/oasisprotocol/emerald-web3-gateway/gas"
 	"github.com/oasisprotocol/emerald-web3-gateway/indexer"
 	"github.com/oasisprotocol/emerald-web3-gateway/log"
 	"github.com/oasisprotocol/emerald-web3-gateway/rpc"
@@ -56,14 +57,16 @@ type Response struct {
 }
 
 const (
-	OasisBlockTimeout = 35 * time.Second
+	OasisBlockTimeout = 60 * time.Second
 	GasLimit          = uint64(1_000_000) // Minimum gas limit required to pass all tests (not using gas estimation).
 )
 
 var (
-	db       *psql.PostDB
-	GasPrice = big.NewInt(10_000_000_000) // Minimum gas price: https://github.com/oasisprotocol/emerald-paratime/blob/07179c1d20eddad3b3c3c9373bc0c853ad57fa16/src/lib.rs#L36
-	w3       *server.Web3Gateway
+	db             *psql.PostDB
+	GasPrice       = big.NewInt(100_000_000_000) // Minimum gas price: https://github.com/oasisprotocol/emerald-paratime/blob/5c32fcd1147c0e3baa64dd26a3a6a928a946236d/src/lib.rs#L36
+	w3             *server.Web3Gateway
+	indx           *indexer.Service
+	gasPriceOracle gas.Backend
 )
 
 func localClient(t *testing.T, ws bool) *ethclient.Client {
@@ -155,7 +158,7 @@ func Setup() error {
 		return err
 	}
 	backend := indexer.NewIndexBackend(runtimeID, storage, subBackend)
-	indx, backend, err := indexer.New(ctx, backend, rc, runtimeID, storage, tests.TestsConfig)
+	indx, backend, err = indexer.New(ctx, backend, rc, runtimeID, storage, tests.TestsConfig)
 	if err != nil {
 		return err
 	}
@@ -170,14 +173,26 @@ func Setup() error {
 		return fmt.Errorf("setup: failed creating server: %w", err)
 	}
 
-	w3.RegisterAPIs(rpc.GetRPCAPIs(context.Background(), rc, backend, tests.TestsConfig.Gateway, es))
+	gasPriceOracle = gas.New(ctx, backend, core.NewV1(rc))
+	if err = gasPriceOracle.Start(); err != nil {
+		return fmt.Errorf("setup: failed starting gas price oracle: %w", err)
+	}
+
+	w3.RegisterAPIs(rpc.GetRPCAPIs(context.Background(), rc, backend, gasPriceOracle, tests.TestsConfig.Gateway, es))
 	w3.RegisterHealthChecks([]server.HealthCheck{indx})
 
 	if err = w3.Start(); err != nil {
 		w3.Close()
 		return fmt.Errorf("setup: failed to start server: %w", err)
 	}
+
 	return nil
+}
+
+func Stop() {
+	_ = w3.Close()
+	indx.Stop()
+	gasPriceOracle.Stop()
 }
 
 func waitForDepositEvent(ch <-chan *client.BlockEvents, from types.Address, nonce uint64, to types.Address, amount types.BaseUnits) error {

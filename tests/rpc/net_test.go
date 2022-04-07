@@ -20,6 +20,8 @@ func TestMain(m *testing.M) {
 	// Run tests.
 	code := m.Run()
 
+	Stop()
+
 	os.Exit(code)
 }
 

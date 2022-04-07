@@ -44,7 +44,7 @@ type Log struct {
 	BlockHash string
 	TxHash    string `bun:",pk"`
 	TxIndex   uint
-	Index     uint `bun:",pk,allowzero"`
+	Index     uint `bun:",pk"`
 	Removed   bool
 }
 

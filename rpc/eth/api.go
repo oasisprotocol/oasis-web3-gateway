@@ -26,6 +26,7 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 
 	"github.com/oasisprotocol/emerald-web3-gateway/conf"
+	"github.com/oasisprotocol/emerald-web3-gateway/gas"
 	"github.com/oasisprotocol/emerald-web3-gateway/indexer"
 	"github.com/oasisprotocol/emerald-web3-gateway/rpc/utils"
 )
@@ -103,11 +104,12 @@ type API interface {
 }
 
 type publicAPI struct {
-	client       client.RuntimeClient
-	backend      indexer.Backend
-	chainID      uint32
-	Logger       *logging.Logger
-	methodLimits *conf.MethodLimits
+	client         client.RuntimeClient
+	backend        indexer.Backend
+	gasPriceOracle gas.Backend
+	chainID        uint32
+	Logger         *logging.Logger
+	methodLimits   *conf.MethodLimits
 }
 
 // NewPublicAPI creates an instance of the public ETH Web3 API.
@@ -116,14 +118,16 @@ func NewPublicAPI(
 	logger *logging.Logger,
 	chainID uint32,
 	backend indexer.Backend,
+	gasPriceOracle gas.Backend,
 	methodLimits *conf.MethodLimits,
 ) API {
 	return &publicAPI{
-		client:       client,
-		chainID:      chainID,
-		Logger:       logger,
-		backend:      backend,
-		methodLimits: methodLimits,
+		client:         client,
+		chainID:        chainID,
+		Logger:         logger,
+		backend:        backend,
+		gasPriceOracle: gasPriceOracle,
+		methodLimits:   methodLimits,
 	}
 }
 
@@ -265,14 +269,7 @@ func (api *publicAPI) GasPrice(ctx context.Context) (*hexutil.Big, error) {
 	logger := api.Logger.With("method", "eth_gasPrice")
 	logger.Debug("request")
 
-	coremod := core.NewV1(api.client)
-	mgp, err := coremod.MinGasPrice(ctx)
-	if err != nil {
-		logger.Error("core.MinGasPrice failed", "err", err)
-		return nil, ErrInternalError
-	}
-	nativeMGP := mgp[types.NativeDenomination]
-	return (*hexutil.Big)(nativeMGP.ToBigInt()), nil
+	return api.gasPriceOracle.GasPrice(), nil
 }
 
 func (api *publicAPI) GetBlockTransactionCountByHash(ctx context.Context, blockHash common.Hash) (hexutil.Uint, error) {

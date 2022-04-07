@@ -11,6 +11,7 @@ import (
 	cmnGrpc "github.com/oasisprotocol/oasis-core/go/common/grpc"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
 	"github.com/spf13/cobra"
 	"github.com/uptrace/bun"
 	"google.golang.org/grpc"
@@ -19,6 +20,7 @@ import (
 	"github.com/oasisprotocol/emerald-web3-gateway/conf"
 	"github.com/oasisprotocol/emerald-web3-gateway/db/migrations"
 	"github.com/oasisprotocol/emerald-web3-gateway/filters"
+	"github.com/oasisprotocol/emerald-web3-gateway/gas"
 	"github.com/oasisprotocol/emerald-web3-gateway/indexer"
 	"github.com/oasisprotocol/emerald-web3-gateway/log"
 	"github.com/oasisprotocol/emerald-web3-gateway/rpc"
@@ -237,7 +239,13 @@ func runRoot() error {
 		logger.Error("failed to create web3", err)
 		return err
 	}
-	w3.RegisterAPIs(rpc.GetRPCAPIs(ctx, rc, backend, cfg.Gateway, es))
+	gasPriceOracle := gas.New(ctx, backend, core.NewV1(rc))
+	if err = gasPriceOracle.Start(); err != nil {
+		logger.Error("failed to start gas price oracle", err)
+		return err
+	}
+
+	w3.RegisterAPIs(rpc.GetRPCAPIs(ctx, rc, backend, gasPriceOracle, cfg.Gateway, es))
 	w3.RegisterHealthChecks([]server.HealthCheck{indx})
 
 	svr := server.Server{
@@ -260,6 +268,7 @@ func runRoot() error {
 		logger.Info("Got interrupt, shutting down...")
 		go svr.Close()
 		go indx.Stop()
+		go gasPriceOracle.Stop()
 	}()
 
 	svr.Wait()

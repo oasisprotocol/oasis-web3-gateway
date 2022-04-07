@@ -15,6 +15,7 @@ import (
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 
+	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
@@ -231,12 +232,22 @@ func (ib *indexBackend) StoreBlockData(ctx context.Context, oasisBlock *block.Bl
 	txsStatus := []uint8{}
 	txsGasUsed := []uint64{}
 	results := []types.CallResult{}
+	lastTransactionPrice := quantity.NewQuantity()
 
 	// Decode tx and get logs
 	for txIndex, item := range txResults {
 		oasisTx := item.Tx
 		if len(oasisTx.AuthProofs) != 1 || oasisTx.AuthProofs[0].Module != "evm.ethereum.v0" {
-			// Skip non-Ethereum transactions.
+			// Skip non-Ethereum transactions unless this is the last transaction.
+			if txIndex == len(txResults)-1 {
+				// Try parsing the transaction to extract the gas price.
+				var tx types.Transaction
+				if err := cbor.Unmarshal(oasisTx.Body, &tx); err != nil {
+					ib.logger.Warn("failed to unamrshal last transaction in the block", "err", err)
+					continue
+				}
+				lastTransactionPrice = tx.AuthInfo.Fee.GasPrice()
+			}
 			continue
 		}
 
@@ -246,6 +257,13 @@ func (ib *indexBackend) StoreBlockData(ctx context.Context, oasisBlock *block.Bl
 		if err != nil {
 			ib.logger.Error("Failed to decode UnverifiedTransaction", "height", blockNum, "index", txIndex, "err", err)
 			return err
+		}
+
+		// Update the last transaction gas price. This is done for every transaction
+		// since the last transaction could be a non-ethereum transaction and failing to
+		// prase it should not be fatal.
+		if err = lastTransactionPrice.FromBigInt(ethTx.GasPrice()); err != nil {
+			ib.logger.Warn("failed to decode gas price", "err", err)
 		}
 
 		var status uint8
@@ -431,10 +449,13 @@ func (ib *indexBackend) StoreBlockData(ctx context.Context, oasisBlock *block.Bl
 	ib.subscribe.ChainChan() <- chainEvent
 	ib.logger.Debug("sent chain event to event system", "height", blockNum)
 
+	bd := &BlockData{Block: blk, Receipts: upsertedReceipts, LastTransactionPrice: lastTransactionPrice}
+
 	// Notify the observer if any.
 	if ib.observer != nil {
-		ib.observer.OnBlockIndexed(blk, upsertedTxes, upsertedReceipts)
+		ib.observer.OnBlockIndexed(bd)
 	}
+	ib.blockNotifier.Broadcast(bd)
 
 	return nil
 }
