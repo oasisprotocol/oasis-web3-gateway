@@ -45,7 +45,7 @@ echo
 # Wait for compute nodes before initiating deposit.
 ${OASIS_NODE} debug control wait-ready -a unix:${OASIS_NODE_SOCKET}
 
-${OASIS_DEPOSIT} -sock unix:${OASIS_NODE_SOCKET} "$@"
+${OASIS_DEPOSIT} -sock unix:${OASIS_NODE_SOCKET} "$@" || read
 
 echo
 echo "WARNING: Emerald is running in ephemeral mode. The chain state will be lost after you quit!"
