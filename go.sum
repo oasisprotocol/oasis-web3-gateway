@@ -687,8 +687,8 @@ github.com/klauspost/cpuid/v2 v2.0.4/go.mod h1:FInQzS24/EEf25PyTYn52gqo7WaD8xa02
 github.com/klauspost/cpuid/v2 v2.0.9/go.mod h1:FInQzS24/EEf25PyTYn52gqo7WaD8xa0213Md/qVLRg=
 github.com/klauspost/crc32 v0.0.0-20161016154125-cb6bfca970f6/go.mod h1:+ZoRqAPRLkC4NPOvfYeR5KNOrY6TD+/sAC3HXPZgDYg=
 github.com/klauspost/pgzip v1.0.2-0.20170402124221-0bf5dcad4ada/go.mod h1:Ch1tH69qFZu15pkjo5kYi6mth2Zzwzt50oCQKQE9RUs=
-github.com/knadh/koanf v1.4.0 h1:/k0Bh49SqLyLNfte9r6cvuZWrApOQhglOmhIU3L/zDw=
-github.com/knadh/koanf v1.4.0/go.mod h1:1cfH5223ZeZUOs8FU2UdTmaNfHpqgtjV0+NHjRO43gs=
+github.com/knadh/koanf v1.4.1 h1:Z0VGW/uo8NJmjd+L1Dc3S5frq6c62w5xQ9Yf4Mg3wFQ=
+github.com/knadh/koanf v1.4.1/go.mod h1:1cfH5223ZeZUOs8FU2UdTmaNfHpqgtjV0+NHjRO43gs=
 github.com/konsorten/go-windows-terminal-sequences v1.0.1/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
 github.com/konsorten/go-windows-terminal-sequences v1.0.3/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
 github.com/koron/go-ssdp v0.0.0-20191105050749-2e1c40ed0b5d/go.mod h1:5Ky9EC2xfoUKUor0Hjgi2BJhCSXJfMOFlmyYrVKGQMk=
