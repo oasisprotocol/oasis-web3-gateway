@@ -8,9 +8,10 @@ require (
 	github.com/fxamacker/cbor/v2 v2.4.0
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.5.0
-	github.com/knadh/koanf v1.4.0
+	github.com/knadh/koanf v1.4.1
 	github.com/oasisprotocol/oasis-core/go v0.2200.2
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.2.1-0.20220321110407-a1147dd2c331
+	github.com/prometheus/client_golang v1.12.1
 	github.com/rs/cors v1.8.2
 	github.com/spf13/cobra v1.4.0
 	github.com/stretchr/testify v1.7.1
@@ -69,7 +70,6 @@ require (
 	github.com/pelletier/go-toml v1.9.4 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/prometheus/client_golang v1.12.1 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.32.1 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
