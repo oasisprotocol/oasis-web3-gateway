@@ -78,7 +78,7 @@ jobs:
 
       - name: Upload oasis-node logs artifacts
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: oasis-node-logs
           path: ${{ env.OASIS_NODE_DATADIR }}/**/*.log
