@@ -449,7 +449,12 @@ func (ib *indexBackend) StoreBlockData(ctx context.Context, oasisBlock *block.Bl
 	ib.subscribe.ChainChan() <- chainEvent
 	ib.logger.Debug("sent chain event to event system", "height", blockNum)
 
-	bd := &BlockData{Block: blk, Receipts: upsertedReceipts, LastTransactionPrice: lastTransactionPrice}
+	bd := &BlockData{
+		Block:                blk,
+		Receipts:             upsertedReceipts,
+		UniqueTxes:           upsertedTxes,
+		LastTransactionPrice: lastTransactionPrice,
+	}
 
 	// Notify the observer if any.
 	if ib.observer != nil {

@@ -93,8 +93,9 @@ type Backend interface {
 
 // BlockData contains all per block indexed data.
 type BlockData struct {
-	Block    *model.Block
-	Receipts []*model.Receipt
+	Block      *model.Block
+	Receipts   []*model.Receipt
+	UniqueTxes []*model.Transaction
 	// LastTransactionPrice is the price of the last transaction in the runtime block in base units.
 	// This can be different than the price of the last transaction in the `BlockData.Block`
 	// as `BlockData.Block` contains only EVM transactions.

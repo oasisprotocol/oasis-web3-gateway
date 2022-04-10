@@ -3,12 +3,11 @@ package indexer
 import (
 	"context"
 	"errors"
-	"fmt"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/dgraph-io/ristretto"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/oasisprotocol/oasis-core/go/common/pubsub"
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
@@ -24,37 +23,91 @@ import (
 const periodicMetricsInterval = 60 * time.Second
 
 var (
-	// Cache hit metrics.
-	metricCacheHits     = promauto.NewGaugeVec(prometheus.GaugeOpts{Name: "oasis_emerald_web3_gateway_cache_hits", Help: "Number of cache hits."}, []string{"cache"})
-	metricCacheMisses   = promauto.NewGaugeVec(prometheus.GaugeOpts{Name: "oasis_emerald_web3_gateway_cache_misses", Help: "Number of cache misses."}, []string{"cache"})
-	metricCacheHitRatio = promauto.NewGaugeVec(prometheus.GaugeOpts{Name: "oasis_emerald_web3_cache_hit_ratio", Help: "Percent of Hits over all accesses (Hits + Misses)."}, []string{"cache"})
-	// Cache keys metrics.
-	metricCacheKeysAdded   = promauto.NewGaugeVec(prometheus.GaugeOpts{Name: "oasis_emerald_web3_cache_keys_added", Help: "Number of times an item was added to the cache."}, []string{"cache"})
-	metricCacheKeysUpdated = promauto.NewGaugeVec(prometheus.GaugeOpts{Name: "oasis_emerald_web3_cache_keys_updated", Help: "Number of times a cache item was updated."}, []string{"cache"})
-	metricCacheKeysEvicted = promauto.NewGaugeVec(prometheus.GaugeOpts{Name: "oasis_emerald_web3_cache_keys_evicted", Help: "Total number of cache keys evicted."}, []string{"cache"})
-	// Mean,Min,Max of item life expectancies.
-	//
-	// These metrics should be replaced by a single prometheus histogram (or a statistic) metric,
-	// but there is no way to transform the underlying Histogram the cache uses to a prometheus histogram.
-	metricCacheExpectancyMean = promauto.NewGaugeVec(prometheus.GaugeOpts{Name: "oasis_emerald_web3_cache_life_expectancy_mean", Help: "Mean item life expectancy in seconds."}, []string{"cache"})
-	metricCacheExpectancyMin  = promauto.NewGaugeVec(prometheus.GaugeOpts{Name: "oasis_emerald_web3_cache_life_expectancy_min", Help: "Min item life expectancy in seconds."}, []string{"cache"})
-	metricCacheExpectancyMax  = promauto.NewGaugeVec(prometheus.GaugeOpts{Name: "oasis_emerald_web3_cache_life_expectancy_max", Help: "Max item life expectancy in seconds."}, []string{"cache"})
+	metricCacheHits = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "oasis_emerald_web3_gateway_cache_hits",
+			Help: "Number of cache hits.",
+		},
+		[]string{"cache"},
+	)
+	metricCacheMisses = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "oasis_emerald_web3_gateway_cache_misses",
+			Help: "Number of cache misses.",
+		},
+		[]string{"cache"},
+	)
+	metricCacheHitRatio = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "oasis_emerald_web3_cache_hit_ratio",
+			Help: "Percent of Hits over all accesses (Hits + Misses).",
+		},
+		[]string{"cache"},
+	)
 )
+
+type txCacheEntry struct {
+	tx          *model.Transaction
+	blockNumber uint64
+}
+
+type receiptCacheEntry struct {
+	receipt     *model.Receipt
+	blockNumber uint64
+}
+
+type cacheMetrics struct {
+	hits   uint64
+	misses uint64
+}
+
+func (m *cacheMetrics) OnHit() {
+	atomic.AddUint64(&m.hits, 1)
+}
+
+func (m *cacheMetrics) OnMiss() {
+	atomic.AddUint64(&m.misses, 1)
+}
+
+func (m *cacheMetrics) Accumulate(label string) {
+	hits := atomic.SwapUint64(&m.hits, 0)
+	misses := atomic.SwapUint64(&m.misses, 0)
+	total := hits + misses
+
+	ratio := float64(1.0)
+	if fTotal := float64(total); fTotal > 0 {
+		ratio = float64(hits) / fTotal
+	}
+	metricCacheHits.WithLabelValues(label).Set(float64(hits))
+	metricCacheMisses.WithLabelValues(label).Set(float64(misses))
+	metricCacheHitRatio.WithLabelValues(label).Set(ratio)
+}
 
 // cachingBackend is a Backend that interposes a cache above an existing
 // backend.
 type cachingBackend struct {
 	inner Backend
 
-	blockByNumber      *ristretto.Cache
-	blockByHashHex     sync.Map
-	txByHashHex        *ristretto.Cache
-	receiptByTxHashHex *ristretto.Cache
-	logsByBlockNumber  sync.Map
+	cacheSize    uint64
+	maxCacheSize uint64
+
+	blockDataByNumber sync.Map
+	blockByHashHex    sync.Map
+	logsByBlockNumber sync.Map
+
+	txByHashHex        sync.Map
+	receiptByTxHashHex sync.Map
 
 	lastIndexedRound       uint64
 	lastRetainedRound      uint64
 	lastRetainedRoundValid uint64
+
+	metricsBlockCache   cacheMetrics
+	metricsTxCache      cacheMetrics
+	metricsLogCache     cacheMetrics
+	metricsReceiptCache cacheMetrics
+
+	trackMetrics bool
 }
 
 // SetObserver sets the intrusive backend observer.
@@ -65,26 +118,42 @@ func (cb *cachingBackend) SetObserver(
 }
 
 func (cb *cachingBackend) OnBlockIndexed(
-	blk *BlockData,
+	bd *BlockData,
 ) {
-	// A new block was indexed, insert it into the cache.
-	cb.cacheBlock(blk.Block)
+	// A new block was indexed, insert it into the various caches.
+	cb.blockDataByNumber.Store(bd.Block.Round, bd)
+	cb.blockByHashHex.Store(bd.Block.Hash, bd.Block)
+	cb.cacheLogsByBlockNumber(bd.Block.Round, bd.Receipts)
 
-	// WARNING: Don't even think of de-duplicating the per-block
-	// transaction data with the transactions in the tx cache.
-	//
-	// Transactions/receipts can get replaced and that would do
-	// bad things in certain edge cases.
-	for i := range blk.Block.Transactions {
-		cb.cacheTx(blk.Block.Transactions[i])
-	}
-	for i := range blk.Receipts {
-		cb.cacheReceipt(blk.Receipts[i])
-	}
-	cb.cacheLogsByBlockNumber(blk.Block.Round, blk.Receipts)
+	cb.cacheTxes(bd.Block.Round, bd.UniqueTxes)
+	cb.cacheReceipts(bd.Block.Round, bd.Receipts)
+	cb.cacheSize++
 
-	if blk.Block.Round > atomic.LoadUint64(&cb.lastIndexedRound) {
-		atomic.StoreUint64(&cb.lastIndexedRound, blk.Block.Round)
+	if bd.Block.Round > atomic.LoadUint64(&cb.lastIndexedRound) {
+		atomic.StoreUint64(&cb.lastIndexedRound, bd.Block.Round)
+	}
+
+	// If the cache is larger than the max size after the insert, prune
+	// the oldest rounds till the cache is at the maximum size again.
+	if cb.cacheSize > cb.maxCacheSize {
+		// Note: This is rather wasteful, but it can happen concurrently
+		// with lookups to the newly cached data, and the cache doesn't
+		// need to be all that large to service the vast majority of
+		// requests.
+		rounds := make([]uint64, 0, cb.cacheSize)
+		cb.blockDataByNumber.Range(func(key, value interface{}) bool {
+			rounds = append(rounds, key.(uint64))
+			return true
+		})
+		sort.Slice(rounds, func(i, j int) bool {
+			return rounds[i] < rounds[j]
+		})
+		for _, idx := range rounds {
+			cb.pruneCache(idx)
+			if cb.cacheSize <= cb.maxCacheSize {
+				break
+			}
+		}
 	}
 }
 
@@ -209,10 +278,7 @@ func (cb *cachingBackend) GetBlockByRound(
 		return blk, nil
 	}
 
-	if blk, err = cb.inner.GetBlockByRound(ctx, blockNumber); err == nil {
-		cb.cacheBlock(blk)
-	}
-	return blk, err
+	return cb.inner.GetBlockByRound(ctx, blockNumber)
 }
 
 func (cb *cachingBackend) GetBlockByHash(
@@ -224,11 +290,7 @@ func (cb *cachingBackend) GetBlockByHash(
 		return blk, nil
 	}
 
-	var err error
-	if blk, err = cb.inner.GetBlockByHash(ctx, blockHash); err == nil {
-		cb.cacheBlock(blk)
-	}
-	return blk, err
+	return cb.inner.GetBlockByHash(ctx, blockHash)
 }
 
 func (cb *cachingBackend) GetBlockTransactionCountByRound(
@@ -284,13 +346,9 @@ func (cb *cachingBackend) GetTransactionReceipt(
 	ctx context.Context,
 	txHash ethcommon.Hash,
 ) (map[string]interface{}, error) {
-	dbReceipt, ok := cb.cachedReceiptByTxHash(txHash)
-	if ok {
-		return db2EthReceipt(dbReceipt), nil
+	if receipt, ok := cb.cachedReceiptByTxHash(txHash); ok {
+		return db2EthReceipt(receipt), nil
 	}
-
-	// This is updated by watching the indexer, as transactions (and
-	// their receipts) can get replaced under eth semantics.
 	return cb.inner.GetTransactionReceipt(ctx, txHash)
 }
 
@@ -315,12 +373,13 @@ func (cb *cachingBackend) GetLogs(
 	startRound uint64,
 	endRound uint64,
 ) ([]*model.Log, error) {
-	const smallRangeMax = 16
-
 	// This uses BETWEEN, so inclusive on both ends.  Additionally,
-	// scanning the map is relatively expensive, so limit the range
-	// we service from the cache to something "reasonable".
-	if reqSize := endRound - startRound + 1; reqSize <= smallRangeMax {
+	// only bother to attempt to service this from the cache iff the
+	// range can possibly be in the cache.
+	//
+	// Queries for data that is too old, will bail after the first
+	// cache lookup, so there is no need to examine the range itself.
+	if reqSize := endRound - startRound + 1; reqSize < cb.maxCacheSize {
 		logs := make([]*model.Log, 0, reqSize)
 		var ok bool
 		for i := startRound; i <= endRound; i++ {
@@ -332,10 +391,16 @@ func (cb *cachingBackend) GetLogs(
 			logs = append(logs, blockLogs...)
 		}
 		if ok {
+			if cb.trackMetrics {
+				cb.metricsLogCache.OnHit()
+			}
 			return logs, nil
 		}
 	}
 
+	if cb.trackMetrics {
+		cb.metricsLogCache.OnMiss()
+	}
 	return cb.inner.GetLogs(ctx, startRound, endRound)
 }
 
@@ -343,28 +408,69 @@ func (cb *cachingBackend) WatchBlocks(ctx context.Context, buffer int64) (<-chan
 	return cb.inner.WatchBlocks(ctx, buffer)
 }
 
-func (cb *cachingBackend) cacheBlock(
-	blk *model.Block,
+func (cb *cachingBackend) pruneCache(
+	blockNumber uint64,
 ) {
-	const costBlock = 1
-	if cb.blockByNumber.Set(blk.Round, blk, costBlock) {
-		cb.blockByHashHex.Store(blk.Hash, blk)
+	bd, ok := cb.cachedBlockDataByNumber(blockNumber)
+	if !ok {
+		return
+	}
+
+	if bd.Block.Round != blockNumber {
+		panic("indexer: cached entry block height != queried height")
+	}
+
+	cb.blockByHashHex.Delete(bd.Block.Hash)
+	cb.logsByBlockNumber.Delete(bd.Block.Round)
+
+	// Note: Load followed by delete is safe since the only routine that
+	// mutates those caches is the caller.
+	for i := range bd.UniqueTxes {
+		txHash := bd.UniqueTxes[i].Hash
+		if untypedTxEntry, ok := cb.txByHashHex.Load(txHash); ok {
+			txEntry := untypedTxEntry.(*txCacheEntry)
+			if txEntry.blockNumber == blockNumber {
+				cb.txByHashHex.Delete(txHash)
+			}
+		}
+	}
+	for i := range bd.Receipts {
+		txHash := bd.Receipts[i].TransactionHash
+		if untypedReceiptEntry, ok := cb.receiptByTxHashHex.Load(txHash); ok {
+			receiptEntry := untypedReceiptEntry.(*receiptCacheEntry)
+			if receiptEntry.blockNumber == blockNumber {
+				cb.receiptByTxHashHex.Delete(txHash)
+			}
+		}
+	}
+
+	cb.cacheSize--
+}
+
+func (cb *cachingBackend) cacheTxes(
+	blockNumber uint64,
+	txes []*model.Transaction,
+) {
+	for i := range txes {
+		entry := &txCacheEntry{
+			tx:          txes[i],
+			blockNumber: blockNumber,
+		}
+		cb.txByHashHex.Store(entry.tx.Hash, entry)
 	}
 }
 
-func (cb *cachingBackend) cacheTx(
-	tx *model.Transaction,
+func (cb *cachingBackend) cacheReceipts(
+	blockNumber uint64,
+	receipts []*model.Receipt,
 ) {
-	cb.txByHashHex.Set(tx.Hash, tx, int64(tx.Size()))
-}
-
-func (cb *cachingBackend) cacheReceipt(
-	receipt *model.Receipt,
-) {
-	// TODO/yawning: At some point this should store the
-	// map[string]interface{} instead to save some s11n overhead,
-	// but calculating the cost annoying (especially accurately).
-	cb.receiptByTxHashHex.Set(receipt.TransactionHash, receipt, int64(receipt.Size()))
+	for i := range receipts {
+		entry := &receiptCacheEntry{
+			receipt:     receipts[i],
+			blockNumber: blockNumber,
+		}
+		cb.receiptByTxHashHex.Store(receipts[i].TransactionHash, entry)
+	}
 }
 
 func (cb *cachingBackend) cacheLogsByBlockNumber(
@@ -389,12 +495,28 @@ func (cb *cachingBackend) blockNumberFromRound(
 	return round, nil
 }
 
+func (cb *cachingBackend) cachedBlockDataByNumber(
+	blockNumber uint64,
+) (*BlockData, bool) {
+	untypedBlockData, ok := cb.blockDataByNumber.Load(blockNumber)
+	if ok {
+		return untypedBlockData.(*BlockData), true
+	}
+	return nil, false
+}
+
 func (cb *cachingBackend) cachedBlockByNumber(
 	blockNumber uint64,
 ) (*model.Block, bool) {
-	untypedBlk, ok := cb.blockByNumber.Get(blockNumber)
-	if ok {
-		return untypedBlk.(*model.Block), true
+	if entry, ok := cb.cachedBlockDataByNumber(blockNumber); ok {
+		if cb.trackMetrics {
+			cb.metricsBlockCache.OnHit()
+		}
+		return entry.Block, true
+	}
+
+	if cb.trackMetrics {
+		cb.metricsBlockCache.OnMiss()
 	}
 	return nil, false
 }
@@ -402,9 +524,16 @@ func (cb *cachingBackend) cachedBlockByNumber(
 func (cb *cachingBackend) cachedBlockByHash(
 	blockHash ethcommon.Hash,
 ) (*model.Block, bool) {
-	untypedBlk, ok := cb.blockByHashHex.Load(blockHash.Hex())
+	untypedBlock, ok := cb.blockByHashHex.Load(blockHash.Hex())
 	if ok {
-		return untypedBlk.(*model.Block), true
+		if cb.trackMetrics {
+			cb.metricsBlockCache.OnHit()
+		}
+		return untypedBlock.(*model.Block), true
+	}
+
+	if cb.trackMetrics {
+		cb.metricsBlockCache.OnMiss()
 	}
 	return nil, false
 }
@@ -412,9 +541,16 @@ func (cb *cachingBackend) cachedBlockByHash(
 func (cb *cachingBackend) cachedTxByHash(
 	ethTxHash ethcommon.Hash,
 ) (*model.Transaction, bool) {
-	untypedTx, ok := cb.txByHashHex.Get(ethTxHash.Hex())
+	untypedEntry, ok := cb.txByHashHex.Load(ethTxHash.Hex())
 	if ok {
-		return untypedTx.(*model.Transaction), true
+		if cb.trackMetrics {
+			cb.metricsTxCache.OnHit()
+		}
+		return untypedEntry.(*txCacheEntry).tx, true
+	}
+
+	if cb.trackMetrics {
+		cb.metricsTxCache.OnMiss()
 	}
 	return nil, false
 }
@@ -422,9 +558,16 @@ func (cb *cachingBackend) cachedTxByHash(
 func (cb *cachingBackend) cachedReceiptByTxHash(
 	ethTxHash ethcommon.Hash,
 ) (*model.Receipt, bool) {
-	untypedReceipt, ok := cb.receiptByTxHashHex.Get(ethTxHash.Hex())
+	untypedEntry, ok := cb.receiptByTxHashHex.Load(ethTxHash.Hex())
 	if ok {
-		return untypedReceipt.(*model.Receipt), true
+		if cb.trackMetrics {
+			cb.metricsReceiptCache.OnHit()
+		}
+		return untypedEntry.(*receiptCacheEntry).receipt, true
+	}
+
+	if cb.trackMetrics {
+		cb.metricsReceiptCache.OnMiss()
 	}
 	return nil, false
 }
@@ -439,41 +582,16 @@ func (cb *cachingBackend) cachedLogsByNumber(
 	return nil, false
 }
 
-func (cb *cachingBackend) onRejectOrEvictBlock(
-	item *ristretto.Item,
-) {
-	blk := item.Value.(*model.Block)
-	cb.blockByHashHex.Delete(blk.Hash)
-	cb.logsByBlockNumber.Delete(blk.Round)
-}
-
-func collectPromMetrics(cache string, m *ristretto.Metrics) {
-	// Hits.
-	metricCacheHits.WithLabelValues(cache).Set(float64(m.Hits()))
-	metricCacheMisses.WithLabelValues(cache).Set(float64(m.Misses()))
-	metricCacheHitRatio.WithLabelValues(cache).Set(m.Ratio())
-
-	// Keys.
-	metricCacheKeysAdded.WithLabelValues(cache).Set(float64(m.KeysAdded()))
-	metricCacheKeysUpdated.WithLabelValues(cache).Set(float64(m.KeysUpdated()))
-	metricCacheKeysEvicted.WithLabelValues(cache).Set(float64(m.KeysEvicted()))
-
-	// Life expectancy.
-	expectancy := m.LifeExpectancySeconds()
-	metricCacheExpectancyMean.WithLabelValues(cache).Set(expectancy.Mean())
-	metricCacheExpectancyMin.WithLabelValues(cache).Set(float64(expectancy.Min))
-	metricCacheExpectancyMax.WithLabelValues(cache).Set(float64(expectancy.Max))
-}
-
 func (cb *cachingBackend) metricsWorker(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-time.After(periodicMetricsInterval):
-			collectPromMetrics("blocks", cb.blockByNumber.Metrics)
-			collectPromMetrics("transactions", cb.txByHashHex.Metrics)
-			collectPromMetrics("transaction_receipts", cb.receiptByTxHashHex.Metrics)
+			cb.metricsBlockCache.Accumulate("blocks")
+			cb.metricsTxCache.Accumulate("transactions")
+			cb.metricsReceiptCache.Accumulate("transaction_receipts")
+			cb.metricsLogCache.Accumulate("transaction_logs")
 		}
 	}
 }
@@ -482,14 +600,8 @@ func newCachingBackend(
 	ctx context.Context,
 	backend Backend,
 	cfg *conf.CacheConfig,
-) (Backend, error) {
-	const (
-		defaultBlockCacheSize   = 128                // In blocks
-		defaultTxCacheSize      = 50 * 1024 * 1024   // In bytes
-		defaultReceiptCacheSize = defaultTxCacheSize // In bytes
-
-		bufferItems = 64 // Per documentation
-	)
+) Backend {
+	const defaultBlockCacheSize = 128 // In blocks
 
 	if cfg == nil {
 		cfg = new(conf.CacheConfig)
@@ -497,75 +609,28 @@ func newCachingBackend(
 	if cfg.BlockSize == 0 {
 		cfg.BlockSize = defaultBlockCacheSize
 	}
-	if cfg.TxSize == 0 {
-		cfg.TxSize = defaultTxCacheSize
-	}
-	if cfg.TxReceiptSize == 0 {
-		cfg.TxReceiptSize = defaultReceiptCacheSize
-	}
 
 	cb := &cachingBackend{
-		inner: backend,
+		inner:        backend,
+		maxCacheSize: cfg.BlockSize,
+		trackMetrics: cfg.Metrics,
 	}
-
-	// Block cache (by block number aka round), accounting in blocks.
-	blockByNumber, err := ristretto.NewCache(&ristretto.Config{
-		NumCounters:        int64(cfg.BlockSize * 10), // 10x MaxCost
-		MaxCost:            int64(cfg.BlockSize),
-		BufferItems:        bufferItems,
-		OnEvict:            cb.onRejectOrEvictBlock,
-		OnReject:           cb.onRejectOrEvictBlock,
-		IgnoreInternalCost: true,
-		Metrics:            cfg.Metrics,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("indexer: failed to create block by number cache: %w", err)
-	}
-	cb.blockByNumber = blockByNumber
-
-	// Transaction cache (by transaction hash in hex), accounting in bytes.
-	txByHashHex, err := ristretto.NewCache(&ristretto.Config{
-		NumCounters: int64(cfg.TxSize * 10),
-		MaxCost:     int64(cfg.TxSize),
-		BufferItems: bufferItems,
-		Metrics:     cfg.Metrics,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("indexer: failed to create tx by hash cache: %w", err)
-	}
-	cb.txByHashHex = txByHashHex
-
-	// Transaction receipt cache (by transaction hash in hex), accounting in bytes.
-	receiptByTxHashHex, err := ristretto.NewCache(&ristretto.Config{
-		NumCounters: int64(cfg.TxReceiptSize * 10),
-		MaxCost:     int64(cfg.TxReceiptSize),
-		BufferItems: bufferItems,
-		Metrics:     cfg.Metrics,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("indexer: failed to create receipt by tx hash cache: %w", err)
-	}
-	cb.receiptByTxHashHex = receiptByTxHashHex
 
 	cb.inner.SetObserver(cb)
 
 	// Try to initialize the last indexed/retained rounds.  Failures
 	// are ok.
+	var err error
 	cb.lastIndexedRound, _ = backend.QueryLastIndexedRound(ctx)
 	if cb.lastRetainedRound, err = backend.QueryLastRetainedRound(ctx); err == nil {
 		cb.lastRetainedRoundValid = 1
 	}
 
+	// TODO: This could warm up the caches by doing db queries.
+
 	if cfg.Metrics {
 		go cb.metricsWorker(ctx)
 	}
 
-	go func() {
-		<-ctx.Done()
-		blockByNumber.Close()
-		txByHashHex.Close()
-		receiptByTxHashHex.Close()
-	}()
-
-	return cb, nil
+	return cb
 }

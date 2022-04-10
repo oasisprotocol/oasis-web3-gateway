@@ -326,11 +326,7 @@ func New(
 	cfg *conf.Config,
 ) (*Service, Backend, error) {
 	ctx, cancelCtx := context.WithCancel(ctxBackend)
-	cachingBackend, err := newCachingBackend(ctx, backend, cfg.Cache)
-	if err != nil {
-		cancelCtx()
-		return nil, nil, err
-	}
+	cachingBackend := newCachingBackend(ctx, backend, cfg.Cache)
 
 	s := &Service{
 		BaseBackgroundService: *service.NewBaseBackgroundService("gateway/indexer"),
