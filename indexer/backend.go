@@ -8,6 +8,8 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common"
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/hash"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
+	"github.com/oasisprotocol/oasis-core/go/common/pubsub"
+	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 
@@ -62,10 +64,17 @@ type GetEthInfoBackend interface {
 	GetLogs(ctx context.Context, startRound, endRound uint64) ([]*model.Log, error)
 }
 
+// BlockWatcher is the block-watcher interface.
+type BlockWatcher interface {
+	// WatchBlocks returns a channel that produces a stream of indexed blocks.
+	WatchBlocks(ctx context.Context, buffer int64) (<-chan *BlockData, pubsub.ClosableSubscription, error)
+}
+
 // Backend is the indexer backend interface.
 type Backend interface {
 	QueryableBackend
 	GetEthInfoBackend
+	BlockWatcher
 
 	// Index indexes a block.
 	Index(
@@ -82,18 +91,36 @@ type Backend interface {
 	SetObserver(BackendObserver)
 }
 
+// BlockData contains all per block indexed data.
+type BlockData struct {
+	Block    *model.Block
+	Receipts []*model.Receipt
+	// LastTransactionPrice is the price of the last transaction in the runtime block in base units.
+	// This can be different than the price of the last transaction in the `BlockData.Block`
+	// as `BlockData.Block` contains only EVM transactions.
+	// When https://github.com/oasisprotocol/emerald-web3-gateway/issues/84 is implemented
+	// this will need to be persisted in the DB, so that instances without the indexer can
+	// obtain this as well.
+	LastTransactionPrice *quantity.Quantity
+}
+
 // BackendObserver is the intrusive backend observer interaface.
+// TODO: BlockObserver could be replaced by using BlockWatcher.
 type BackendObserver interface {
-	OnBlockIndexed(*model.Block, []*model.Transaction, []*model.Receipt)
+	OnBlockIndexed(*BlockData)
 	OnLastRetainedRound(uint64)
 }
 
 type indexBackend struct {
-	runtimeID common.Namespace
-	logger    *logging.Logger
-	storage   storage.Storage
+	runtimeID     common.Namespace
+	logger        *logging.Logger
+	storage       storage.Storage
+	blockNotifier *pubsub.Broker
+
+	// TODO: "filter subscriber" can probably be migrated to using BlockWatcher.
 	subscribe filters.SubscribeBackend
-	observer  BackendObserver
+	// TODO: observer can probably be migrated to using BlockWatcher.
+	observer BackendObserver
 }
 
 // SetObserver sets the intrusive backend observer.
@@ -137,6 +164,14 @@ func (ib *indexBackend) Prune(ctx context.Context, round uint64) error {
 
 		return ib.storage.Delete(ctx, new(model.Receipt), round)
 	})
+}
+
+func (ib *indexBackend) WatchBlocks(ctx context.Context, buffer int64) (<-chan *BlockData, pubsub.ClosableSubscription, error) {
+	typedCh := make(chan *BlockData)
+	sub := ib.blockNotifier.SubscribeBuffered(buffer)
+	sub.Unwrap(typedCh)
+
+	return typedCh, sub, nil
 }
 
 // blockNumberFromRound converts a round to a blocknumber.
@@ -283,10 +318,11 @@ func (ib *indexBackend) GetLogs(ctx context.Context, startRound, endRound uint64
 // NewIndexBackend returns a new index backend.
 func NewIndexBackend(runtimeID common.Namespace, storage storage.Storage, sb filters.SubscribeBackend) Backend {
 	b := &indexBackend{
-		runtimeID: runtimeID,
-		logger:    logging.GetLogger("indexer"),
-		storage:   storage,
-		subscribe: sb,
+		runtimeID:     runtimeID,
+		logger:        logging.GetLogger("indexer"),
+		storage:       storage,
+		subscribe:     sb,
+		blockNotifier: pubsub.NewBroker(false),
 	}
 
 	b.logger.Info("New indexer backend")

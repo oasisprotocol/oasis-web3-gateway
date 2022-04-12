@@ -9,6 +9,7 @@ import (
 
 	"github.com/oasisprotocol/emerald-web3-gateway/conf"
 	eventFilters "github.com/oasisprotocol/emerald-web3-gateway/filters"
+	"github.com/oasisprotocol/emerald-web3-gateway/gas"
 	"github.com/oasisprotocol/emerald-web3-gateway/indexer"
 	"github.com/oasisprotocol/emerald-web3-gateway/rpc/eth"
 	"github.com/oasisprotocol/emerald-web3-gateway/rpc/eth/filters"
@@ -23,13 +24,14 @@ func GetRPCAPIs(
 	ctx context.Context,
 	client client.RuntimeClient,
 	backend indexer.Backend,
+	gasPriceOracle gas.Backend,
 	config *conf.GatewayConfig,
 	eventSystem *eventFilters.EventSystem,
 ) []ethRpc.API {
 	var apis []ethRpc.API
 
 	web3Service := web3.NewPublicAPI()
-	ethService := eth.NewPublicAPI(client, logging.GetLogger("eth_rpc"), config.ChainID, backend, config.MethodLimits)
+	ethService := eth.NewPublicAPI(client, logging.GetLogger("eth_rpc"), config.ChainID, backend, gasPriceOracle, config.MethodLimits)
 	netService := net.NewPublicAPI(config.ChainID)
 	txpoolService := txpool.NewPublicAPI()
 	filtersService := filters.NewPublicAPI(client, logging.GetLogger("eth_filters"), backend, eventSystem)

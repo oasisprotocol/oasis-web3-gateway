@@ -14,6 +14,7 @@ import (
 	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
 	"github.com/tyler-smith/go-bip39"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/oasisprotocol/oasis-core/go/common"
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
@@ -176,7 +177,7 @@ func main() {
 		panic(fmt.Sprintf("can't decode runtime ID: %s", err))
 	}
 
-	conn, err := cmnGrpc.Dial(*sock, grpc.WithInsecure())
+	conn, err := cmnGrpc.Dial(*sock, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		panic(fmt.Sprintf("can't connect to socket: %s", err))
 	}
