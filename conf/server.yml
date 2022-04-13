@@ -10,8 +10,6 @@ log:
 
 cache:
   block_size: 1024
-  tx_size: 1073741824
-  tx_receipt_size: 1073741824
   metrics: false
 
 database:
