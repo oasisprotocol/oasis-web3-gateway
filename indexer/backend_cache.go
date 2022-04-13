@@ -39,7 +39,7 @@ var (
 	)
 	metricCacheHitRatio = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "oasis_emerald_web3_cache_hit_ratio",
+			Name: "oasis_emerald_web3_gateway_cache_hit_ratio",
 			Help: "Percent of Hits over all accesses (Hits + Misses).",
 		},
 		[]string{"cache"},
