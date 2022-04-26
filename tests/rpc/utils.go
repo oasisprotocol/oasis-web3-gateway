@@ -14,7 +14,7 @@ import (
 	cmnGrpc "github.com/oasisprotocol/oasis-core/go/common/grpc"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
-	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
+	sdkClient "github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/ed25519"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/accounts"
 	consAccClient "github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/consensusaccounts"
@@ -26,6 +26,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
+	"github.com/oasisprotocol/emerald-web3-gateway/client"
 	"github.com/oasisprotocol/emerald-web3-gateway/filters"
 	"github.com/oasisprotocol/emerald-web3-gateway/gas"
 	"github.com/oasisprotocol/emerald-web3-gateway/indexer"
@@ -106,11 +107,14 @@ func Setup() error {
 	}
 
 	// Create the Oasis runtime client.
-	rc := client.New(conn, runtimeID)
-	_, err = rc.GetInfo(context.Background())
+	rc, err := client.NewMulti(
+		context.Background(),
+		sdkClient.New(conn, runtimeID),
+		nil,
+	)
 	if err != nil {
 		logging.GetLogger("main").Error("It seems oasis-node is not running. To spin up oasis-node locally you can run tests/tools/spinup-oasis-stack.sh")
-		return fmt.Errorf("failed connecting to oasis-node: %w", err)
+		return fmt.Errorf("failed to create composite client: %w", err)
 	}
 
 	// Fund test accounts.
@@ -195,7 +199,7 @@ func Stop() {
 	gasPriceOracle.Stop()
 }
 
-func waitForDepositEvent(ch <-chan *client.BlockEvents, from types.Address, nonce uint64, to types.Address, amount types.BaseUnits) error {
+func waitForDepositEvent(ch <-chan *sdkClient.BlockEvents, from types.Address, nonce uint64, to types.Address, amount types.BaseUnits) error {
 	for {
 		select {
 		case bev := <-ch:
@@ -231,7 +235,7 @@ func waitForDepositEvent(ch <-chan *client.BlockEvents, from types.Address, nonc
 	}
 }
 
-func InitialDeposit(rc client.RuntimeClient, amount quantity.Quantity, to types.Address) error {
+func InitialDeposit(rc sdkClient.RuntimeClient, amount quantity.Quantity, to types.Address) error {
 	if amount.IsZero() {
 		return fmt.Errorf("no deposit amount provided")
 	}
@@ -260,7 +264,7 @@ func InitialDeposit(rc client.RuntimeClient, amount quantity.Quantity, to types.
 
 	// Get current nonce for the signer's account.
 	ac := accounts.NewV1(rc)
-	nonce, err := ac.Nonce(ctx, client.RoundLatest, types.NewAddress(types.NewSignatureAddressSpecEd25519(signer.Public().(ed25519.PublicKey))))
+	nonce, err := ac.Nonce(ctx, sdkClient.RoundLatest, types.NewAddress(types.NewSignatureAddressSpecEd25519(signer.Public().(ed25519.PublicKey))))
 	if err != nil {
 		return err
 	}
@@ -270,7 +274,7 @@ func InitialDeposit(rc client.RuntimeClient, amount quantity.Quantity, to types.
 	// Set the starting gas to something high, so we don't run out.
 	tx.AuthInfo.Fee.Gas = GasLimit
 	// Estimate gas usage.
-	gas, err := core.NewV1(rc).EstimateGas(ctx, client.RoundLatest, &tx)
+	gas, err := core.NewV1(rc).EstimateGas(ctx, sdkClient.RoundLatest, &tx)
 	if err != nil {
 		return fmt.Errorf("unable to estimate gas: %w", err)
 	}
@@ -284,7 +288,7 @@ func InitialDeposit(rc client.RuntimeClient, amount quantity.Quantity, to types.
 	}
 
 	consAccounts := consAccClient.NewV1(rc)
-	acCh, err := rc.WatchEvents(context.Background(), []client.EventDecoder{consAccounts}, false)
+	acCh, err := rc.WatchEvents(context.Background(), []sdkClient.EventDecoder{consAccounts}, false)
 	if err != nil {
 		return err
 	}

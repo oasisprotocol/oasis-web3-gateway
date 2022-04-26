@@ -10,13 +10,14 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common"
 	cmnGrpc "github.com/oasisprotocol/oasis-core/go/common/grpc"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
-	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
+	sdkClient "github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
 	"github.com/spf13/cobra"
 	"github.com/uptrace/bun"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
+	"github.com/oasisprotocol/emerald-web3-gateway/client"
 	"github.com/oasisprotocol/emerald-web3-gateway/conf"
 	"github.com/oasisprotocol/emerald-web3-gateway/db/migrations"
 	"github.com/oasisprotocol/emerald-web3-gateway/filters"
@@ -179,17 +180,39 @@ func runRoot() error {
 		return err
 	}
 
-	// Establish a gRPC connection with the client node.
-	logger.Info("connecting to local node", "addr", cfg.NodeAddress)
-	conn, err := cmnGrpc.Dial(cfg.NodeAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	// Establish gRPC connections with the client nodes, instantiate
+	// clients.
+	addrs := []string{cfg.NodeAddress}
+	if len(cfg.ArchiveAddresses) > 0 {
+		addrs = append(addrs, cfg.ArchiveAddresses...)
+	}
+	clients := make([]sdkClient.RuntimeClient, 0, len(addrs))
+	for _, addr := range addrs {
+		logger.Info("connecting to local node", "addr", addr)
+		conn, cErr := cmnGrpc.Dial(
+			addr,
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+		)
+		if cErr != nil {
+			logger.Error("failed to establish connection", "err", cErr)
+			return cErr
+		}
+		defer conn.Close()
+
+		clients = append(clients, sdkClient.New(conn, runtimeID))
+	}
+	activeClient, archiveClients := clients[0], clients[1:]
+
+	// Create the composite runtime client.
+	rc, err := client.NewMulti(
+		ctx,
+		activeClient,
+		archiveClients,
+	)
 	if err != nil {
-		logger.Error("failed to establish connection", "err", err)
+		logger.Error("failed to initialize composite client", "err", err)
 		return err
 	}
-	defer conn.Close()
-
-	// Create the runtime client with account module query helpers.
-	rc := client.New(conn, runtimeID)
 
 	// Initialize db for migrations (higher timeouts).
 	db, err := psql.InitDB(ctx, cfg.Database, true)
