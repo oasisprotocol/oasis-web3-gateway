@@ -101,6 +101,9 @@ type API interface {
 	Mining() bool
 	// Hashrate returns the current node's hashrate.
 	Hashrate() hexutil.Uint64
+	// Syncing returns false in case the node is currently not syncing with the network, otherwise
+	// returns syncing information.
+	Syncing(ctx context.Context) (interface{}, error)
 }
 
 type publicAPI struct {
@@ -692,6 +695,13 @@ func (api *publicAPI) Hashrate() hexutil.Uint64 {
 	logger := api.Logger.With("method", "eth_hashrate")
 	logger.Debug("request")
 	return 0
+}
+
+func (api *publicAPI) Syncing(ctx context.Context) (interface{}, error) {
+	logger := api.Logger.With("method", "eth_syncing")
+	logger.Debug("request")
+
+	return false, nil
 }
 
 // getBlockRound returns the block round from BlockNumberOrHash.

@@ -312,6 +312,15 @@ func (m *metricsWrapper) SendRawTransaction(ctx context.Context, data hexutil.By
 	return
 }
 
+// Syncing implements eth.API.
+func (m *metricsWrapper) Syncing(ctx context.Context) (res interface{}, err error) {
+	r, s, f, i, d := metrics.GetAPIMethodMetrics("eth_syncing")
+	defer metrics.InstrumentCaller(r, s, f, i, d, &err)()
+
+	res, err = m.api.Syncing(ctx)
+	return
+}
+
 // NewMetricsWrapper returns an instrumanted API service.
 func NewMetricsWrapper(api eth.API, logger *logging.Logger, backend indexer.Backend) eth.API {
 	return &metricsWrapper{
