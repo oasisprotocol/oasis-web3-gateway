@@ -17,6 +17,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
+	"github.com/oasisprotocol/emerald-web3-gateway/archive"
 	"github.com/oasisprotocol/emerald-web3-gateway/conf"
 	"github.com/oasisprotocol/emerald-web3-gateway/db/migrations"
 	"github.com/oasisprotocol/emerald-web3-gateway/filters"
@@ -245,7 +246,15 @@ func runRoot() error {
 		return err
 	}
 
-	w3.RegisterAPIs(rpc.GetRPCAPIs(ctx, rc, backend, gasPriceOracle, cfg.Gateway, es))
+	var archiveClient *archive.Client
+	if cfg.ArchiveURI != "" {
+		if archiveClient, err = archive.New(ctx, cfg.ArchiveURI, cfg.ArchiveHeightMax); err != nil {
+			logger.Error("failed to create archive client", err)
+			return err
+		}
+	}
+
+	w3.RegisterAPIs(rpc.GetRPCAPIs(ctx, rc, archiveClient, backend, gasPriceOracle, cfg.Gateway, es))
 	w3.RegisterHealthChecks([]server.HealthCheck{indx})
 
 	svr := server.Server{

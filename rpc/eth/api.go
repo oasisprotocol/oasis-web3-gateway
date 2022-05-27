@@ -25,6 +25,7 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/evm"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 
+	"github.com/oasisprotocol/emerald-web3-gateway/archive"
 	"github.com/oasisprotocol/emerald-web3-gateway/conf"
 	"github.com/oasisprotocol/emerald-web3-gateway/gas"
 	"github.com/oasisprotocol/emerald-web3-gateway/indexer"
@@ -108,6 +109,7 @@ type API interface {
 
 type publicAPI struct {
 	client         client.RuntimeClient
+	archiveClient  *archive.Client
 	backend        indexer.Backend
 	gasPriceOracle gas.Backend
 	chainID        uint32
@@ -118,6 +120,7 @@ type publicAPI struct {
 // NewPublicAPI creates an instance of the public ETH Web3 API.
 func NewPublicAPI(
 	client client.RuntimeClient,
+	archiveClient *archive.Client,
 	logger *logging.Logger,
 	chainID uint32,
 	backend indexer.Backend,
@@ -126,6 +129,7 @@ func NewPublicAPI(
 ) API {
 	return &publicAPI{
 		client:         client,
+		archiveClient:  archiveClient,
 		chainID:        chainID,
 		Logger:         logger,
 		backend:        backend,
@@ -147,6 +151,15 @@ func handleStorageError(logger *logging.Logger, err error) error {
 	}
 	logger.Error("internal storage error", "err", err)
 	return ErrInternalError
+}
+
+func (api *publicAPI) shouldQueryArchive(n uint64) bool {
+	// If there is no archive node configured, return false.
+	if api.archiveClient == nil {
+		return false
+	}
+
+	return n <= api.archiveClient.LatestBlock()
 }
 
 // roundParamFromBlockNum converts special BlockNumber values to the corresponding special round numbers.
@@ -226,6 +239,10 @@ func (api *publicAPI) GetStorageAt(ctx context.Context, address common.Address, 
 	if err != nil {
 		return hexutil.Big{}, err
 	}
+	if api.shouldQueryArchive(round) {
+		return api.archiveClient.GetStorageAt(ctx, address, position, round)
+	}
+
 	// EVM module takes index as H256, which needs leading zeros.
 	position256 := make([]byte, 32)
 	// Unmarshalling to hexutil.Big rejects overlong inputs. Verify in `TestRejectOverlong`.
@@ -247,11 +264,15 @@ func (api *publicAPI) GetBalance(ctx context.Context, address common.Address, bl
 	logger := api.Logger.With("method", "eth_getBalance", "address", address, "block_or_hash", blockNrOrHash)
 	logger.Debug("request")
 
-	ethmod := evm.NewV1(api.client)
 	round, err := api.getBlockRound(ctx, logger, blockNrOrHash)
 	if err != nil {
 		return nil, err
 	}
+	if api.shouldQueryArchive(round) {
+		return api.archiveClient.GetBalance(ctx, address, round)
+	}
+
+	ethmod := evm.NewV1(api.client)
 	res, err := ethmod.Balance(ctx, round, address[:])
 	if err != nil {
 		logger.Error("ethmod.Balance failed", "round", round, "err", err)
@@ -291,13 +312,17 @@ func (api *publicAPI) GetTransactionCount(ctx context.Context, ethAddr common.Ad
 	logger := api.Logger.With("method", "eth_getBlockTransactionCount", "address", ethAddr, "block_or_hash", blockNrOrHash)
 	logger.Debug("request")
 
-	accountsMod := accounts.NewV1(api.client)
-	accountsAddr := types.NewAddressRaw(types.AddressV0Secp256k1EthContext, ethAddr[:])
-
 	round, err := api.getBlockRound(ctx, logger, blockNrOrHash)
 	if err != nil {
 		return nil, err
 	}
+	if api.shouldQueryArchive(round) {
+		return api.archiveClient.GetTransactionCount(ctx, ethAddr, round)
+	}
+
+	accountsMod := accounts.NewV1(api.client)
+	accountsAddr := types.NewAddressRaw(types.AddressV0Secp256k1EthContext, ethAddr[:])
+
 	nonce, err := accountsMod.Nonce(ctx, round, accountsAddr)
 	if err != nil {
 		logger.Error("accounts.Nonce failed", "err", err)
@@ -311,11 +336,15 @@ func (api *publicAPI) GetCode(ctx context.Context, address common.Address, block
 	logger := api.Logger.With("method", "eth_getCode", "address", address, "block_or_hash", blockNrOrHash)
 	logger.Debug("request")
 
-	ethmod := evm.NewV1(api.client)
 	round, err := api.getBlockRound(ctx, logger, blockNrOrHash)
 	if err != nil {
 		return nil, err
 	}
+	if api.shouldQueryArchive(round) {
+		return api.archiveClient.GetCode(ctx, address, round)
+	}
+
+	ethmod := evm.NewV1(api.client)
 	res, err := ethmod.Code(ctx, round, address[:])
 	if err != nil {
 		logger.Error("ethmod.Code failed", "err", err)
@@ -361,6 +390,15 @@ func (api *publicAPI) NewRevertError(revertErr error) *RevertError {
 func (api *publicAPI) Call(ctx context.Context, args utils.TransactionArgs, blockNrOrHash ethrpc.BlockNumberOrHash, _ *utils.StateOverride) (hexutil.Bytes, error) {
 	logger := api.Logger.With("method", "eth_call", "block_or_hash", blockNrOrHash)
 	logger.Debug("request", "args", args)
+
+	round, err := api.getBlockRound(ctx, logger, blockNrOrHash)
+	if err != nil {
+		return nil, err
+	}
+	if api.shouldQueryArchive(round) {
+		return api.archiveClient.Call(ctx, args, round)
+	}
+
 	var (
 		amount   = []byte{0}
 		input    = []byte{}
@@ -369,11 +407,6 @@ func (api *publicAPI) Call(ctx context.Context, args utils.TransactionArgs, bloc
 		// This gas cap should be enough for SimulateCall an ethereum transaction
 		gas uint64 = 30_000_000
 	)
-
-	round, err := api.getBlockRound(ctx, logger, blockNrOrHash)
-	if err != nil {
-		return nil, err
-	}
 
 	if args.To == nil {
 		return []byte{}, errors.New("to address not specified")

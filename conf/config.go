@@ -28,6 +28,15 @@ type Config struct {
 	Cache    *CacheConfig    `koanf:"cache"`
 	Database *DatabaseConfig `koanf:"database"`
 	Gateway  *GatewayConfig  `koanf:"gateway"`
+
+	// ArchiveURI is the URI of an archival web3 gateway instance
+	// for servicing historical queries.
+	ArchiveURI string `koanf:"archive_uri"`
+	// ArchiveHeightMax is the maximum height (inclusive) to query the
+	// archvie node (ArchiveURI).  If the archive node is configured
+	// with it's own SQL database instance, this parameter should not
+	// be needed.
+	ArchiveHeightMax uint64 `koanf:"archive_height_max"`
 }
 
 // Validate performs config validation.
