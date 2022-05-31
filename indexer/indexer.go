@@ -43,10 +43,11 @@ var ErrNotHealthy = errors.New("not healthy")
 type Service struct {
 	service.BaseBackgroundService
 
-	runtimeID     common.Namespace
-	enablePruning bool
-	pruningStep   uint64
-	indexingStart uint64
+	runtimeID       common.Namespace
+	enablePruning   bool
+	pruningStep     uint64
+	indexingStart   uint64
+	indexingDisable bool
 
 	backend Backend
 	client  client.RuntimeClient
@@ -303,6 +304,14 @@ func (s *Service) indexingWorker() {
 
 // Start starts service.
 func (s *Service) Start() {
+	// TODO/NotYawning: Non-archive nodes that have the indexer disabled
+	// likey want to use a different notion of healthy, and probably also
+	// want to start a worker that monitors the database for changes.
+	if s.indexingDisable {
+		s.updateHealth(true)
+		return
+	}
+
 	go s.indexingWorker()
 	go s.healthWorker()
 
@@ -339,8 +348,20 @@ func New(
 		enablePruning:         cfg.EnablePruning,
 		pruningStep:           cfg.PruningStep,
 		indexingStart:         cfg.IndexingStart,
+		indexingDisable:       cfg.IndexingDisable,
 	}
 	s.Logger = s.Logger.With("runtime_id", s.runtimeID.String())
+
+	// TODO/NotYawning: Non-archive nodes probably want to do something
+	// different here.
+	if s.indexingDisable {
+		if _, err := s.backend.QueryLastIndexedRound(ctx); err != nil {
+			s.Logger.Error("indexer disabled and no rounds indexed, this will never work",
+				"err", err,
+			)
+			return nil, nil, err
+		}
+	}
 
 	return s, cachingBackend, nil
 }

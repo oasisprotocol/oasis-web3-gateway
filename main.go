@@ -114,7 +114,7 @@ func truncateExec(cmd *cobra.Command, args []string) error {
 	}
 
 	// Initialize db.
-	db, err := psql.InitDB(ctx, cfg.Database, true)
+	db, err := psql.InitDB(ctx, cfg.Database, true, false)
 	if err != nil {
 		logger.Error("failed to initialize db", "err", err)
 		return err
@@ -145,7 +145,7 @@ func migrateExec(cmd *cobra.Command, args []string) error {
 	logger := logging.GetLogger("migrate-db")
 
 	// Initialize db.
-	db, err := psql.InitDB(ctx, cfg.Database, true)
+	db, err := psql.InitDB(ctx, cfg.Database, true, false)
 	if err != nil {
 		logger.Error("failed to initialize db", "err", err)
 		return err
@@ -192,8 +192,13 @@ func runRoot() error {
 	// Create the runtime client with account module query helpers.
 	rc := client.New(conn, runtimeID)
 
+	// For now, "disable" write access to the DB in a kind of kludgy way
+	// if the indexer is disabled.  Yes this means that no migrations
+	// can be done.  Deal with it.
+	dbReadOnly := cfg.IndexingDisable
+
 	// Initialize db for migrations (higher timeouts).
-	db, err := psql.InitDB(ctx, cfg.Database, true)
+	db, err := psql.InitDB(ctx, cfg.Database, true, dbReadOnly)
 	if err != nil {
 		logger.Error("failed to initialize db", "err", err)
 		return err
@@ -208,7 +213,7 @@ func runRoot() error {
 
 	// Initialize db again, now with configured timeouts.
 	var storage storage.Storage
-	storage, err = psql.InitDB(ctx, cfg.Database, false)
+	storage, err = psql.InitDB(ctx, cfg.Database, false, dbReadOnly)
 	if err != nil {
 		logger.Error("failed to initialize db", "err", err)
 		return err

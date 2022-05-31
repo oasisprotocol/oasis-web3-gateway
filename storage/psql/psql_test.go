@@ -21,7 +21,7 @@ func TestMain(m *testing.M) {
 	var err error
 	ctx := context.Background()
 	tests.MustInitConfig()
-	db, err = InitDB(ctx, tests.TestsConfig.Database, false)
+	db, err = InitDB(ctx, tests.TestsConfig.Database, false, false)
 	if err != nil {
 		log.Println(`It seems database failed to initialize. Do you have PostgreSQL running? If not, you can run
 docker run  -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=postgres  -p 5432:5432 -d postgres`)

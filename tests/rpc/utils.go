@@ -130,7 +130,7 @@ func Setup() error {
 
 	// Initialize db.
 	ctx := context.Background()
-	db, err = psql.InitDB(ctx, tests.TestsConfig.Database, true)
+	db, err = psql.InitDB(ctx, tests.TestsConfig.Database, true, false)
 	if err != nil {
 		return fmt.Errorf("failed to initialize DB: %w", err)
 	}
@@ -143,7 +143,7 @@ func Setup() error {
 
 	// Initialize db again, now with configured timeouts.
 	var storage storage.Storage
-	storage, err = psql.InitDB(ctx, tests.TestsConfig.Database, false)
+	storage, err = psql.InitDB(ctx, tests.TestsConfig.Database, false, false)
 	if err != nil {
 		return err
 	}

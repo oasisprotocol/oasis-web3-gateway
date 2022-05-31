@@ -30,7 +30,12 @@ type PostDB struct {
 }
 
 // InitDB creates postgresql db instance.
-func InitDB(ctx context.Context, cfg *conf.DatabaseConfig, longTimeouts bool) (*PostDB, error) {
+func InitDB(
+	ctx context.Context,
+	cfg *conf.DatabaseConfig,
+	longTimeouts bool,
+	readOnly bool,
+) (*PostDB, error) {
 	if cfg == nil {
 		return nil, errors.New("nil configuration")
 	}
@@ -61,6 +66,19 @@ func InitDB(ctx context.Context, cfg *conf.DatabaseConfig, longTimeouts bool) (*
 		if longReadWriteTimeout > writeTimeout {
 			opts = append(opts, pgdriver.WithWriteTimeout(longReadWriteTimeout))
 		}
+	}
+
+	// Set "read-only" mode by setting the default status of new
+	// transactions.
+	//
+	// Note: This still allows txes to alter temporary tables, and is
+	// advisory rather than something that is securely enforced.
+	if readOnly {
+		opts = append(opts, pgdriver.WithConnParams(
+			map[string]interface{}{
+				"default_transaction_read_only": "on",
+			},
+		))
 	}
 
 	pgConn := pgdriver.NewConnector(opts...)
