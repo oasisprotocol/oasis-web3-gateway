@@ -1,0 +1,77 @@
+# NOTE: This name appears in GitHub's Checks API and in workflow's status badge.
+name: ci-benchmarks
+
+# Trigger the workflow when:
+on:
+  # A push occurs to one of the matched branches.
+  push:
+    branches:
+      - main
+      - stable/*
+  # Or when a pull request event occurs for a pull request against one of the
+  # matched branches.
+  pull_request:
+    branches:
+      - main
+      - stable/*
+
+# Cancel in-progress jobs on same branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark-rt:
+    name: benchmark-rt
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_HOST: 127.0.0.1
+          POSTGRES_PORT: 5432
+          POSTGRES_DB: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+    env:
+      OASIS_CORE_VERSION: "22.0.2"
+      OASIS_NODE: ${{ github.workspace }}/oasis_core/oasis-node
+      OASIS_NET_RUNNER: ${{ github.workspace }}/oasis_core/oasis-net-runner
+      EMERALD_PARATIME_VERSION: 7.1.0-rc1
+      GATEWAY__CHAIN_ID: 42261
+      EMERALD_PARATIME: ${{ github.workspace }}/oasis_core/emerald-paratime
+      OASIS_NODE_DATADIR: /tmp/oasis-emerald-benchmarks
+      EMERALD_WEB3_GATEWAY: ${{ github.workspace }}/emerald-web3-gateway
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: "1.17"
+
+      - name: Install prerequisites
+        run: |
+          sudo apt update && sudo apt install bubblewrap libseccomp-dev unzip -y
+          wget "https://github.com/oasisprotocol/oasis-core/releases/download/v${OASIS_CORE_VERSION}/oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz"
+          tar xfvz "oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz"
+          mkdir -p "$(dirname ${OASIS_NODE})"
+          mv "oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-node" "${OASIS_NODE}"
+          mkdir -p "$(dirname ${OASIS_NET_RUNNER})"
+          mv "oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-net-runner" "${OASIS_NET_RUNNER}"
+          mkdir -p "$(dirname ${EMERALD_PARATIME})"
+          wget "https://github.com/oasisprotocol/emerald-paratime/releases/download/v${EMERALD_PARATIME_VERSION}/emerald-paratime.orc" -O "${EMERALD_PARATIME}.orc"
+          unzip "${EMERALD_PARATIME}.orc"
+          mv runtime.elf "${EMERALD_PARATIME}"
+          chmod a+x "${EMERALD_PARATIME}"
+          go build
+          cd benchmarks
+          go build
+
+      - name: Run end-to-end benchmarks
+        working-directory: benchmarks
+        run: ./run-benchmarks.sh
