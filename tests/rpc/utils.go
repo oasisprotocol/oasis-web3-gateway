@@ -130,7 +130,7 @@ func Setup() error {
 
 	// Initialize db.
 	ctx := context.Background()
-	db, err = psql.InitDB(ctx, tests.TestsConfig.Database, true)
+	db, err = psql.InitDB(ctx, tests.TestsConfig.Database, true, false)
 	if err != nil {
 		return fmt.Errorf("failed to initialize DB: %w", err)
 	}
@@ -143,7 +143,7 @@ func Setup() error {
 
 	// Initialize db again, now with configured timeouts.
 	var storage storage.Storage
-	storage, err = psql.InitDB(ctx, tests.TestsConfig.Database, false)
+	storage, err = psql.InitDB(ctx, tests.TestsConfig.Database, false, false)
 	if err != nil {
 		return err
 	}
@@ -178,7 +178,7 @@ func Setup() error {
 		return fmt.Errorf("setup: failed starting gas price oracle: %w", err)
 	}
 
-	w3.RegisterAPIs(rpc.GetRPCAPIs(context.Background(), rc, backend, gasPriceOracle, tests.TestsConfig.Gateway, es))
+	w3.RegisterAPIs(rpc.GetRPCAPIs(context.Background(), rc, nil, backend, gasPriceOracle, tests.TestsConfig.Gateway, es))
 	w3.RegisterHealthChecks([]server.HealthCheck{indx})
 
 	if err = w3.Start(); err != nil {

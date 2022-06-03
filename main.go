@@ -17,6 +17,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
+	"github.com/oasisprotocol/emerald-web3-gateway/archive"
 	"github.com/oasisprotocol/emerald-web3-gateway/conf"
 	"github.com/oasisprotocol/emerald-web3-gateway/db/migrations"
 	"github.com/oasisprotocol/emerald-web3-gateway/filters"
@@ -113,7 +114,7 @@ func truncateExec(cmd *cobra.Command, args []string) error {
 	}
 
 	// Initialize db.
-	db, err := psql.InitDB(ctx, cfg.Database, true)
+	db, err := psql.InitDB(ctx, cfg.Database, true, false)
 	if err != nil {
 		logger.Error("failed to initialize db", "err", err)
 		return err
@@ -144,7 +145,7 @@ func migrateExec(cmd *cobra.Command, args []string) error {
 	logger := logging.GetLogger("migrate-db")
 
 	// Initialize db.
-	db, err := psql.InitDB(ctx, cfg.Database, true)
+	db, err := psql.InitDB(ctx, cfg.Database, true, false)
 	if err != nil {
 		logger.Error("failed to initialize db", "err", err)
 		return err
@@ -191,8 +192,13 @@ func runRoot() error {
 	// Create the runtime client with account module query helpers.
 	rc := client.New(conn, runtimeID)
 
+	// For now, "disable" write access to the DB in a kind of kludgy way
+	// if the indexer is disabled.  Yes this means that no migrations
+	// can be done.  Deal with it.
+	dbReadOnly := cfg.IndexingDisable
+
 	// Initialize db for migrations (higher timeouts).
-	db, err := psql.InitDB(ctx, cfg.Database, true)
+	db, err := psql.InitDB(ctx, cfg.Database, true, dbReadOnly)
 	if err != nil {
 		logger.Error("failed to initialize db", "err", err)
 		return err
@@ -207,7 +213,7 @@ func runRoot() error {
 
 	// Initialize db again, now with configured timeouts.
 	var storage storage.Storage
-	storage, err = psql.InitDB(ctx, cfg.Database, false)
+	storage, err = psql.InitDB(ctx, cfg.Database, false, dbReadOnly)
 	if err != nil {
 		logger.Error("failed to initialize db", "err", err)
 		return err
@@ -245,7 +251,15 @@ func runRoot() error {
 		return err
 	}
 
-	w3.RegisterAPIs(rpc.GetRPCAPIs(ctx, rc, backend, gasPriceOracle, cfg.Gateway, es))
+	var archiveClient *archive.Client
+	if cfg.ArchiveURI != "" {
+		if archiveClient, err = archive.New(ctx, cfg.ArchiveURI, cfg.ArchiveHeightMax); err != nil {
+			logger.Error("failed to create archive client", err)
+			return err
+		}
+	}
+
+	w3.RegisterAPIs(rpc.GetRPCAPIs(ctx, rc, archiveClient, backend, gasPriceOracle, cfg.Gateway, es))
 	w3.RegisterHealthChecks([]server.HealthCheck{indx})
 
 	svr := server.Server{

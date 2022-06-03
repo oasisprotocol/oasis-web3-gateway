@@ -22,12 +22,22 @@ type Config struct {
 	// blocks that the node doesn't have data for, such as by skipping them in checkpoint sync.
 	// For sensible reasons, indexing may actually start at an even later block, such as if
 	// this block is already indexed or the node indicates that it doesn't have this block.
-	IndexingStart uint64 `koanf:"indexing_start"`
+	IndexingStart   uint64 `koanf:"indexing_start"`
+	IndexingDisable bool   `koanf:"indexing_disable"`
 
 	Log      *LogConfig      `koanf:"log"`
 	Cache    *CacheConfig    `koanf:"cache"`
 	Database *DatabaseConfig `koanf:"database"`
 	Gateway  *GatewayConfig  `koanf:"gateway"`
+
+	// ArchiveURI is the URI of an archival web3 gateway instance
+	// for servicing historical queries.
+	ArchiveURI string `koanf:"archive_uri"`
+	// ArchiveHeightMax is the maximum height (inclusive) to query the
+	// archvie node (ArchiveURI).  If the archive node is configured
+	// with it's own SQL database instance, this parameter should not
+	// be needed.
+	ArchiveHeightMax uint64 `koanf:"archive_height_max"`
 }
 
 // Validate performs config validation.
