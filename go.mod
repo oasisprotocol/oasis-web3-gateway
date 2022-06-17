@@ -7,7 +7,7 @@ require (
 	github.com/fxamacker/cbor/v2 v2.4.0
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.5.0
-	github.com/knadh/koanf v1.4.1
+	github.com/knadh/koanf v1.4.2
 	github.com/oasisprotocol/oasis-core/go v0.2200.2
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.2.1-0.20220321110407-a1147dd2c331
 	github.com/prometheus/client_golang v1.12.2
