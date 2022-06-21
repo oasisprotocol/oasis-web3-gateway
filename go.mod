@@ -12,7 +12,7 @@ require (
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.2.1-0.20220321110407-a1147dd2c331
 	github.com/prometheus/client_golang v1.12.2
 	github.com/rs/cors v1.8.2
-	github.com/spf13/cobra v1.4.0
+	github.com/spf13/cobra v1.5.0
 	github.com/stretchr/testify v1.7.4
 	github.com/uptrace/bun v1.1.5
 	github.com/uptrace/bun/dialect/pgdialect v1.1.5
