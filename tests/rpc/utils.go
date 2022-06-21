@@ -270,7 +270,7 @@ func InitialDeposit(rc client.RuntimeClient, amount quantity.Quantity, to types.
 	// Set the starting gas to something high, so we don't run out.
 	tx.AuthInfo.Fee.Gas = GasLimit
 	// Estimate gas usage.
-	gas, err := core.NewV1(rc).EstimateGas(ctx, client.RoundLatest, &tx)
+	gas, err := core.NewV1(rc).EstimateGas(ctx, client.RoundLatest, &tx, true)
 	if err != nil {
 		return fmt.Errorf("unable to estimate gas: %w", err)
 	}

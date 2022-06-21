@@ -175,6 +175,15 @@ func TestEth_EstimateGas(t *testing.T) {
 
 	_, err = waitTransaction(ctx, ec, signedTx.Hash())
 	require.NoError(t, err)
+
+	// EstimateGas should fail for a failing transaction.
+	msg = ethereum.CallMsg{
+		From:  common.HexToAddress("0x0000000000000000000000000000000000000000"),
+		Value: big.NewInt(100000),
+		Data:  []byte{0, 1, 2, 3},
+	}
+	_, err = ec.EstimateGas(context.Background(), msg)
+	require.Error(t, err, "gas estimation should fail")
 }
 
 func TestEth_GetCode(t *testing.T) {
@@ -366,7 +375,7 @@ func TestERC20(t *testing.T) {
 		Data: balanceOfCall,
 	}
 	out, err := ec.CallContract(context.Background(), msg, nil)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	t.Logf("contract call return: %x", out)
 
 	ret, err := testabi.Unpack("balanceOf", out)

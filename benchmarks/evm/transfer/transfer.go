@@ -133,7 +133,7 @@ func (bench *benchEVMTransfers) Scenario(ctx context.Context, state *api.State) 
 		Nonce:    nonce,
 		Value:    big.NewInt(10),
 		Gas:      500_000,
-		GasPrice: big.NewInt(10_000_000_000),
+		GasPrice: big.NewInt(100_000_000_000),
 		To:       &benchState.to,
 	})
 	signer := ethtypes.LatestSignerForChainID(benchState.chainID)
