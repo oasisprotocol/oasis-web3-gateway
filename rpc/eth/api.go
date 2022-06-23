@@ -517,7 +517,7 @@ func (api *publicAPI) EstimateGas(ctx context.Context, args utils.TransactionArg
 
 	var ethAddress [20]byte
 	copy(ethAddress[:], args.From[:])
-	gas, err := core.NewV1(api.client).EstimateGasForCaller(ctx, round, types.CallerAddress{EthAddress: &ethAddress}, tx)
+	gas, err := core.NewV1(api.client).EstimateGasForCaller(ctx, round, types.CallerAddress{EthAddress: &ethAddress}, tx, true)
 	if err != nil {
 		logger.Debug("failed", "err", err)
 		return 0, err

@@ -15,8 +15,8 @@ Web3 Gateway for Oasis Emerald EVM.
 - [PostgreSQL](https://www.postgresql.org/) (at least version 13.3).
 
 Additionally, for testing:
-- [Oasis Core](https://github.com/oasisprotocol/oasis-core) version 22.0.
-- [Emerald Paratime](https://github.com/oasisprotocol/emerald-paratime) version 7.0.0-rc2.
+- [Oasis Core](https://github.com/oasisprotocol/oasis-core) version 22.1.7.
+- [Emerald Paratime](https://github.com/oasisprotocol/emerald-paratime) version 9.0.0-testnet.
 
 ### Build
 
@@ -39,7 +39,7 @@ docker run --rm --name postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 postg
 In a separate terminal, start an Oasis development network:
 
 ```bash
-export EMERALD_PARATIME_VERSION=7.0.0-rc2
+export EMERALD_PARATIME_VERSION=9.0.0-testnet
 export EMERALD_PARATIME=<path-to-emerald-paratime>/emerald-paratime
 export OASIS_NET_RUNNER=<path-to-oasis-core-artifacts>/oasis-net-runner
 export OASIS_NODE=<path-to-oasis-core-artifacts>/oasis-node

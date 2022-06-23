@@ -23,12 +23,12 @@ type mockCoreClient struct {
 }
 
 // EstimateGas implements core.V1.
-func (*mockCoreClient) EstimateGas(ctx context.Context, round uint64, tx *types.Transaction) (uint64, error) {
+func (*mockCoreClient) EstimateGas(ctx context.Context, round uint64, tx *types.Transaction, propagateFailures bool) (uint64, error) {
 	panic("unimplemented")
 }
 
 // EstimateGasForCaller implements core.V1.
-func (*mockCoreClient) EstimateGasForCaller(ctx context.Context, round uint64, caller types.CallerAddress, tx *types.Transaction) (uint64, error) {
+func (*mockCoreClient) EstimateGasForCaller(ctx context.Context, round uint64, caller types.CallerAddress, tx *types.Transaction, propagateFailures bool) (uint64, error) {
 	panic("unimplemented")
 }
 
@@ -44,6 +44,16 @@ func (*mockCoreClient) Parameters(ctx context.Context, round uint64) (*core.Para
 
 // RuntimeInfo implements core.V1.
 func (*mockCoreClient) RuntimeInfo(ctx context.Context) (*core.RuntimeInfoResponse, error) {
+	panic("unimplemented")
+}
+
+// RuntimeInfo implements core.V1.
+func (*mockCoreClient) CallDataPublicKey(ctx context.Context) (*core.CallDataPublicKeyResponse, error) {
+	panic("unimplemented")
+}
+
+// RuntimeInfo implements core.V1.
+func (*mockCoreClient) ExecuteReadOnlyTx(ctx context.Context, round uint64, tx *types.UnverifiedTransaction) (*core.ExecuteReadOnlyTxResponse, error) {
 	panic("unimplemented")
 }
 
