@@ -25,39 +25,29 @@ ${OASIS_NET_RUNNER} dump-fixture \
   --fixture.default.deterministic_entities \
   --fixture.default.fund_entities \
   --fixture.default.num_entities 2 \
-  --fixture.default.keymanager.binary "${EMERALD_PARATIME}" \
+  --fixture.default.keymanager.binary "" \
   --fixture.default.runtime.binary "${EMERALD_PARATIME}" \
   --fixture.default.runtime.provisioner "unconfined" \
+  --fixture.default.runtime.version "$(emerald_ver 1).$(emerald_ver 2).$(emerald_ver 3)" \
   --fixture.default.halt_epoch 100000 \
   --fixture.default.staking_genesis "${STAKING_GENESIS_FILE}" >"$FIXTURE_FILE"
 
-# oasis-core 22.0 has a bug where you cannot provision a fixture without a keymanager.
-# When updating to oasis-core 22.1.8 remove below hack and updaate abobe keymanager.binary to "".
-# Disable keymanager for runtime.
-jq '.runtimes[1].keymanager = -1' "$FIXTURE_FILE" >"$FIXTURE_FILE.tmp"
-mv "$FIXTURE_FILE.tmp" "$FIXTURE_FILE"
-
 # Enable expensive queries for testing.
-jq '.clients[0].runtime_config."1".allow_expensive_queries = true' "$FIXTURE_FILE" >"$FIXTURE_FILE.tmp"
-mv "$FIXTURE_FILE.tmp" "$FIXTURE_FILE"
-
-# Assign non-zero version to runtime, otherwise nodes won't register.
-# TODO: Replace with fixture flag once https://github.com/oasisprotocol/oasis-core/pull/4815 is released.
-jq ".runtimes[1].deployments[0].version = {major:"$(emerald_ver 1)", minor:"$(emerald_ver 2)", patch:"$(emerald_ver 3)"}" "$FIXTURE_FILE" >"$FIXTURE_FILE.tmp"
+jq '.clients[0].runtime_config."0".allow_expensive_queries = true' "$FIXTURE_FILE" >"$FIXTURE_FILE.tmp"
 mv "$FIXTURE_FILE.tmp" "$FIXTURE_FILE"
 
 # Bump the batch size (default=1).
-jq '.runtimes[1].txn_scheduler.max_batch_size=20' "$FIXTURE_FILE" >"$FIXTURE_FILE.tmp"
+jq '.runtimes[0].txn_scheduler.max_batch_size=20' "$FIXTURE_FILE" >"$FIXTURE_FILE.tmp"
 mv "$FIXTURE_FILE.tmp" "$FIXTURE_FILE"
 
-jq '.runtimes[1].txn_scheduler.max_batch_size_bytes=1048576' "$FIXTURE_FILE" >"$FIXTURE_FILE.tmp"
+jq '.runtimes[0].txn_scheduler.max_batch_size_bytes=1048576' "$FIXTURE_FILE" >"$FIXTURE_FILE.tmp"
 mv "$FIXTURE_FILE.tmp" "$FIXTURE_FILE"
 
-jq '.runtimes[1].txn_scheduler.propose_batch_timeout=2' "$FIXTURE_FILE" >"$FIXTURE_FILE.tmp"
+jq '.runtimes[0].txn_scheduler.propose_batch_timeout=2' "$FIXTURE_FILE" >"$FIXTURE_FILE.tmp"
 mv "$FIXTURE_FILE.tmp" "$FIXTURE_FILE"
 
 # Use a batch timeout of 1 second.
-jq '.runtimes[1].txn_scheduler.batch_flush_timeout=1000000000' "$FIXTURE_FILE" >"$FIXTURE_FILE.tmp"
+jq '.runtimes[0].txn_scheduler.batch_flush_timeout=1000000000' "$FIXTURE_FILE" >"$FIXTURE_FILE.tmp"
 mv "$FIXTURE_FILE.tmp" "$FIXTURE_FILE"
 
 # Run oasis-node.
