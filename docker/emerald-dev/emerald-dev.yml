@@ -23,7 +23,7 @@ cache:
   metrics: true
 
 gateway:
-  chain_id: 42261
+  chain_id: 42262
   http:
     host: "0.0.0.0"
     port: 8545
