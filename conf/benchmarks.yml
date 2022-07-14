@@ -22,7 +22,7 @@ database:
   max_open_conns: 0
 
 gateway:
-  chain_id: 42261
+  chain_id: 42262
   http:
     host: "localhost"
     port: 8545

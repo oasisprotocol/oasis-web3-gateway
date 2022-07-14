@@ -213,7 +213,7 @@ func benchmarkInit(cmd *cobra.Command) {
 	cmd.Flags().DurationVar(&flagBenchmarksDuration, cfgBenchmarksDuration, 30*time.Second, "Benchmark duration")
 	cmd.Flags().UintVar(&flagBenchmarksRate, cfgBenchmarksRate, 1, "Benchmark maximum per second rate per concurrent connection")
 	cmd.Flags().String(cfgGatewayURL, "", "Web3 Gateway URL (for EVM benchmarks)")
-	cmd.Flags().Uint64(cfgChainID, 42261, "Web3 Chain ID")
+	cmd.Flags().Uint64(cfgChainID, 42262, "Web3 Chain ID")
 	cmd.Flags().StringVar(&flagPrometheusPushAddr, cfgPrometheusPushAddr, "", "Prometheus push gateway address")
 	cmd.Flags().StringVar(&flagPrometheusPushJobName, cfgPrometheusPushJobName, "", "Prometheus push `job` name")
 	cmd.Flags().StringVar(&flagPrometheusPushInstanceLabel, cfgPrometheusPushInstanceLabel, "", "Prometheus push `instance` label")
