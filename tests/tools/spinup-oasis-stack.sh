@@ -25,7 +25,7 @@ ${OASIS_NET_RUNNER} dump-fixture \
   --fixture.default.deterministic_entities \
   --fixture.default.fund_entities \
   --fixture.default.num_entities 2 \
-  --fixture.default.keymanager.binary "" \
+  --fixture.default.keymanager.binary "${KEYMANAGER_BINARY:-}" \
   --fixture.default.runtime.binary "${EMERALD_PARATIME}" \
   --fixture.default.runtime.provisioner "unconfined" \
   --fixture.default.runtime.version "$(emerald_ver 1).$(emerald_ver 2).$(emerald_ver 3)" \

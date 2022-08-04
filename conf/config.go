@@ -131,6 +131,9 @@ type GatewayConfig struct {
 
 	// MethodLimits is the gateway method limits config.
 	MethodLimits *MethodLimits `koanf:"method_limits"`
+
+	// OasisRPCs controls whether to enable the `oasis_*` methods. Default is not exposed.
+	ExposeOasisRPCs bool `koanf:"oasis_rpcs"`
 }
 
 // GatewayMonitoringConfig is the gateway prometheus configuration.

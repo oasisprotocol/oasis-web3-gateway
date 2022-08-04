@@ -16,6 +16,7 @@ import (
 	"github.com/oasisprotocol/emerald-web3-gateway/rpc/eth/filters"
 	ethmetrics "github.com/oasisprotocol/emerald-web3-gateway/rpc/eth/metrics"
 	"github.com/oasisprotocol/emerald-web3-gateway/rpc/net"
+	"github.com/oasisprotocol/emerald-web3-gateway/rpc/oasis"
 	"github.com/oasisprotocol/emerald-web3-gateway/rpc/txpool"
 	"github.com/oasisprotocol/emerald-web3-gateway/rpc/web3"
 )
@@ -37,6 +38,7 @@ func GetRPCAPIs(
 	netService := net.NewPublicAPI(config.ChainID)
 	txpoolService := txpool.NewPublicAPI()
 	filtersService := filters.NewPublicAPI(client, logging.GetLogger("eth_filters"), backend, eventSystem)
+	oasisService := oasis.NewPublicAPI(client, logging.GetLogger("oasis"))
 
 	if config.Monitoring.Enabled() {
 		web3Service = web3.NewMetricsWrapper(web3Service)
@@ -44,6 +46,7 @@ func GetRPCAPIs(
 		ethService = ethmetrics.NewMetricsWrapper(ethService, logging.GetLogger("eth_rpc_metrics"), backend)
 		txpoolService = txpool.NewMetricsWrapper(txpoolService)
 		filtersService = filters.NewMetricsWrapper(filtersService)
+		oasisService = oasis.NewMetricsWrapper(oasisService)
 	}
 
 	apis = append(apis,
@@ -76,6 +79,12 @@ func GetRPCAPIs(
 			Version:   "1.0",
 			Service:   filtersService,
 			Public:    true,
+		},
+		ethRpc.API{
+			Namespace: "oasis",
+			Version:   "1.0",
+			Service:   oasisService,
+			Public:    config.ExposeOasisRPCs,
 		},
 	)
 
