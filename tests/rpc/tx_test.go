@@ -128,16 +128,28 @@ func testContractCreation(t *testing.T, value *big.Int) uint64 {
 }
 
 func TestContractCreation(t *testing.T) {
+	if tests.TestsConfig.Gateway.ExposeOasisRPCs {
+		t.Skip("contract tests w/ c10lity require compat lib to be integrated")
+		return
+	}
 	status := testContractCreation(t, big.NewInt(0))
 	require.Equal(t, uint64(1), status)
 }
 
 func TestContractFailCreation(t *testing.T) {
+	if tests.TestsConfig.Gateway.ExposeOasisRPCs {
+		t.Skip("contract tests w/ c10lity require compat lib to be integrated")
+		return
+	}
 	status := testContractCreation(t, big.NewInt(1))
 	require.Equal(t, uint64(0), status)
 }
 
 func TestEth_EstimateGas(t *testing.T) {
+	if tests.TestsConfig.Gateway.ExposeOasisRPCs {
+		t.Skip("contract tests w/ c10lity require compat lib to be integrated")
+		return
+	}
 	ec := localClient(t, false)
 	code := common.FromHex(strings.TrimSpace(evmSolTestCompiledHex))
 
@@ -187,6 +199,10 @@ func TestEth_EstimateGas(t *testing.T) {
 }
 
 func TestEth_GetCode(t *testing.T) {
+	if tests.TestsConfig.Gateway.ExposeOasisRPCs {
+		t.Skip("contract tests w/ c10lity require compat lib to be integrated")
+		return
+	}
 	ec := localClient(t, false)
 
 	code := common.FromHex(strings.TrimSpace(evmSolTestCompiledHex))
@@ -227,6 +243,10 @@ func TestEth_GetCode(t *testing.T) {
 }
 
 func TestEth_Call(t *testing.T) {
+	if tests.TestsConfig.Gateway.ExposeOasisRPCs {
+		t.Skip("contract tests w/ c10lity require compat lib to be integrated")
+		return
+	}
 	abidata := `
 		[
 			{
@@ -311,6 +331,10 @@ func TestEth_Call(t *testing.T) {
 // 	   }
 //   }
 func TestERC20(t *testing.T) {
+	if tests.TestsConfig.Gateway.ExposeOasisRPCs {
+		t.Skip("contract tests w/ c10lity require compat lib to be integrated")
+		return
+	}
 	testabi, _ := abi.JSON(strings.NewReader(erc20abi))
 
 	ec := localClient(t, false)

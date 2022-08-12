@@ -33,3 +33,4 @@ gateway:
     port: 9999
   method_limits:
     get_logs_max_rounds: 100
+  oasis_rpcs: false

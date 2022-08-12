@@ -166,7 +166,7 @@ func TestEth_GetBlockByNumberAndGetBlockByHash(t *testing.T) {
 	require.Equal(t, number, blk1.Number())
 
 	// Ensure block gas limit is correct.
-	require.EqualValues(t, 10_000_000, blk1.GasLimit(), "expected block gas limit")
+	require.True(t, blk1.GasLimit() == 10_000_000 || blk1.GasLimit() == 30_000_000, "expected block gas limit")
 
 	// go-ethereum's Block struct always computes block hash on-the-fly
 	// instead of simply returning the hash from BlockBy* API responses.
@@ -245,6 +245,10 @@ func TestEth_BlockNumber(t *testing.T) {
 }
 
 func TestEth_GetTransactionByHash(t *testing.T) {
+	if tests.TestsConfig.Gateway.ExposeOasisRPCs {
+		t.Skip("contract tests w/ c10lity require compat lib to be integrated")
+		return
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
 	defer cancel()
 
@@ -278,6 +282,10 @@ func TestEth_GetTransactionByHash(t *testing.T) {
 }
 
 func TestEth_GetTransactionByBlockAndIndex(t *testing.T) {
+	if tests.TestsConfig.Gateway.ExposeOasisRPCs {
+		t.Skip("contract tests w/ c10lity require compat lib to be integrated")
+		return
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
 	defer cancel()
 
@@ -311,6 +319,10 @@ func TestEth_GetTransactionByBlockAndIndex(t *testing.T) {
 }
 
 func TestEth_GetBlockByHashRawResponses(t *testing.T) {
+	if tests.TestsConfig.Gateway.ExposeOasisRPCs {
+		t.Skip("contract tests w/ c10lity require compat lib to be integrated")
+		return
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
 	defer cancel()
 
@@ -348,6 +360,10 @@ func TestEth_GetBlockByHashRawResponses(t *testing.T) {
 }
 
 func TestEth_GetTransactionReceiptRawResponses(t *testing.T) {
+	if tests.TestsConfig.Gateway.ExposeOasisRPCs {
+		t.Skip("contract tests w/ c10lity require compat lib to be integrated")
+		return
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
 	defer cancel()
 
@@ -437,6 +453,10 @@ func TestEth_GetLogsWithFilters(t *testing.T) {
 }
 
 func TestEth_GetLogsMultiple(t *testing.T) {
+	if tests.TestsConfig.Gateway.ExposeOasisRPCs {
+		t.Skip("contract tests w/ c10lity require compat lib to be integrated")
+		return
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
 	defer cancel()
 	ec := localClient(t, false)

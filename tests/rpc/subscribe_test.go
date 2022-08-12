@@ -39,6 +39,10 @@ func TestEth_SubscribeNewHead(t *testing.T) {
 }
 
 func TestEth_SubscribeLogs(t *testing.T) {
+	if tests.TestsConfig.Gateway.ExposeOasisRPCs {
+		t.Skip("contract tests w/ c10lity require compat lib to be integrated")
+		return
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
 	defer cancel()
 
