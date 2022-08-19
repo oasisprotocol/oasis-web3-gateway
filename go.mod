@@ -7,7 +7,7 @@ require (
 	github.com/fxamacker/cbor/v2 v2.4.0
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.5.0
-	github.com/knadh/koanf v1.4.2
+	github.com/knadh/koanf v1.4.3
 	github.com/oasisprotocol/oasis-core/go v0.2201.7
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.2.1-0.20220621104653-a0da10b705b9
 	github.com/prometheus/client_golang v1.12.2
@@ -58,7 +58,7 @@ require (
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-testing-interface v1.0.0 // indirect
-	github.com/mitchellh/mapstructure v1.4.3 // indirect
+	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/oasisprotocol/curve25519-voi v0.0.0-20211219162838-e9a669f65da9 // indirect
 	github.com/oasisprotocol/deoxysii v0.0.0-20220228165953-2091330c22b7 // indirect
