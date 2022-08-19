@@ -56,7 +56,28 @@ make test
 
 ## Running the Gateway on Testnet/Mainnet
 
-The gateway connects to an Emerald enabled [Oasis Paratime Client Node](https://docs.oasis.dev/general/run-a-node/set-up-your-node/run-a-paratime-client-node).
+The gateway connects to an Emerald enabled [Oasis ParaTime Client Node](https://docs.oasis.dev/general/run-a-node/set-up-your-node/run-a-paratime-client-node).
+
+In addition to the general instructions for setting up an Oasis ParaTime Client
+Node update the node configuration (e.g. `config.yml`) as follows:
+
+```yaml
+# ... sections not relevant are omitted ...
+runtime:
+  mode: client
+  paths:
+    - <emerald_bundle_path>
+
+  config:
+    "<emerald_paratime_id>":
+      # The following allows the gateway to perform gas estimation of smart
+      # contract calls (not allowed by default).
+      estimate_gas_by_simulating_contracts: true
+      # The following allows some more resource-intensive queries to be called
+      # by the gateway (not allowed by default).
+      allowed_queries:
+        all_expensive: true
+```
 
 Set up the config file (e.g. `gateway.yml`) appropriately:
 
