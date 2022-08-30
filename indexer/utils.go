@@ -243,7 +243,7 @@ func (ib *indexBackend) StoreBlockData(ctx context.Context, oasisBlock *block.Bl
 				// Try parsing the transaction to extract the gas price.
 				var tx types.Transaction
 				if err := cbor.Unmarshal(oasisTx.Body, &tx); err != nil {
-					ib.logger.Warn("failed to unamrshal last transaction in the block", "err", err)
+					ib.logger.Warn("failed to unmarshal last transaction in the block", "err", err)
 					continue
 				}
 				lastTransactionPrice = tx.AuthInfo.Fee.GasPrice()
@@ -261,7 +261,7 @@ func (ib *indexBackend) StoreBlockData(ctx context.Context, oasisBlock *block.Bl
 
 		// Update the last transaction gas price. This is done for every transaction
 		// since the last transaction could be a non-ethereum transaction and failing to
-		// prase it should not be fatal.
+		// parse it should not be fatal.
 		if err = lastTransactionPrice.FromBigInt(ethTx.GasPrice()); err != nil {
 			ib.logger.Warn("failed to decode gas price", "err", err)
 		}
