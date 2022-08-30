@@ -76,7 +76,7 @@ runtime:
       # The following allows some more resource-intensive queries to be called
       # by the gateway (not allowed by default).
       allowed_queries:
-        all_expensive: true
+        - all_expensive: true
 ```
 
 Set up the config file (e.g. `gateway.yml`) appropriately:
