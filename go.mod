@@ -12,7 +12,7 @@ require (
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.2.1-0.20220621104653-a0da10b705b9
 	github.com/prometheus/client_golang v1.13.0
 	github.com/rs/cors v1.8.2
-	github.com/spf13/cobra v1.5.0
+	github.com/spf13/cobra v1.6.0
 	github.com/stretchr/testify v1.8.0
 	github.com/uptrace/bun v1.1.8
 	github.com/uptrace/bun/dialect/pgdialect v1.1.8
@@ -48,7 +48,7 @@ require (
 	github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d // indirect
 	github.com/holiman/bloomfilter/v2 v2.0.3 // indirect
 	github.com/holiman/uint256 v1.2.0 // indirect
-	github.com/inconshreveable/mousetrap v1.0.0 // indirect
+	github.com/inconshreveable/mousetrap v1.0.1 // indirect
 	github.com/ipfs/go-log/v2 v2.5.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/magiconair/properties v1.8.5 // indirect
