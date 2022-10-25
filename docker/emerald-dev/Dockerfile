@@ -1,11 +1,11 @@
-FROM golang:1.17 AS emerald-web3-gateway
+FROM golang:1.18 AS emerald-web3-gateway
 
 COPY . /go/emerald-web3-gateway
 RUN cd emerald-web3-gateway && make build
 
 FROM ubuntu:20.04
 
-ENV OASIS_CORE_VERSION=22.1.8
+ENV OASIS_CORE_VERSION=22.2
 ENV EMERALD_PARATIME_VERSION=9.0.1
 
 ENV OASIS_NODE=/oasis-node

@@ -282,7 +282,7 @@ func (api *publicAPI) GetBalance(ctx context.Context, address common.Address, bl
 	return (*hexutil.Big)(res.ToBigInt()), nil
 }
 
-// nolint:revive,stylecheck
+//nolint:revive,stylecheck
 func (api *publicAPI) ChainId() (*hexutil.Big, error) {
 	logger := api.Logger.With("method", "eth_chainId")
 	logger.Debug("request")

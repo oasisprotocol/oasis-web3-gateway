@@ -91,12 +91,15 @@ func (h *httpServer) start() error {
 	}
 
 	// Initialize the server.
-	h.server = &http.Server{Handler: h.rpcHandler}
-	if h.timeouts != (rpc.HTTPTimeouts{}) {
-		CheckTimeouts(&h.timeouts)
-		h.server.ReadTimeout = h.timeouts.ReadTimeout
-		h.server.WriteTimeout = h.timeouts.WriteTimeout
-		h.server.IdleTimeout = h.timeouts.IdleTimeout
+	if h.timeouts == (rpc.HTTPTimeouts{}) {
+		h.timeouts = rpc.DefaultHTTPTimeouts
+	}
+	CheckTimeouts(&h.timeouts)
+	h.server = &http.Server{
+		Handler:      h.rpcHandler,
+		ReadTimeout:  h.timeouts.ReadTimeout,
+		WriteTimeout: h.timeouts.WriteTimeout,
+		IdleTimeout:  h.timeouts.IdleTimeout,
 	}
 
 	// Start the server.
@@ -106,7 +109,7 @@ func (h *httpServer) start() error {
 		return err
 	}
 
-	// nolint:errcheck
+	//nolint:errcheck
 	go h.server.Serve(listener)
 	// Random port is determined by the server. Retrieve it.
 	if h.port == 0 {

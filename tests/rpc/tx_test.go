@@ -23,11 +23,13 @@ const ethTimeout = 15 * time.Second
 
 // We store the compiled EVM bytecode for the SimpleSolEVMTest in a separate
 // file (in hex) to preserve readability of this file.
+//
 //go:embed contracts/evm_sol_test_compiled.hex
 var evmSolTestCompiledHex string
 
 // We store the compiled EVM bytecode for the SimpleERC20EVMTest in a separate
 // file (in hex) to preserve readability of this file.
+//
 //go:embed contracts/evm_erc20_test_compiled.hex
 var evmERC20TestCompiledHex string
 
@@ -323,13 +325,13 @@ func TestEth_Call(t *testing.T) {
 
 // TestERC20 deploy erc20 with no constructor.
 //
-//   pragma solidity ^0.8.0;
-//   import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-//   contract TestToken is ERC20 {
-// 	   constructor() ERC20("Test", "TST") public {
-// 	     _mint(msg.sender, 1000000 * (10 ** uint256(decimals())));
-// 	   }
-//   }
+//	  pragma solidity ^0.8.0;
+//	  import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+//	  contract TestToken is ERC20 {
+//		   constructor() ERC20("Test", "TST") public {
+//		     _mint(msg.sender, 1000000 * (10 ** uint256(decimals())));
+//		   }
+//	  }
 func TestERC20(t *testing.T) {
 	if tests.TestsConfig.Gateway.ExposeOasisRPCs {
 		t.Skip("contract tests w/ c10lity require compat lib to be integrated")

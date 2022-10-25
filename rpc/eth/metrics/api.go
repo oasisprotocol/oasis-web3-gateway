@@ -118,7 +118,8 @@ func (m *metricsWrapper) Call(ctx context.Context, args utils.TransactionArgs, b
 }
 
 // ChainId implements eth.API.
-// nolint:revive,stylecheck
+//
+//nolint:revive,stylecheck
 func (m *metricsWrapper) ChainId() (res *hexutil.Big, err error) {
 	r, s, f, i, d := metrics.GetAPIMethodMetrics("eth_chainId")
 	defer metrics.InstrumentCaller(r, s, f, i, d, &err)()
