@@ -25,11 +25,12 @@ func GetAPIMethodMetrics(method string) (prometheus.Counter, prometheus.Counter,
 // InstrumentCaller instruments the caller method.
 //
 // Use InstrumentCaller is usually used the following way:
-//    func InstrumentMe() (err error) {
-// 	  r, s, f, i, d := metrics.GetAPIMethodMetrics("method")
-// 	  defer metrics.InstrumentCaller(r, s, f, i, d, &err)()
-//        // Do actual work.
-//    }
+//
+//	   func InstrumentMe() (err error) {
+//		  r, s, f, i, d := metrics.GetAPIMethodMetrics("method")
+//		  defer metrics.InstrumentCaller(r, s, f, i, d, &err)()
+//	       // Do actual work.
+//	   }
 func InstrumentCaller(count prometheus.Counter, success prometheus.Counter, failures prometheus.Counter, inflight prometheus.Gauge, duration prometheus.Observer, err *error) func() {
 	timer := prometheus.NewTimer(duration)
 	inflight.Inc()

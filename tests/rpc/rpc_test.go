@@ -62,7 +62,7 @@ func call(t *testing.T, method string, params interface{}) *Response {
 	return rpcRes
 }
 
-// nolint:unparam
+//nolint:unparam
 func submitTransaction(ctx context.Context, t *testing.T, to common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *types.Receipt {
 	ec := localClient(t, false)
 	chainID, err := ec.ChainID(context.Background())

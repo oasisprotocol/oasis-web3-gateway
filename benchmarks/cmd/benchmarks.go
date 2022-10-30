@@ -232,7 +232,7 @@ func benchmarkInit(cmd *cobra.Command) {
 		cfgPrometheusPushJobName,
 		cfgPrometheusPushInstanceLabel,
 	} {
-		viper.BindPFlag(v, cmd.Flags().Lookup(v)) // nolint: errcheck
+		viper.BindPFlag(v, cmd.Flags().Lookup(v)) //nolint: errcheck
 	}
 
 	cmd.Flags().AddFlagSet(grpc.ClientFlags)

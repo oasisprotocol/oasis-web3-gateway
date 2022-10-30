@@ -11,11 +11,11 @@ Web3 Gateway for Oasis Emerald EVM.
 
 ### Prerequisites
 
-- [Go](https://go.dev/) (at least version 1.17.3).
+- [Go](https://go.dev/) (at least version 1.18).
 - [PostgreSQL](https://www.postgresql.org/) (at least version 13.3).
 
 Additionally, for testing:
-- [Oasis Core](https://github.com/oasisprotocol/oasis-core) version 22.1.8.
+- [Oasis Core](https://github.com/oasisprotocol/oasis-core) version 22.2.
 - [Emerald Paratime](https://github.com/oasisprotocol/emerald-paratime) version 9.0.1.
 
 ### Build

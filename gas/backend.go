@@ -63,6 +63,7 @@ var (
 //   - look at the most recent block(s) (controlled by `windowSize` parameter)
 //   - if block gas used is greater than some threshold, consider it "full" (controlled by `fullBlockThresholdParameter`)
 //   - set recommended gas price to the lowest-priced transaction from the full blocks + a small constant (controlled by `minPriceEps`)
+//
 // (b) Query gas price configured on the oasis-node:
 //   - periodically query the oasis-node for it's configured gas price
 //

@@ -2,7 +2,7 @@ project_name: Emerald Web3 Gateway
 
 before:
   hooks:
-    - go mod tidy -compat=1.17
+    - go mod tidy
 
 builds:
   - binary: emerald-web3-gateway

@@ -222,7 +222,7 @@ func blockToModels(
 }
 
 // StoreBlockData parses oasis block and stores in db.
-func (ib *indexBackend) StoreBlockData(ctx context.Context, oasisBlock *block.Block, txResults []*client.TransactionWithResults, blockGasLimit uint64) error { // nolint: gocyclo
+func (ib *indexBackend) StoreBlockData(ctx context.Context, oasisBlock *block.Block, txResults []*client.TransactionWithResults, blockGasLimit uint64) error { //nolint: gocyclo
 	encoded := oasisBlock.Header.EncodedHash()
 	bhash := common.HexToHash(encoded.Hex())
 	blockNum := oasisBlock.Header.Round
