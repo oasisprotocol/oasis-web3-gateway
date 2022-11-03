@@ -10,7 +10,7 @@ require (
 	github.com/knadh/koanf v1.4.4
 	github.com/oasisprotocol/oasis-core/go v0.2202.0
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.2.1-0.20220621104653-a0da10b705b9
-	github.com/prometheus/client_golang v1.13.0
+	github.com/prometheus/client_golang v1.13.1
 	github.com/rs/cors v1.8.2
 	github.com/spf13/cobra v1.6.1
 	github.com/stretchr/testify v1.8.1
