@@ -15,7 +15,7 @@ Web3 Gateway for Oasis Emerald EVM.
 - [PostgreSQL](https://www.postgresql.org/) (at least version 13.3).
 
 Additionally, for testing:
-- [Oasis Core](https://github.com/oasisprotocol/oasis-core) version 22.2.
+- [Oasis Core](https://github.com/oasisprotocol/oasis-core) version 22.2.1.
 - [Emerald Paratime](https://github.com/oasisprotocol/emerald-paratime) version 9.0.1.
 
 ### Build

@@ -11,7 +11,7 @@ replace (
 
 require (
 	github.com/ethereum/go-ethereum v1.10.19
-	github.com/oasisprotocol/oasis-core/go v0.2202.0
+	github.com/oasisprotocol/oasis-core/go v0.2202.1
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.2.1-0.20220621104653-a0da10b705b9
 	github.com/prometheus/client_golang v1.13.0
 	github.com/spf13/cobra v1.5.0
@@ -186,7 +186,7 @@ require (
 	golang.org/x/net v0.0.0-20220920183852-bf014ff85ad5 // indirect
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4 // indirect
 	golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab // indirect
-	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/text v0.4.0 // indirect
 	golang.org/x/tools v0.1.12 // indirect
 	google.golang.org/genproto v0.0.0-20220725144611-272f38e5d71b // indirect
 	google.golang.org/grpc/security/advancedtls v0.0.0-20221004221323-12db695f1648 // indirect
