@@ -134,6 +134,9 @@ type GatewayConfig struct {
 
 	// OasisRPCs controls whether to enable the `oasis_*` methods. Default is not exposed.
 	ExposeOasisRPCs bool `koanf:"oasis_rpcs"`
+
+	// AllowUnencryptedTxs also accepts transacions with CallFormat=0. Default is false.
+	AllowUnencryptedTxs bool `koanf:"allow_unencrypted_txs"`
 }
 
 // GatewayMonitoringConfig is the gateway prometheus configuration.

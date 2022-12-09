@@ -17,6 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/eth/filters"
 	"github.com/ethereum/go-ethereum/rlp"
 	ethrpc "github.com/ethereum/go-ethereum/rpc"
+	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/secp256k1"
@@ -108,13 +109,14 @@ type API interface {
 }
 
 type publicAPI struct {
-	client         client.RuntimeClient
-	archiveClient  *archive.Client
-	backend        indexer.Backend
-	gasPriceOracle gas.Backend
-	chainID        uint32
-	Logger         *logging.Logger
-	methodLimits   *conf.MethodLimits
+	client              client.RuntimeClient
+	archiveClient       *archive.Client
+	backend             indexer.Backend
+	gasPriceOracle      gas.Backend
+	chainID             uint32
+	Logger              *logging.Logger
+	methodLimits        *conf.MethodLimits
+	allowUnencryptedTxs bool
 }
 
 // NewPublicAPI creates an instance of the public ETH Web3 API.
@@ -126,15 +128,17 @@ func NewPublicAPI(
 	backend indexer.Backend,
 	gasPriceOracle gas.Backend,
 	methodLimits *conf.MethodLimits,
+	allowUnencryptedTxes bool,
 ) API {
 	return &publicAPI{
-		client:         client,
-		archiveClient:  archiveClient,
-		chainID:        chainID,
-		Logger:         logger,
-		backend:        backend,
-		gasPriceOracle: gasPriceOracle,
-		methodLimits:   methodLimits,
+		client:              client,
+		archiveClient:       archiveClient,
+		chainID:             chainID,
+		Logger:              logger,
+		backend:             backend,
+		gasPriceOracle:      gasPriceOracle,
+		methodLimits:        methodLimits,
+		allowUnencryptedTxs: allowUnencryptedTxes,
 	}
 }
 
@@ -463,6 +467,13 @@ func (api *publicAPI) SendRawTransaction(ctx context.Context, data hexutil.Bytes
 		return common.Hash{}, ErrMalformedTransaction
 	}
 
+	if !api.checkOasisTxEncrypted(ethTx.Data()) {
+		logger.Debug("dropped unencrypted transaction", "hash", ethTx.Hash())
+		return common.Hash{}, ErrInvalidRequest
+	}
+
+	ethTx.Data()
+
 	// Generate an Ethereum transaction that is handled by the EVM module.
 	utx := types.UnverifiedTransaction{
 		Body: data,
@@ -750,4 +761,29 @@ func (api *publicAPI) getBlockRound(ctx context.Context, logger *logging.Logger,
 	default:
 		return 0, nil
 	}
+}
+
+// checkOasisTxEncrypted checks, if the Oasis transaction wrapped inside Ethereum tx is encrypted.
+func (api *publicAPI) checkOasisTxEncrypted(data []byte) bool {
+	if api.allowUnencryptedTxs {
+		// Unencrypted transactions are allowed or encryption not supported by the gateway.
+		return true
+	}
+	if data == nil {
+		// Transaction is not Oasis transaction, ignore.
+		return true
+	}
+
+	var tx types.Transaction
+	if err := cbor.Unmarshal(data, &tx); err != nil {
+		// Transaction is not Oasis transaction, ignore.
+		return true
+	}
+
+	if tx.Call.Format == types.CallFormatPlain {
+		return false
+	}
+
+	// Transaction marked as encrypted.
+	return true
 }
