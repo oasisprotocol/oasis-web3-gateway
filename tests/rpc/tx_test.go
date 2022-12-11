@@ -16,7 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/require"
 
-	"github.com/oasisprotocol/emerald-web3-gateway/tests"
+	"github.com/oasisprotocol/oasis-web3-gateway/tests"
 )
 
 const ethTimeout = 15 * time.Second

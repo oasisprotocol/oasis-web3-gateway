@@ -26,7 +26,7 @@ function cleanup {
 trap cleanup INT TERM EXIT
 
 echo "Starting oasis-net-runner with Emerald ParaTime..."
-/spinup-oasis-stack.sh 2>1&>/var/log/spinup-oasis-stack.log &
+/spinup-oasis-stack.sh 2>1 &>/var/log/spinup-oasis-stack.log &
 OASIS_NODE_PID=$!
 
 echo "Starting postgresql..."
@@ -36,7 +36,7 @@ echo "Starting emerald-web3-gateway..."
 # Wait for oasis-node socket before starting web3 gateway.
 while ! [[ -S ${OASIS_NODE_SOCKET} ]]; do sleep 1; done
 
-${EMERALD_WEB3_GATEWAY} --config ${EMERALD_WEB3_GATEWAY_CONFIG_FILE} 2>1&>/var/log/emerald-web3-gateway.log &
+${EMERALD_WEB3_GATEWAY} --config ${EMERALD_WEB3_GATEWAY_CONFIG_FILE} 2>1 &>/var/log/emerald-web3-gateway.log &
 EMERALD_WEB3_GATEWAY_PID=$!
 
 echo "Populating account(s) (this might take a moment)..."

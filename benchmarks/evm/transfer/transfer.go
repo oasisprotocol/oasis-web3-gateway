@@ -21,8 +21,8 @@ import (
 	consAccClient "github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/consensusaccounts"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 
-	"github.com/oasisprotocol/emerald-web3-gateway/benchmarks/api"
-	"github.com/oasisprotocol/emerald-web3-gateway/benchmarks/util/keys"
+	"github.com/oasisprotocol/oasis-web3-gateway/benchmarks/api"
+	"github.com/oasisprotocol/oasis-web3-gateway/benchmarks/util/keys"
 )
 
 type benchEVMTransfers struct{}

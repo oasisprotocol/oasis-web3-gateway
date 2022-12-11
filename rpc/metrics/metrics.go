@@ -6,11 +6,11 @@ import (
 )
 
 var (
-	durations = promauto.NewHistogramVec(prometheus.HistogramOpts{Name: "oasis_emerald_web3_gateway_api_seconds", Buckets: []float64{0.00001, 0.0001, .001, .005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10}, Help: "Histogram for the eth API requests duration."}, []string{"method_name"})
-	requests  = promauto.NewCounterVec(prometheus.CounterOpts{Name: "oasis_emerald_web3_gateway_api_request", Help: "Counter for API requests."}, []string{"method_name"})
-	failures  = promauto.NewCounterVec(prometheus.CounterOpts{Name: "oasis_emerald_web3_gateway_api_failure", Help: "Counter for API request failures."}, []string{"method_name"})
-	successes = promauto.NewCounterVec(prometheus.CounterOpts{Name: "oasis_emerald_web3_gateway_api_success", Help: "Counter for API successful requests."}, []string{"method_name"})
-	inflight  = promauto.NewGaugeVec(prometheus.GaugeOpts{Name: "oasis_emerald_web3_gateway_api_inflight", Help: "Number of inflight API request."}, []string{"method_name"})
+	durations = promauto.NewHistogramVec(prometheus.HistogramOpts{Name: "oasis_oasis_web3_gateway_api_seconds", Buckets: []float64{0.00001, 0.0001, .001, .005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10}, Help: "Histogram for the eth API requests duration."}, []string{"method_name"})
+	requests  = promauto.NewCounterVec(prometheus.CounterOpts{Name: "oasis_oasis_web3_gateway_api_request", Help: "Counter for API requests."}, []string{"method_name"})
+	failures  = promauto.NewCounterVec(prometheus.CounterOpts{Name: "oasis_oasis_web3_gateway_api_failure", Help: "Counter for API request failures."}, []string{"method_name"})
+	successes = promauto.NewCounterVec(prometheus.CounterOpts{Name: "oasis_oasis_web3_gateway_api_success", Help: "Counter for API successful requests."}, []string{"method_name"})
+	inflight  = promauto.NewGaugeVec(prometheus.GaugeOpts{Name: "oasis_oasis_web3_gateway_api_inflight", Help: "Number of inflight API request."}, []string{"method_name"})
 )
 
 // GetAPIMethodMetrics returns the method metrics for the specified API call.

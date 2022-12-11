@@ -13,9 +13,9 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 
-	"github.com/oasisprotocol/emerald-web3-gateway/db/model"
-	"github.com/oasisprotocol/emerald-web3-gateway/filters"
-	"github.com/oasisprotocol/emerald-web3-gateway/storage"
+	"github.com/oasisprotocol/oasis-web3-gateway/db/model"
+	"github.com/oasisprotocol/oasis-web3-gateway/filters"
+	"github.com/oasisprotocol/oasis-web3-gateway/storage"
 )
 
 var ErrGetLastRetainedRound = errors.New("get last retained round error in db")
@@ -99,7 +99,7 @@ type BlockData struct {
 	// LastTransactionPrice is the price of the last transaction in the runtime block in base units.
 	// This can be different than the price of the last transaction in the `BlockData.Block`
 	// as `BlockData.Block` contains only EVM transactions.
-	// When https://github.com/oasisprotocol/emerald-web3-gateway/issues/84 is implemented
+	// When https://github.com/oasisprotocol/oasis-web3-gateway/issues/84 is implemented
 	// this will need to be persisted in the DB, so that instances without the indexer can
 	// obtain this as well.
 	LastTransactionPrice *quantity.Quantity

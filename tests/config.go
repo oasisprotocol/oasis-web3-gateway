@@ -3,7 +3,7 @@ package tests
 import (
 	"log"
 
-	"github.com/oasisprotocol/emerald-web3-gateway/conf"
+	"github.com/oasisprotocol/oasis-web3-gateway/conf"
 )
 
 var TestsConfig *conf.Config

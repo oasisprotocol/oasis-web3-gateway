@@ -8,13 +8,13 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
-	"github.com/oasisprotocol/emerald-web3-gateway/rpc/metrics"
+	"github.com/oasisprotocol/oasis-web3-gateway/rpc/metrics"
 )
 
 var (
 	durations = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name: "oasis_emerald_web3_gateway_subscription_seconds",
+			Name: "oasis_oasis_web3_gateway_subscription_seconds",
 			// Buckets ranging from 1 second to 24 hours.
 			Buckets: []float64{1, 10, 30, 60, 600, 1800, 3600, 7200, 21600, 86400},
 			Help:    "Histogram for the eth subscription API subscriptions duration.",
@@ -23,7 +23,7 @@ var (
 	)
 	inflightSubs = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "oasis_emerald_web3_gateway_subscription_inflight",
+			Name: "oasis_oasis_web3_gateway_subscription_inflight",
 			Help: "Number of concurrent eth inflight subscriptions.",
 		},
 		[]string{"method_name"},

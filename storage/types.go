@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/oasisprotocol/emerald-web3-gateway/db/model"
+	"github.com/oasisprotocol/oasis-web3-gateway/db/model"
 )
 
 // ErrNoRoundsIndexed is the error returned by last indexed round when no rounds

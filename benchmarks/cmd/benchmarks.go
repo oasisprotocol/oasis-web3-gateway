@@ -17,9 +17,9 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-core/go/oasis-node/cmd/common/grpc"
 
-	"github.com/oasisprotocol/emerald-web3-gateway/benchmarks/api"
-	"github.com/oasisprotocol/emerald-web3-gateway/benchmarks/evm/queries"
-	"github.com/oasisprotocol/emerald-web3-gateway/benchmarks/evm/transfer"
+	"github.com/oasisprotocol/oasis-web3-gateway/benchmarks/api"
+	"github.com/oasisprotocol/oasis-web3-gateway/benchmarks/evm/queries"
+	"github.com/oasisprotocol/oasis-web3-gateway/benchmarks/evm/transfer"
 )
 
 const (

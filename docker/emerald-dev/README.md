@@ -4,13 +4,13 @@ This folder contains the Dockerfile bundling the following components required t
 set up your local development environment for dApps running on Emerald:
 - oasis-node and oasis-net-runner
 - emerald paratime
-- emerald-web3-gateway
+- oasis-web3-gateway
 - oasis-deposit helper to fund your ethereum wallet
 
 ## Prebuilt images
 
 Oasis provides prebuilt `emerald-dev` docker images. To run the `latest` version
-based on the `main` branch of `emerald-web3-gateway` repository, run
+based on the `main` branch of `oasis-web3-gateway` repository, run
 
 ```sh
 docker run -it -p8545:8545 -p8546:8546 oasisprotocol/emerald-dev
@@ -18,7 +18,7 @@ docker run -it -p8545:8545 -p8546:8546 oasisprotocol/emerald-dev
 
 ## Build image locally
 
-To build the docker image, go to your `emerald-web3-gateway` repository root
+To build the docker image, go to your `oasis-web3-gateway` repository root
 folder and run:
 
 ```sh

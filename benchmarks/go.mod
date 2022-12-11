@@ -1,4 +1,4 @@
-module github.com/oasisprotocol/emerald-web3-gateway/benchmarks
+module github.com/oasisprotocol/oasis-web3-gateway/benchmarks
 
 go 1.18
 

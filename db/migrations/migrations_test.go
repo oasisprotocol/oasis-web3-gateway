@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
 
-	"github.com/oasisprotocol/emerald-web3-gateway/db/migrator"
-	"github.com/oasisprotocol/emerald-web3-gateway/tests"
+	"github.com/oasisprotocol/oasis-web3-gateway/db/migrator"
+	"github.com/oasisprotocol/oasis-web3-gateway/tests"
 )
 
 func TestConcurentMigrations(t *testing.T) {

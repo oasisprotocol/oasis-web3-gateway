@@ -9,11 +9,11 @@ all: build
 
 build:
 	@$(ECHO) "$(CYAN)*** Building...$(OFF)"
-	@$(MAKE) emerald-web3-gateway
+	@$(MAKE) oasis-web3-gateway
 	@$(MAKE) docker/emerald-dev/oasis-deposit/oasis-deposit
 	@$(ECHO) "$(CYAN)*** Everything built successfully!$(OFF)"
 
-emerald-web3-gateway:
+oasis-web3-gateway:
 	@$(GO) build $(GOFLAGS) $(GO_EXTRA_FLAGS)
 
 docker/emerald-dev/oasis-deposit/oasis-deposit:
@@ -30,7 +30,7 @@ test:
 fmt:
 	@$(ECHO) "$(CYAN)*** Running Go formatters...$(OFF)"
 	@gofumpt -w .
-	@goimports -w -local github.com/oasisprotocol/emerald-web3-gateway .
+	@goimports -w -local github.com/oasisprotocol/oasis-web3-gateway .
 
 # Lint code, commits and documentation.
 lint-targets := lint-go lint-go-mod-tidy lint-git
@@ -47,7 +47,7 @@ lint-go-mod-tidy:
 
 lint-git:
 	@$(CHECK_GITLINT) || \
-	($(ECHO) "See commit style guide at: https://github.com/oasisprotocol/emerald-web3-gateway/blob/main/CONTRIBUTING.md#git-commit-messages" && \
+	($(ECHO) "See commit style guide at: https://github.com/oasisprotocol/oasis-web3-gateway/blob/main/CONTRIBUTING.md#git-commit-messages" && \
 	exit 1)
 
 lint: $(lint-targets)
@@ -61,7 +61,7 @@ docker:
 # List of targets that are not actual files.
 .PHONY: \
 	all build \
-	emerald-web3-gateway \
+	oasis-web3-gateway \
 	docker/emerald-dev/oasis-deposit/oasis-deposit \
 	clean \
 	test \

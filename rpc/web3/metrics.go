@@ -3,7 +3,7 @@ package web3
 import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
-	"github.com/oasisprotocol/emerald-web3-gateway/rpc/metrics"
+	"github.com/oasisprotocol/oasis-web3-gateway/rpc/metrics"
 )
 
 type metricsWrapper struct {

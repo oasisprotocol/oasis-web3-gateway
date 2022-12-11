@@ -15,13 +15,13 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
-	"github.com/oasisprotocol/emerald-web3-gateway/db/model"
-	"github.com/oasisprotocol/emerald-web3-gateway/indexer"
+	"github.com/oasisprotocol/oasis-web3-gateway/db/model"
+	"github.com/oasisprotocol/oasis-web3-gateway/indexer"
 )
 
 var (
-	metricNodeMinPrice  = promauto.NewGauge(prometheus.GaugeOpts{Name: "oasis_emerald_web3_gateway_gas_orcale_node_min_price", Help: "Min gas price periodically queried from the node."})
-	metricComputedPrice = promauto.NewGauge(prometheus.GaugeOpts{Name: "oasis_emerald_web3_gateway_gas_oracle_computed_price", Help: "Computed recommended gas price based on recent full blocks. -1 if none (no recent full blocks)."})
+	metricNodeMinPrice  = promauto.NewGauge(prometheus.GaugeOpts{Name: "oasis_oasis_web3_gateway_gas_orcale_node_min_price", Help: "Min gas price periodically queried from the node."})
+	metricComputedPrice = promauto.NewGauge(prometheus.GaugeOpts{Name: "oasis_oasis_web3_gateway_gas_oracle_computed_price", Help: "Computed recommended gas price based on recent full blocks. -1 if none (no recent full blocks)."})
 )
 
 // Backend is the gas price oracle backend.

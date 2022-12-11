@@ -6,8 +6,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/oasisprotocol/emerald-web3-gateway/rpc/oasis"
-	"github.com/oasisprotocol/emerald-web3-gateway/tests"
+	"github.com/oasisprotocol/oasis-web3-gateway/rpc/oasis"
+	"github.com/oasisprotocol/oasis-web3-gateway/tests"
 )
 
 func TestOasis_CallDataPublicKey(t *testing.T) {
