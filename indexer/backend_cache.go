@@ -15,9 +15,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
-	"github.com/oasisprotocol/emerald-web3-gateway/conf"
-	"github.com/oasisprotocol/emerald-web3-gateway/db/model"
-	"github.com/oasisprotocol/emerald-web3-gateway/storage"
+	"github.com/oasisprotocol/oasis-web3-gateway/conf"
+	"github.com/oasisprotocol/oasis-web3-gateway/db/model"
+	"github.com/oasisprotocol/oasis-web3-gateway/storage"
 )
 
 const periodicMetricsInterval = 60 * time.Second
@@ -25,21 +25,21 @@ const periodicMetricsInterval = 60 * time.Second
 var (
 	metricCacheHits = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "oasis_emerald_web3_gateway_cache_hits",
+			Name: "oasis_oasis_web3_gateway_cache_hits",
 			Help: "Number of cache hits.",
 		},
 		[]string{"cache"},
 	)
 	metricCacheMisses = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "oasis_emerald_web3_gateway_cache_misses",
+			Name: "oasis_oasis_web3_gateway_cache_misses",
 			Help: "Number of cache misses.",
 		},
 		[]string{"cache"},
 	)
 	metricCacheHitRatio = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "oasis_emerald_web3_gateway_cache_hit_ratio",
+			Name: "oasis_oasis_web3_gateway_cache_hit_ratio",
 			Help: "Percent of Hits over all accesses (Hits + Misses).",
 		},
 		[]string{"cache"},

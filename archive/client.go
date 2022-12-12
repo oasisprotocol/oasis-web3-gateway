@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	"github.com/oasisprotocol/emerald-web3-gateway/rpc/utils"
+	"github.com/oasisprotocol/oasis-web3-gateway/rpc/utils"
 )
 
 // Client is an archive node client backed by web, implementing a limited

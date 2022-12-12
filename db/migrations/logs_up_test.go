@@ -14,8 +14,8 @@ import (
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/driver/pgdriver"
 
-	"github.com/oasisprotocol/emerald-web3-gateway/log"
-	"github.com/oasisprotocol/emerald-web3-gateway/tests"
+	"github.com/oasisprotocol/oasis-web3-gateway/log"
+	"github.com/oasisprotocol/oasis-web3-gateway/tests"
 )
 
 func InitTests(t *testing.T) *bun.DB {

@@ -42,7 +42,7 @@ func newSecp256k1TestKey(seed string) TestKey {
 }
 
 var (
-	TestKey1 = newSecp256k1TestKey("emerald-web3-gateway/test-keys: 1")
-	TestKey2 = newSecp256k1TestKey("emerald-web3-gateway/test-keys: 2")
-	TestKey3 = newSecp256k1TestKey("emerald-web3-gateway/test-keys: 3")
+	TestKey1 = newSecp256k1TestKey("oasis-web3-gateway/test-keys: 1")
+	TestKey2 = newSecp256k1TestKey("oasis-web3-gateway/test-keys: 2")
+	TestKey3 = newSecp256k1TestKey("oasis-web3-gateway/test-keys: 3")
 )

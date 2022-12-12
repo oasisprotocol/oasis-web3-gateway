@@ -14,15 +14,15 @@ import (
 
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 
-	"github.com/oasisprotocol/emerald-web3-gateway/indexer"
-	"github.com/oasisprotocol/emerald-web3-gateway/rpc/eth"
-	"github.com/oasisprotocol/emerald-web3-gateway/rpc/metrics"
-	"github.com/oasisprotocol/emerald-web3-gateway/rpc/utils"
+	"github.com/oasisprotocol/oasis-web3-gateway/indexer"
+	"github.com/oasisprotocol/oasis-web3-gateway/rpc/eth"
+	"github.com/oasisprotocol/oasis-web3-gateway/rpc/metrics"
+	"github.com/oasisprotocol/oasis-web3-gateway/rpc/utils"
 )
 
 var requestHeights = promauto.NewHistogramVec(
 	prometheus.HistogramOpts{
-		Name:    "oasis_emerald_web3_gateway_api_request_heights",
+		Name:    "oasis_oasis_web3_gateway_api_request_heights",
 		Buckets: []float64{0, 1, 2, 3, 5, 10, 50, 100, 500, 1000},
 		Help:    "Histogram of eth API request heights (difference from the latest  height).",
 	},

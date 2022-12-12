@@ -6,7 +6,7 @@ import (
 
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 
-	"github.com/oasisprotocol/emerald-web3-gateway/benchmarks/cmd"
+	"github.com/oasisprotocol/oasis-web3-gateway/benchmarks/cmd"
 )
 
 func main() {

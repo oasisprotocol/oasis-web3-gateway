@@ -13,8 +13,8 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 	"github.com/stretchr/testify/require"
 
-	"github.com/oasisprotocol/emerald-web3-gateway/db/model"
-	"github.com/oasisprotocol/emerald-web3-gateway/indexer"
+	"github.com/oasisprotocol/oasis-web3-gateway/db/model"
+	"github.com/oasisprotocol/oasis-web3-gateway/indexer"
 )
 
 type mockCoreClient struct {

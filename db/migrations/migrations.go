@@ -9,7 +9,7 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/uptrace/bun"
 
-	"github.com/oasisprotocol/emerald-web3-gateway/db/migrator"
+	"github.com/oasisprotocol/oasis-web3-gateway/db/migrator"
 )
 
 // Migrations are all migrations.
@@ -96,13 +96,13 @@ func init() {
 			Up:   migrator.NewSQLMigrationFunc(migrations, "20211213143752_initial.up.sql"),
 		},
 		// Logs index fix migration.
-		// https://github.com/oasisprotocol/emerald-web3-gateway/pull/174
+		// https://github.com/oasisprotocol/oasis-web3-gateway/pull/174
 		{
 			Name: "20220109122505",
 			Up:   LogsUp,
 		},
 		// Add missing receipt on round index, used in pruning.
-		// https://github.com/oasisprotocol/emerald-web3-gateway/issues/227
+		// https://github.com/oasisprotocol/oasis-web3-gateway/issues/227
 		{
 			Name: "20220324091030",
 			Up:   migrator.NewSQLMigrationFunc(migrations, "20220324091030_receipt_round_index.up.sql"),

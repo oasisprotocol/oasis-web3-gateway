@@ -7,8 +7,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/cobra"
 
-	"github.com/oasisprotocol/emerald-web3-gateway/benchmarks/api"
-	"github.com/oasisprotocol/emerald-web3-gateway/benchmarks/util/keys"
+	"github.com/oasisprotocol/oasis-web3-gateway/benchmarks/api"
+	"github.com/oasisprotocol/oasis-web3-gateway/benchmarks/util/keys"
 )
 
 type benchBlockNumber struct{}

@@ -1,4 +1,4 @@
-module github.com/oasisprotocol/emerald-web3-gateway
+module github.com/oasisprotocol/oasis-web3-gateway
 
 go 1.18
 

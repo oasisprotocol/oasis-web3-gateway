@@ -1,6 +1,6 @@
 package txpool
 
-import "github.com/oasisprotocol/emerald-web3-gateway/rpc/metrics"
+import "github.com/oasisprotocol/oasis-web3-gateway/rpc/metrics"
 
 type metricsWrapper struct {
 	api API

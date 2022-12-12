@@ -22,9 +22,9 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/evm"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 
-	"github.com/oasisprotocol/emerald-web3-gateway/db/model"
-	"github.com/oasisprotocol/emerald-web3-gateway/filters"
-	"github.com/oasisprotocol/emerald-web3-gateway/storage"
+	"github.com/oasisprotocol/oasis-web3-gateway/db/model"
+	"github.com/oasisprotocol/oasis-web3-gateway/filters"
+	"github.com/oasisprotocol/oasis-web3-gateway/storage"
 )
 
 var defaultValidatorAddr = "0x0000000000000000000000000000000088888888"

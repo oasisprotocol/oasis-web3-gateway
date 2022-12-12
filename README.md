@@ -1,11 +1,11 @@
-# emerald-web3-gateway
+# oasis-web3-gateway
 
-[![ci-lint](https://github.com/oasisprotocol/emerald-web3-gateway/actions/workflows/ci-lint.yml/badge.svg)](https://github.com/oasisprotocol/emerald-web3-gateway/actions/workflows/ci-lint.yml)
-[![ci-test](https://github.com/oasisprotocol/emerald-web3-gateway/actions/workflows/ci-test.yaml/badge.svg)](https://github.com/oasisprotocol/emerald-web3-gateway/actions/workflows/ci-test.yaml)
-[![codecov](https://codecov.io/gh/oasisprotocol/emerald-web3-gateway/branch/main/graph/badge.svg?token=WMx1Bg91Hm)](https://codecov.io/gh/oasisprotocol/emerald-web3-gateway)
+[![ci-lint](https://github.com/oasisprotocol/oasis-web3-gateway/actions/workflows/ci-lint.yml/badge.svg)](https://github.com/oasisprotocol/oasis-web3-gateway/actions/workflows/ci-lint.yml)
+[![ci-test](https://github.com/oasisprotocol/oasis-web3-gateway/actions/workflows/ci-test.yaml/badge.svg)](https://github.com/oasisprotocol/oasis-web3-gateway/actions/workflows/ci-test.yaml)
+[![codecov](https://codecov.io/gh/oasisprotocol/oasis-web3-gateway/branch/main/graph/badge.svg?token=WMx1Bg91Hm)](https://codecov.io/gh/oasisprotocol/oasis-web3-gateway)
 
 
-Web3 Gateway for Oasis Emerald EVM.
+Web3 Gateway for Oasis-SDK Paratime EVM module.
 
 ## Building and Testing
 
@@ -15,8 +15,9 @@ Web3 Gateway for Oasis Emerald EVM.
 - [PostgreSQL](https://www.postgresql.org/) (at least version 13.3).
 
 Additionally, for testing:
-- [Oasis Core](https://github.com/oasisprotocol/oasis-core) version 22.2.1.
-- [Emerald Paratime](https://github.com/oasisprotocol/emerald-paratime) version 9.0.1.
+- [Oasis Core](https://github.com/oasisprotocol/oasis-core) version 22.2.x.
+- [Emerald Paratime](https://github.com/oasisprotocol/emerald-paratime) version 9.x.x.
+- (or) [Sapphire Paratime](https://github.com/oasisprotocol/sapphire-paratime) version 0.2.x.
 
 ### Build
 
@@ -39,11 +40,11 @@ docker run --rm --name postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 postg
 In a separate terminal, start an Oasis development network:
 
 ```bash
-export EMERALD_PARATIME_VERSION=9.0.1
-export EMERALD_PARATIME=<path-to-emerald-paratime>/emerald-paratime
+export PARATIME_VERSION=9.0.1
+export PARATIME=<path-to-emerald-paratime>/emerald-paratime
 export OASIS_NET_RUNNER=<path-to-oasis-core-artifacts>/oasis-net-runner
 export OASIS_NODE=<path-to-oasis-core-artifacts>/oasis-node
-export OASIS_NODE_DATADIR=/tmp/oasis-evm-gateway-tests
+export OASIS_NODE_DATADIR=/tmp/eth-runtime-test
 
 ./tests/tools/spinup-oasis-stack.sh
 ```

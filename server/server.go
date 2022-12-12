@@ -14,8 +14,8 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"github.com/oasisprotocol/emerald-web3-gateway/conf"
-	"github.com/oasisprotocol/emerald-web3-gateway/storage"
+	"github.com/oasisprotocol/oasis-web3-gateway/conf"
+	"github.com/oasisprotocol/oasis-web3-gateway/storage"
 )
 
 // HealthCheck is the health checker interface.

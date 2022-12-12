@@ -25,11 +25,11 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/evm"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 
-	"github.com/oasisprotocol/emerald-web3-gateway/archive"
-	"github.com/oasisprotocol/emerald-web3-gateway/conf"
-	"github.com/oasisprotocol/emerald-web3-gateway/gas"
-	"github.com/oasisprotocol/emerald-web3-gateway/indexer"
-	"github.com/oasisprotocol/emerald-web3-gateway/rpc/utils"
+	"github.com/oasisprotocol/oasis-web3-gateway/archive"
+	"github.com/oasisprotocol/oasis-web3-gateway/conf"
+	"github.com/oasisprotocol/oasis-web3-gateway/gas"
+	"github.com/oasisprotocol/oasis-web3-gateway/indexer"
+	"github.com/oasisprotocol/oasis-web3-gateway/rpc/utils"
 )
 
 func estimateGasDummySigSpec() types.SignatureAddressSpec {

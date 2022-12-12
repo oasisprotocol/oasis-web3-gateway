@@ -3,7 +3,7 @@ package oasis
 import (
 	"context"
 
-	"github.com/oasisprotocol/emerald-web3-gateway/rpc/metrics"
+	"github.com/oasisprotocol/oasis-web3-gateway/rpc/metrics"
 )
 
 type metricsWrapper struct {

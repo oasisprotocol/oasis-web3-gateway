@@ -5,7 +5,7 @@ before:
     - go mod tidy
 
 builds:
-  - binary: emerald-web3-gateway
+  - binary: oasis-web3-gateway
     env:
       - CGO_ENABLED=0
     flags:
@@ -61,8 +61,8 @@ release:
   prerelease: auto
 
   footer: |
-    **Full Changelog**: https://github.com/oasisprotocol/emerald-web3-gateway/compare/{{ .PreviousTag }}...{{ .Tag }}
+    **Full Changelog**: https://github.com/oasisprotocol/oasis-web3-gateway/compare/{{ .PreviousTag }}...{{ .Tag }}
 
     ### Running the gateway
 
-    https://github.com/oasisprotocol/emerald-web3-gateway/blob/{{ .Tag }}/README.md#running-the-gateway-on-testnetmainnet
+    https://github.com/oasisprotocol/oasis-web3-gateway/blob/{{ .Tag }}/README.md#running-the-gateway-on-testnetmainnet

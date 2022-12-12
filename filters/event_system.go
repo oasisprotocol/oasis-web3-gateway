@@ -13,7 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
 
-	"github.com/oasisprotocol/emerald-web3-gateway/rpc/utils"
+	"github.com/oasisprotocol/oasis-web3-gateway/rpc/utils"
 )
 
 type Type byte

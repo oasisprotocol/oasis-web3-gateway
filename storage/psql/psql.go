@@ -14,10 +14,10 @@ import (
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/driver/pgdriver"
 
-	"github.com/oasisprotocol/emerald-web3-gateway/conf"
-	"github.com/oasisprotocol/emerald-web3-gateway/db/migrations"
-	"github.com/oasisprotocol/emerald-web3-gateway/db/model"
-	"github.com/oasisprotocol/emerald-web3-gateway/storage"
+	"github.com/oasisprotocol/oasis-web3-gateway/conf"
+	"github.com/oasisprotocol/oasis-web3-gateway/db/migrations"
+	"github.com/oasisprotocol/oasis-web3-gateway/db/model"
+	"github.com/oasisprotocol/oasis-web3-gateway/storage"
 )
 
 // Long timeout used when database is opened with long timeouts option enabled.

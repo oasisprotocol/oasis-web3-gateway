@@ -12,7 +12,7 @@
 coverage.txt
 
 # Build binary.
-emerald-web3-gateway
+oasis-web3-gateway
 
 # Benchmarks binary.
 benchmarks/benchmarks

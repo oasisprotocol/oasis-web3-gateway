@@ -17,7 +17,7 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
-const seedPrefix = "oasisprotocol/emerald-web3-gateway/benchmarks: "
+const seedPrefix = "oasisprotocol/oasis-web3-gateway/benchmarks: "
 
 // EVMBenchmarkKey is key generated for benchmarks.
 type EVMBenchmarkKey struct {

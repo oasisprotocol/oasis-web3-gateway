@@ -15,8 +15,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
-	"github.com/oasisprotocol/emerald-web3-gateway/conf"
-	"github.com/oasisprotocol/emerald-web3-gateway/storage"
+	"github.com/oasisprotocol/oasis-web3-gateway/conf"
+	"github.com/oasisprotocol/oasis-web3-gateway/storage"
 )
 
 const (
@@ -31,9 +31,9 @@ const (
 )
 
 var (
-	metricBlockIndexed = promauto.NewGauge(prometheus.GaugeOpts{Name: "oasis_emerald_web3_gateway_block_indexed", Help: "Indexed block heights."})
-	metricBlockPruned  = promauto.NewGauge(prometheus.GaugeOpts{Name: "oasis_emerald_web3_gateway_block_pruned", Help: "Pruned block heights."})
-	metricHealthy      = promauto.NewGauge(prometheus.GaugeOpts{Name: "oasis_emerald_web3_gateway_health", Help: "1 if gateway healthcheck is reporting as healthy, 0 otherwise."})
+	metricBlockIndexed = promauto.NewGauge(prometheus.GaugeOpts{Name: "oasis_oasis_web3_gateway_block_indexed", Help: "Indexed block heights."})
+	metricBlockPruned  = promauto.NewGauge(prometheus.GaugeOpts{Name: "oasis_oasis_web3_gateway_block_pruned", Help: "Pruned block heights."})
+	metricHealthy      = promauto.NewGauge(prometheus.GaugeOpts{Name: "oasis_oasis_web3_gateway_health", Help: "1 if gateway healthcheck is reporting as healthy, 0 otherwise."})
 )
 
 // ErrNotHealthy is the error returned if the gateway is unhealthy.

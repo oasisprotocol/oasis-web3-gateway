@@ -24,7 +24,7 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/staking/api"
 	"github.com/oasisprotocol/oasis-core/go/worker/common/p2p"
 
-	"github.com/oasisprotocol/emerald-web3-gateway/benchmarks/util/keys"
+	"github.com/oasisprotocol/oasis-web3-gateway/benchmarks/util/keys"
 )
 
 const (

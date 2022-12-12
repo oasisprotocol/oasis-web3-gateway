@@ -10,7 +10,7 @@ import (
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 
-	"github.com/oasisprotocol/emerald-web3-gateway/db/model"
+	"github.com/oasisprotocol/oasis-web3-gateway/db/model"
 )
 
 // NewRPCTransaction returns a transaction that will serialize to the RPC representation.
