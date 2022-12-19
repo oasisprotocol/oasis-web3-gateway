@@ -1,7 +1,7 @@
-FROM golang:1.18 AS emerald-web3-gateway
+FROM golang:1.18 AS oasis-web3-gateway
 
-COPY . /go/emerald-web3-gateway
-RUN cd emerald-web3-gateway && make build
+COPY . /go/oasis-web3-gateway
+RUN cd oasis-web3-gateway && make build
 
 FROM ubuntu:20.04
 
@@ -12,7 +12,7 @@ ENV OASIS_NODE=/oasis-node
 ENV OASIS_NET_RUNNER=/oasis-net-runner
 ENV OASIS_NODE_DATADIR=/serverdir/node
 ENV EMERALD_PARATIME=/emerald-paratime
-ENV EMERALD_WEB3_GATEWAY=/emerald-web3-gateway
+ENV EMERALD_WEB3_GATEWAY=/oasis-web3-gateway
 ENV EMERALD_WEB3_GATEWAY_CONFIG_FILE=/emerald-dev.yml
 ENV OASIS_DEPOSIT=/oasis-deposit
 ENV PARATIME=${EMERALD_PARATIME}
@@ -27,9 +27,9 @@ RUN apt update -qq \
 	&& apt install jq postgresql unzip -y \
 	&& rm -rf /var/lib/apt/lists/*
 
-# emerald-web3-gateway binary, config, spinup-* scripts and staking_genesis.json.
-COPY --from=emerald-web3-gateway /go/emerald-web3-gateway/emerald-web3-gateway ${EMERALD_WEB3_GATEWAY}
-COPY --from=emerald-web3-gateway /go/emerald-web3-gateway/docker/emerald-dev/oasis-deposit/oasis-deposit ${OASIS_DEPOSIT}
+# oasis-web3-gateway binary, config, spinup-* scripts and staking_genesis.json.
+COPY --from=oasis-web3-gateway /go/oasis-web3-gateway/oasis-web3-gateway ${EMERALD_WEB3_GATEWAY}
+COPY --from=oasis-web3-gateway /go/oasis-web3-gateway/docker/emerald-dev/oasis-deposit/oasis-deposit ${OASIS_DEPOSIT}
 COPY docker/emerald-dev/emerald-dev.yml ${EMERALD_WEB3_GATEWAY_CONFIG_FILE}
 COPY docker/emerald-dev/start-emerald-dev.sh /
 COPY tests/tools/* /

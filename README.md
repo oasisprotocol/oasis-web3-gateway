@@ -17,7 +17,7 @@ Web3 Gateway for Oasis-SDK Paratime EVM module.
 Additionally, for testing:
 - [Oasis Core](https://github.com/oasisprotocol/oasis-core) version 22.2.x.
 - [Emerald Paratime](https://github.com/oasisprotocol/emerald-paratime) version 9.x.x.
-- (or) [Sapphire Paratime](https://github.com/oasisprotocol/sapphire-paratime) version 0.2.x.
+- (or) [Sapphire Paratime](https://github.com/oasisprotocol/sapphire-paratime) version 0.3.x.
 
 ### Build
 
