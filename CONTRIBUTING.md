@@ -1,6 +1,6 @@
 # Contributing Guidelines
 
-Thank you for your interest in contributing to Emerald Web3 Gateway! There are
+Thank you for your interest in contributing to Oasis Web3 Gateway! There are
 many ways to contribute, and this document should not be considered
 encompassing.
 
