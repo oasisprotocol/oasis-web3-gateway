@@ -1,6 +1,6 @@
 # Versioning
 
-Emerald Web3 Gateway uses [Semantic Versioning 2.0.0] with the following
+Oasis Web3 Gateway uses [Semantic Versioning 2.0.0] with the following
 format:
 
 ```text
