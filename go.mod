@@ -14,9 +14,9 @@ require (
 	github.com/rs/cors v1.8.3
 	github.com/spf13/cobra v1.6.1
 	github.com/stretchr/testify v1.8.1
-	github.com/uptrace/bun v1.1.9
-	github.com/uptrace/bun/dialect/pgdialect v1.1.9
-	github.com/uptrace/bun/driver/pgdriver v1.1.9
+	github.com/uptrace/bun v1.1.10
+	github.com/uptrace/bun/dialect/pgdialect v1.1.10
+	github.com/uptrace/bun/driver/pgdriver v1.1.10
 	golang.org/x/crypto v0.5.0
 	google.golang.org/grpc v1.52.0
 )
@@ -55,7 +55,7 @@ require (
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/magiconair/properties v1.8.6 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mattn/go-isatty v0.0.16 // indirect
+	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
@@ -103,5 +103,5 @@ require (
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	mellium.im/sasl v0.3.0 // indirect
+	mellium.im/sasl v0.3.1 // indirect
 )
