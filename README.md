@@ -126,10 +126,10 @@ DATABASE__PASSWORD: <postgresql_password>
 
 environment variable.
 
-Start the gateway by running the `emerald-web3-gateway` binary:
+Start the gateway by running the `oasis-web3-gateway` binary:
 
 ```bash
-emerald-web3-gateway --config gateway.yml
+oasis-web3-gateway --config gateway.yml
 ```
 
 ### Wipe state to force a complete reindex
@@ -137,7 +137,7 @@ emerald-web3-gateway --config gateway.yml
 To wipe the DB state and force a reindexing use the `truncate-db` subcommand:
 
 ```bash
-emerald-web3-gateway truncate-db --config gateway.yml --unsafe
+oasis-web3-gateway truncate-db --config gateway.yml --unsafe
 ```
 
 **Warning: this will wipe all existing state in the Postgres DB and can
