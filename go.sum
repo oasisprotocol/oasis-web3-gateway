@@ -528,8 +528,8 @@ github.com/tklauser/numcpus v0.2.2/go.mod h1:x3qojaO3uyYt0i56EW/VUYs7uBvdl2fkfZF
 github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc h1:9lRDQMhESg+zvGYmW5DyG0UqvY96Bu5QYsTLvCHdrgo=
 github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc/go.mod h1:bciPuU6GHm1iF1pBvUfxfsH0Wmnc2VbpgvbI9ZWuIRs=
 github.com/tyler-smith/go-bip39 v1.1.0 h1:5eUemwrMargf3BSLRRCalXT93Ns6pQJIjYQN2nyfOP8=
-github.com/uptrace/bun v1.1.10 h1:wx80lg32mWlOV1gNvmPTbR9znt6A2fYvvURzU5dzSPE=
-github.com/uptrace/bun v1.1.10/go.mod h1:pOWJSVU+W0jp3+cbn/TtHdcG/h+QxagECw4EYdKiaSw=
+github.com/uptrace/bun v1.1.11 h1:PVT+DHdLX13tIJaBoT0tkjh1TOWOybW/pz3TKiOB9lo=
+github.com/uptrace/bun v1.1.11/go.mod h1:ysoB7l3gioKLBaZH9wKuJAoeBiOthb/hTyKdbXKcaxg=
 github.com/uptrace/bun/dialect/pgdialect v1.1.10 h1:H25ieb5OJV5ywvKvswF++wMTnePRaGRiSNkYCRXrQxc=
 github.com/uptrace/bun/dialect/pgdialect v1.1.10/go.mod h1:leDSw/IC70/GYPIU3zC8fkOZpJaJ28f51OMT1VnZiY8=
 github.com/uptrace/bun/driver/pgdriver v1.1.10 h1:xmabc3eG5rz8FadFF3GrQiGs5XvXlz6CJUMZhne+1sM=
