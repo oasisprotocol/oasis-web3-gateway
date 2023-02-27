@@ -102,11 +102,11 @@ jobs:
         ports:
           - 5432:5432
     env:
-      OASIS_CORE_VERSION: "22.2.3"
+      OASIS_CORE_VERSION: "22.2.6"
       OASIS_NODE: ${{ github.workspace }}/oasis_core/oasis-node
       OASIS_NET_RUNNER: ${{ github.workspace }}/oasis_core/oasis-net-runner
-      SAPPHIRE_PARATIME_VERSION: 0.3.0
-      GATEWAY__CHAIN_ID: 23294
+      SAPPHIRE_PARATIME_VERSION: 0.4.0
+      GATEWAY__CHAIN_ID: 23293
       GATEWAY__OASIS_RPCS: true
       SAPPHIRE_PARATIME: ${{ github.workspace }}/oasis_core/sapphire-paratime
       KEYMANAGER_ARTIFACT_URL: https://buildkite.com/organizations/oasisprotocol/pipelines/oasis-core-ci/builds/9960/jobs/0184855d-945c-4f29-bffc-86ecb95935f4/artifacts/01848561-82f5-4e4f-b4c1-c6f78e23f815 # Find this at https://buildkite.com/oasisprotocol/oasis-core-ci/builds?branch=stable%2F<...> under "Build runtimes".
@@ -133,7 +133,7 @@ jobs:
           mv "oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-net-runner" "${OASIS_NET_RUNNER}"
           mkdir -p "$(dirname ${SAPPHIRE_PARATIME})"
           # sapphire-paratime
-          wget "https://github.com/oasisprotocol/sapphire-paratime/releases/download/v${SAPPHIRE_PARATIME_VERSION}/insecure-debug-sapphire-paratime.orc" -O "${SAPPHIRE_PARATIME}.orc"
+          wget "https://github.com/oasisprotocol/sapphire-paratime/releases/download/v${SAPPHIRE_PARATIME_VERSION}/localnet-sapphire-paratime.orc" -O "${SAPPHIRE_PARATIME}.orc"
           unzip "${SAPPHIRE_PARATIME}.orc"
           mv runtime.elf "${SAPPHIRE_PARATIME}"
           chmod a+x "${SAPPHIRE_PARATIME}"
