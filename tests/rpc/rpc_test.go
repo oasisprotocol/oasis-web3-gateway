@@ -177,6 +177,8 @@ func TestEth_GetBlockByNumberAndGetBlockByHash(t *testing.T) {
 		0x5aff: 30_000_000,
 		// Sapphire Mainnet.
 		0x5afe: 15_000_000,
+		// Sapphire Localnet.
+		0x5afd: 15_000_000,
 	}
 	require.EqualValues(t, blockGasLimits[chainID.Uint64()], blk1.GasLimit(), "expected block gas limit")
 
