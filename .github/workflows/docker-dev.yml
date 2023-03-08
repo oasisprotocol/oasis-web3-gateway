@@ -1,4 +1,4 @@
-name: docker-emerald-dev
+name: docker-dev
 
 on:
   push:
@@ -7,12 +7,15 @@ on:
 
 jobs:
   docker:
+    strategy:
+      matrix:
+        docker_image: [emerald-dev, sapphire-dev]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
-          # We need history to determine emerald-web3-gateway version from git tag.
+          # We need history to determine oasis-web3-gateway version from git tag.
           fetch-depth: 0
 
       - name: Set up Docker Buildx
@@ -25,7 +28,7 @@ jobs:
           password: ${{ secrets.DOCKER_ACCESS_TOKEN }}
 
       - name: Compute version
-        # Version emerald-dev image by date and git revision.
+        # Version docker image by date and git revision.
         run: |
           echo "VERSION=$(date +%Y-%m-%d-git$(git rev-parse --short HEAD))" >> $GITHUB_ENV
 
@@ -35,10 +38,10 @@ jobs:
           build-args: |
             VERSION=${{ env.VERSION }}
           context: .
-          file: docker/emerald-dev/Dockerfile
+          file: docker/${{ matrix.docker_image }}/Dockerfile
           tags: |
-            oasisprotocol/emerald-dev:latest
-            oasisprotocol/emerald-dev:latest-${{ env.VERSION }}
+            oasisprotocol/${{ matrix.docker_image }}:latest
+            oasisprotocol/${{ matrix.docker_image }}:latest-${{ env.VERSION }}
           push: true
           labels: |
             org.opencontainers.image.source=${{ github.event.repository.html_url }}

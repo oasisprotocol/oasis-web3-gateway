@@ -123,7 +123,7 @@ func printSummary(addresses []string, keys []string, baseAmount types.BaseUnits,
 	amount := new(big.Int).Div(baseAmount.Amount.ToBigInt(), new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil))
 
 	for i, a := range addresses {
-		fmt.Printf("(%d) %s (%d ROSE)\n", i, a, amount)
+		fmt.Printf("(%d) %s (%d TEST)\n", i, a, amount)
 	}
 
 	if len(keys) != 0 {
@@ -144,7 +144,7 @@ func printSummary(addresses []string, keys []string, baseAmount types.BaseUnits,
 func main() {
 	flag.Usage = func() {
 		fmt.Fprintln(os.Stderr, "Usage: oasis-deposit [ options ... ]")
-		fmt.Fprintln(os.Stderr, "Deposit ROSE from the Alice testing account on the consensus layer to the given address on ParaTime.")
+		fmt.Fprintln(os.Stderr, "Deposit native tokens from Alice testing account on the consensus layer to the given address on ParaTime.")
 		fmt.Fprintln(os.Stderr, "\nOptions:")
 		flag.PrintDefaults()
 		os.Exit(1)

@@ -67,7 +67,8 @@ jobs:
           chmod a+x "${EMERALD_PARATIME}"
 
       - name: Spinup oasis-node
-        run: PARATIME="${EMERALD_PARATIME}" PARATIME_VERSION="${EMERALD_PARATIME_VERSION}" tests/tools/spinup-oasis-stack.sh > /dev/null &
+        run:
+          PARATIME="${EMERALD_PARATIME}" PARATIME_VERSION="${EMERALD_PARATIME_VERSION}" tests/tools/spinup-oasis-stack.sh > /dev/null &
 
       - name: Unit tests with coverage
         run:
@@ -141,7 +142,8 @@ jobs:
           wget "${KEYMANAGER_ARTIFACT_URL}" -O "${KEYMANAGER_BINARY}"
 
       - name: Spinup oasis-node
-        run: PARATIME="${SAPPHIRE_PARATIME}" PARATIME_VERSION="${SAPPHIRE_PARATIME_VERSION}" tests/tools/spinup-oasis-stack.sh > /dev/null &
+        run:
+          PARATIME="${SAPPHIRE_PARATIME}" PARATIME_VERSION="${SAPPHIRE_PARATIME_VERSION}" tests/tools/spinup-oasis-stack.sh > /dev/null &
 
       - name: Unit tests with coverage
         run:

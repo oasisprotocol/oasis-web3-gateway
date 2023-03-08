@@ -4,14 +4,23 @@ FROM golang:1.18 AS oasis-web3-gateway
 COPY . /go/oasis-web3-gateway
 RUN cd oasis-web3-gateway && make build
 
-# Build emerald-dev
+# Build simple-keymanager
+FROM oasisprotocol/oasis-core-dev:stable-22.2.x AS oasis-core-dev
+
+ENV OASIS_UNSAFE_SKIP_KM_POLICY=1
+
+RUN git clone https://github.com/oasisprotocol/oasis-core.git --branch stable/22.2.x --depth 1 \
+    && cd oasis-core/tests/runtimes/simple-keymanager \
+    && cargo build
+
+# Build sapphire-dev
 FROM ubuntu:22.04
 
 # Docker-specific variables
 ENV OASIS_CORE_VERSION=22.2.6
-ENV PARATIME_VERSION=10.0.0
-ENV PARATIME_NAME=emerald
-ENV GATEWAY__CHAIN_ID=0xa514
+ENV PARATIME_VERSION=0.4.0
+ENV PARATIME_NAME=sapphire
+ENV GATEWAY__CHAIN_ID=0x5afd
 
 # start.sh and spinup-oasis-stack.sh ENV variables.
 ENV OASIS_NODE=/oasis-node
@@ -21,7 +30,10 @@ ENV OASIS_WEB3_GATEWAY=/oasis-web3-gateway
 ENV OASIS_DEPOSIT=/oasis-deposit
 ENV OASIS_WEB3_GATEWAY_CONFIG_FILE=/localnet.yml
 ENV PARATIME=/runtime.elf
-ENV KEYMANAGER_BINARY=""
+ENV KEYMANAGER_BINARY=/simple-keymanager
+ENV OASIS_UNSAFE_SKIP_AVR_VERIFY=1
+ENV OASIS_UNSAFE_SKIP_KM_POLICY=1
+ENV OASIS_UNSAFE_ALLOW_DEBUG_ENCLAVES=1
 
 ARG VERSION
 ARG DEBIAN_FRONTEND=noninteractive
@@ -31,6 +43,9 @@ RUN apt update -qq \
 	&& apt dist-upgrade -qq -y \
 	&& apt install jq postgresql unzip -y \
 	&& rm -rf /var/lib/apt/lists/*
+
+# simple-keymanager
+COPY --from=oasis-core-dev /oasis-core/target/debug/simple-keymanager ${KEYMANAGER_BINARY}
 
 # oasis-web3-gateway binary, config, spinup-* scripts and staking_genesis.json.
 COPY --from=oasis-web3-gateway /go/oasis-web3-gateway/oasis-web3-gateway ${OASIS_WEB3_GATEWAY}

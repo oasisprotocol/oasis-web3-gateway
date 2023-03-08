@@ -23,7 +23,7 @@ cache:
   metrics: true
 
 gateway:
-  chain_id: 42262
+#  chain_id: 0x0 # defined by GATEWAY__CHAIN_ID env variable!
   http:
     host: "0.0.0.0"
     port: 8545
@@ -37,3 +37,4 @@ gateway:
     port: 9999
   method_limits:
     get_logs_max_rounds: 100
+  oasis_rpcs: true
