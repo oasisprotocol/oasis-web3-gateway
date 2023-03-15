@@ -58,10 +58,10 @@ release-build:
 docker: docker-emerald-dev docker-sapphire-dev
 
 docker-emerald-dev:
-	@docker build -t oasisprotocol/emerald-dev:local --build-arg VERSION=local -f docker/emerald-dev/Dockerfile .
+	@docker build -t ghcr.io/oasisprotocol/emerald-dev:local --build-arg VERSION=local -f docker/emerald-dev/Dockerfile .
 
 docker-sapphire-dev:
-	@docker build -t oasisprotocol/sapphire-dev:local --build-arg VERSION=local -f docker/sapphire-dev/Dockerfile .
+	@docker build -t ghcr.io/oasisprotocol/sapphire-dev:local --build-arg VERSION=local -f docker/sapphire-dev/Dockerfile .
 
 
 # List of targets that are not actual files.
