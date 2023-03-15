@@ -19,8 +19,8 @@ versions are based on:
 To use the precompiled images, run:
 
 ```sh
-docker run -it -p8545:8545 -p8546:8546 oasisprotocol/emerald-dev # Emerald
-docker run -it -p8545:8545 -p8546:8546 oasisprotocol/sapphire-dev # Sapphire
+docker run -it -p8545:8545 -p8546:8546 ghcr.io/oasisprotocol/emerald-dev # Emerald
+docker run -it -p8545:8545 -p8546:8546 ghcr.io/oasisprotocol/sapphire-dev # Sapphire
 ```
 
 ## Build image locally
@@ -35,8 +35,8 @@ make docker
 To run the compiled image type:
 
 ```sh
-docker run -it -p8545:8545 -p8546:8546 oasisprotocol/emerald-dev:local
-docker run -it -p8545:8545 -p8546:8546 oasisprotocol/sapphire-dev:local
+docker run -it -p8545:8545 -p8546:8546 ghcr.io/oasisprotocol/emerald-dev:local
+docker run -it -p8545:8545 -p8546:8546 ghcr.io/oasisprotocol/sapphire-dev:local
 ```
 
 ## Usage
