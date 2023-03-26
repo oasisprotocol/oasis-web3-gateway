@@ -1,6 +1,6 @@
 module github.com/oasisprotocol/oasis-web3-gateway
 
-go 1.18
+go 1.19
 
 require (
 	github.com/ethereum/go-ethereum v1.11.5

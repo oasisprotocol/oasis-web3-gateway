@@ -1,6 +1,6 @@
 module github.com/oasisprotocol/web3-tests/test/tools/oasis-deposit
 
-go 1.18
+go 1.19
 
 require (
 	github.com/oasisprotocol/oasis-core/go v0.2202.1
