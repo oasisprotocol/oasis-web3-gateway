@@ -1,5 +1,5 @@
 # Build oasis-web3-gateway
-FROM golang:1.18 AS oasis-web3-gateway
+FROM golang:1.19 AS oasis-web3-gateway
 
 COPY . /go/oasis-web3-gateway
 RUN cd oasis-web3-gateway && make build

@@ -49,7 +49,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
-          go-version: "1.18"
+          go-version: "1.19"
 
       - name: Install prerequisites
         run: |
@@ -120,7 +120,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
-          go-version: "1.18"
+          go-version: "1.19"
 
       - name: Install prerequisites
         run: |
