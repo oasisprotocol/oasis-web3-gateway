@@ -596,6 +596,17 @@ func (api *publicAPI) GetTransactionReceipt(ctx context.Context, txHash common.H
 	return receipt, nil
 }
 
+// resolveLatest ensures that the special "latest round" marker is resolved into an actual value.
+func (api *publicAPI) resolveLatest(ctx context.Context, round uint64) (uint64, error) {
+	switch round {
+	case client.RoundLatest:
+		// Resolve to actual latest round.
+		return api.backend.BlockNumber(ctx)
+	default:
+		return round, nil
+	}
+}
+
 // getStartEndRounds is a helper for fetching start and end rounds parameters.
 func (api *publicAPI) getStartEndRounds(ctx context.Context, logger *logging.Logger, filter filters.FilterCriteria) (uint64, uint64, error) {
 	if filter.BlockHash != nil {
@@ -606,21 +617,34 @@ func (api *publicAPI) getStartEndRounds(ctx context.Context, logger *logging.Log
 		return round, round, nil
 	}
 
-	start := client.RoundLatest
-	end := client.RoundLatest
+	// Determine start round. If nothing passed, this is the genesis round.
+	blockNum := ethrpc.EarliestBlockNumber
 	if filter.FromBlock != nil {
-		round, err := api.roundParamFromBlockNum(ctx, logger, ethrpc.BlockNumber(filter.FromBlock.Int64()))
-		if err != nil {
-			return 0, 0, err
-		}
-		start = round
+		blockNum = ethrpc.BlockNumber(filter.FromBlock.Int64())
 	}
+	start, err := api.roundParamFromBlockNum(ctx, logger, blockNum)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	// Determine end round. If nothing passed, this is the latest round.
+	end := client.RoundLatest
 	if filter.ToBlock != nil {
-		round, err := api.roundParamFromBlockNum(ctx, logger, ethrpc.BlockNumber(filter.ToBlock.Int64()))
+		end, err = api.roundParamFromBlockNum(ctx, logger, ethrpc.BlockNumber(filter.ToBlock.Int64()))
 		if err != nil {
 			return 0, 0, err
 		}
-		end = round
+	}
+
+	// Ensure we have concrete round numbers here before proceeding as these rounds are used to
+	// determine whether the range of blocks is too large.
+	start, err = api.resolveLatest(ctx, start)
+	if err != nil {
+		return 0, 0, err
+	}
+	end, err = api.resolveLatest(ctx, end)
+	if err != nil {
+		return 0, 0, err
 	}
 
 	return start, end, nil

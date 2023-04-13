@@ -391,7 +391,9 @@ func TestERC20(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), receipt.Status)
 	require.NotEmpty(t, receipt.Logs, "ERC20-transfer receipt should contain the emitted log")
-	require.EqualValues(t, uint64(49700), receipt.GasUsed, "ERC20-transfer expected gas use")
+	// NOTE: Gas used may vary depending on the nonce value was so this may need updates if other
+	//       tests submit more or less transactions.
+	require.EqualValues(t, uint64(49699), receipt.GasUsed, "ERC20-transfer expected gas use")
 
 	// Get balance of token receiver
 	balanceOfCall, err := testabi.Pack("balanceOf", common.Address{1})

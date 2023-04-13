@@ -407,6 +407,30 @@ func TestEth_GetLogsWithoutBlockhash(t *testing.T) {
 	require.NoError(t, err, "getLogs without explicit block hash")
 }
 
+func TestEth_GetLogsWithLatestHeight(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
+	defer cancel()
+
+	ec := localClient(t, false)
+
+	// Submit test transaction.
+	receipt := submitTestTransaction(ctx, t)
+	require.Equal(t, uint64(1), receipt.Status)
+	require.NotNil(t, receipt)
+
+	_, err := ec.FilterLogs(ctx, ethereum.FilterQuery{FromBlock: receipt.BlockNumber, ToBlock: nil})
+	require.NoError(t, err, "getLogs from specific block to latest block")
+}
+
+func TestEth_GetLogsWithGenesisHeight(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
+	defer cancel()
+
+	ec := localClient(t, false)
+	_, err := ec.FilterLogs(ctx, ethereum.FilterQuery{FromBlock: nil, ToBlock: big.NewInt(10)})
+	require.NoError(t, err, "getLogs from genesis block to specific block")
+}
+
 func TestEth_GetLogsWithFilters(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
 	defer cancel()
