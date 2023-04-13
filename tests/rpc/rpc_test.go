@@ -259,10 +259,6 @@ func TestEth_BlockNumber(t *testing.T) {
 }
 
 func TestEth_GetTransactionByHash(t *testing.T) {
-	if tests.TestsConfig.Gateway.ExposeOasisRPCs {
-		t.Skip("contract tests w/ c10lity require compat lib to be integrated")
-		return
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
 	defer cancel()
 
@@ -296,10 +292,6 @@ func TestEth_GetTransactionByHash(t *testing.T) {
 }
 
 func TestEth_GetTransactionByBlockAndIndex(t *testing.T) {
-	if tests.TestsConfig.Gateway.ExposeOasisRPCs {
-		t.Skip("contract tests w/ c10lity require compat lib to be integrated")
-		return
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
 	defer cancel()
 
@@ -333,10 +325,6 @@ func TestEth_GetTransactionByBlockAndIndex(t *testing.T) {
 }
 
 func TestEth_GetBlockByHashRawResponses(t *testing.T) {
-	if tests.TestsConfig.Gateway.ExposeOasisRPCs {
-		t.Skip("contract tests w/ c10lity require compat lib to be integrated")
-		return
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
 	defer cancel()
 
@@ -374,10 +362,6 @@ func TestEth_GetBlockByHashRawResponses(t *testing.T) {
 }
 
 func TestEth_GetTransactionReceiptRawResponses(t *testing.T) {
-	if tests.TestsConfig.Gateway.ExposeOasisRPCs {
-		t.Skip("contract tests w/ c10lity require compat lib to be integrated")
-		return
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
 	defer cancel()
 
@@ -405,6 +389,30 @@ func TestEth_GetLogsWithoutBlockhash(t *testing.T) {
 	ec := localClient(t, false)
 	_, err := ec.FilterLogs(ctx, ethereum.FilterQuery{FromBlock: big.NewInt(1), ToBlock: big.NewInt(10)})
 	require.NoError(t, err, "getLogs without explicit block hash")
+}
+
+func TestEth_GetLogsWithLatestHeight(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
+	defer cancel()
+
+	ec := localClient(t, false)
+
+	// Submit test transaction.
+	receipt := submitTestTransaction(ctx, t)
+	require.Equal(t, uint64(1), receipt.Status)
+	require.NotNil(t, receipt)
+
+	_, err := ec.FilterLogs(ctx, ethereum.FilterQuery{FromBlock: receipt.BlockNumber, ToBlock: nil})
+	require.NoError(t, err, "getLogs from specific block to latest block")
+}
+
+func TestEth_GetLogsWithGenesisHeight(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
+	defer cancel()
+
+	ec := localClient(t, false)
+	_, err := ec.FilterLogs(ctx, ethereum.FilterQuery{FromBlock: nil, ToBlock: big.NewInt(10)})
+	require.NoError(t, err, "getLogs from genesis block to specific block")
 }
 
 func TestEth_GetLogsWithFilters(t *testing.T) {
@@ -467,10 +475,6 @@ func TestEth_GetLogsWithFilters(t *testing.T) {
 }
 
 func TestEth_GetLogsMultiple(t *testing.T) {
-	if tests.TestsConfig.Gateway.ExposeOasisRPCs {
-		t.Skip("contract tests w/ c10lity require compat lib to be integrated")
-		return
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
 	defer cancel()
 	ec := localClient(t, false)

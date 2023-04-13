@@ -130,19 +130,11 @@ func testContractCreation(t *testing.T, value *big.Int) uint64 {
 }
 
 func TestContractCreation(t *testing.T) {
-	if tests.TestsConfig.Gateway.ExposeOasisRPCs {
-		t.Skip("contract tests w/ c10lity require compat lib to be integrated")
-		return
-	}
 	status := testContractCreation(t, big.NewInt(0))
 	require.Equal(t, uint64(1), status)
 }
 
 func TestContractFailCreation(t *testing.T) {
-	if tests.TestsConfig.Gateway.ExposeOasisRPCs {
-		t.Skip("contract tests w/ c10lity require compat lib to be integrated")
-		return
-	}
 	status := testContractCreation(t, big.NewInt(1))
 	require.Equal(t, uint64(0), status)
 }
@@ -201,10 +193,6 @@ func TestEth_EstimateGas(t *testing.T) {
 }
 
 func TestEth_GetCode(t *testing.T) {
-	if tests.TestsConfig.Gateway.ExposeOasisRPCs {
-		t.Skip("contract tests w/ c10lity require compat lib to be integrated")
-		return
-	}
 	ec := localClient(t, false)
 
 	code := common.FromHex(strings.TrimSpace(evmSolTestCompiledHex))
@@ -236,7 +224,13 @@ func TestEth_GetCode(t *testing.T) {
 	t.Logf("SignedTx hash: %s", signedTx.Hash().Hex())
 	t.Logf("Contract address: %s", receipt.ContractAddress)
 
-	require.EqualValues(t, uint64(103630), receipt.GasUsed, "expected contract creation gas used")
+	// NOTE: Gas used may vary depending on the nonce value was so this may need updates if other
+	//       tests submit more or less transactions.
+	if tests.TestsConfig.Gateway.ExposeOasisRPCs {
+		require.EqualValues(t, uint64(103629), receipt.GasUsed, "expected contract creation gas used")
+	} else {
+		require.EqualValues(t, uint64(103630), receipt.GasUsed, "expected contract creation gas used")
+	}
 	require.Equal(t, uint64(1), receipt.Status)
 
 	storedCode, err := ec.CodeAt(context.Background(), receipt.ContractAddress, nil)
@@ -245,10 +239,6 @@ func TestEth_GetCode(t *testing.T) {
 }
 
 func TestEth_Call(t *testing.T) {
-	if tests.TestsConfig.Gateway.ExposeOasisRPCs {
-		t.Skip("contract tests w/ c10lity require compat lib to be integrated")
-		return
-	}
 	abidata := `
 		[
 			{
@@ -333,10 +323,6 @@ func TestEth_Call(t *testing.T) {
 //		   }
 //	  }
 func TestERC20(t *testing.T) {
-	if tests.TestsConfig.Gateway.ExposeOasisRPCs {
-		t.Skip("contract tests w/ c10lity require compat lib to be integrated")
-		return
-	}
 	testabi, _ := abi.JSON(strings.NewReader(erc20abi))
 
 	ec := localClient(t, false)
@@ -391,7 +377,9 @@ func TestERC20(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), receipt.Status)
 	require.NotEmpty(t, receipt.Logs, "ERC20-transfer receipt should contain the emitted log")
-	require.EqualValues(t, uint64(49700), receipt.GasUsed, "ERC20-transfer expected gas use")
+	// NOTE: Gas used may vary depending on the nonce value was so this may need updates if other
+	//       tests submit more or less transactions.
+	require.EqualValues(t, uint64(49699), receipt.GasUsed, "ERC20-transfer expected gas use")
 
 	// Get balance of token receiver
 	balanceOfCall, err := testabi.Pack("balanceOf", common.Address{1})
