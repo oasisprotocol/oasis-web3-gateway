@@ -259,10 +259,6 @@ func TestEth_BlockNumber(t *testing.T) {
 }
 
 func TestEth_GetTransactionByHash(t *testing.T) {
-	if tests.TestsConfig.Gateway.ExposeOasisRPCs {
-		t.Skip("contract tests w/ c10lity require compat lib to be integrated")
-		return
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
 	defer cancel()
 
@@ -296,10 +292,6 @@ func TestEth_GetTransactionByHash(t *testing.T) {
 }
 
 func TestEth_GetTransactionByBlockAndIndex(t *testing.T) {
-	if tests.TestsConfig.Gateway.ExposeOasisRPCs {
-		t.Skip("contract tests w/ c10lity require compat lib to be integrated")
-		return
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
 	defer cancel()
 
@@ -333,10 +325,6 @@ func TestEth_GetTransactionByBlockAndIndex(t *testing.T) {
 }
 
 func TestEth_GetBlockByHashRawResponses(t *testing.T) {
-	if tests.TestsConfig.Gateway.ExposeOasisRPCs {
-		t.Skip("contract tests w/ c10lity require compat lib to be integrated")
-		return
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
 	defer cancel()
 
@@ -374,10 +362,6 @@ func TestEth_GetBlockByHashRawResponses(t *testing.T) {
 }
 
 func TestEth_GetTransactionReceiptRawResponses(t *testing.T) {
-	if tests.TestsConfig.Gateway.ExposeOasisRPCs {
-		t.Skip("contract tests w/ c10lity require compat lib to be integrated")
-		return
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
 	defer cancel()
 
@@ -491,10 +475,6 @@ func TestEth_GetLogsWithFilters(t *testing.T) {
 }
 
 func TestEth_GetLogsMultiple(t *testing.T) {
-	if tests.TestsConfig.Gateway.ExposeOasisRPCs {
-		t.Skip("contract tests w/ c10lity require compat lib to be integrated")
-		return
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
 	defer cancel()
 	ec := localClient(t, false)
