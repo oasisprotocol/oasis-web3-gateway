@@ -4,7 +4,7 @@ Subfolders contain Dockerfiles for bundling the following components required to
 set up localnet for developing dApps running on Emerald or Sapphire:
 
 - oasis-node and oasis-net-runner
-- Emerald or Sapphire ParaTime .orc bundles
+- Emerald or Sapphire ParaTime localnet .orc bundles
 - oasis-web3-gateway
 - oasis-deposit helper to fund local development accounts
 
