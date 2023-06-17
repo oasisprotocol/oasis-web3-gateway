@@ -17,8 +17,8 @@ RUN git clone https://github.com/oasisprotocol/oasis-core.git --branch stable/22
 FROM ubuntu:22.04
 
 # Docker-specific variables
-ENV OASIS_CORE_VERSION=22.2.6
-ENV PARATIME_VERSION=0.4.0
+ENV OASIS_CORE_VERSION=22.2.8
+ENV PARATIME_VERSION=0.5.2
 ENV PARATIME_NAME=sapphire
 ENV GATEWAY__CHAIN_ID=0x5afd
 
