@@ -47,7 +47,7 @@ jq "
 " "$FIXTURE_FILE" >"$FIXTURE_FILE.tmp"
 mv "$FIXTURE_FILE.tmp" "$FIXTURE_FILE"
 
-if [[ $SAPPHIRE_BACKEND == 'mock' ]]; then
+if [[ ${SAPPHIRE_BACKEND-} == 'mock' ]]; then
 	# Set beacon backend to 'debug mock'
 	jq ".network.beacon.debug_mock_backend = true" "$FIXTURE_FILE" >"$FIXTURE_FILE.tmp"
 	mv "$FIXTURE_FILE.tmp" "$FIXTURE_FILE"
