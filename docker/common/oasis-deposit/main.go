@@ -150,10 +150,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	amount := flag.String("amount", "100_000_000_000_000_000_000", "amount to deposit in ParaTime base units")
+	amount := flag.String("amount", "100_000_000_000_000_000_000_000", "amount to deposit in ParaTime base units")
 	sock := flag.String("sock", "", "oasis-node internal UNIX socket address")
 	rtid := flag.String("rtid", "8000000000000000000000000000000000000000000000000000000000000000", "Runtime ID")
 	to := flag.String("to", "", "deposit address in 0x or oasis1 format or mnemonic phrase. If none provided, new mnemonic will be generated")
+	useTestMnemonic := flag.Bool("test-mnemonic", false, "Use the standard test mnemonic (test test test test test test test test test test test junk)")
 	flag.IntVar(&numMnemonicDerivations, "n", numMnemonicDerivations, "number of addresses to derive from mnemonic")
 	flag.Parse()
 
@@ -191,6 +192,9 @@ func main() {
 
 	toAddresses := []string{*to}
 	toPrivateKeys := []string{}
+	if *useTestMnemonic {
+		*to = "test test test test test test test test test test test junk"
+	}
 	if *to == "" {
 		// Address or mnemonic not provided. Generate a short mnemonic.
 		entropy, _ := bip39.NewEntropy(128)
