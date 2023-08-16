@@ -9,8 +9,9 @@
 # - OASIS_WEB3_GATEWAY_CONFIG_FILE: path to oasis-web3-gateway config file
 # - OASIS_DEPOSIT: path to oasis-deposit binary
 # - SAPPHIRE_BACKEND: uses 'mock' backend by default
+# - OASIS_SINGLE_COMPUTE_NODE: (default: true) if non-empty only run a single compute node
 
-export OASIS_SINGLE_COMPUTE_NODE=1
+export OASIS_SINGLE_COMPUTE_NODE=${OASIS_SINGLE_COMPUTE_NODE-1}
 OASIS_WEB3_GATEWAY_VERSION=$(${OASIS_WEB3_GATEWAY} -v | head -n1 | cut -d " " -f 3 | sed -r 's/^v//')
 OASIS_CORE_VERSION=$(${OASIS_NODE} -v | head -n1 | cut -d " " -f 3 | sed -r 's/^v//')
 VERSION=$(cat /VERSION)

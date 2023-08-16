@@ -11,7 +11,7 @@ set -euo pipefail
 # - PARATIME_VERSION: version of the binary. e.g. 3.0.0
 # - OASIS_NODE_DATADIR: path to temporary oasis-node data dir e.g. /tmp/oasis-localnet
 # - KEYMANAGER_BINARY: path to key manager binary e.g. simple-keymanager
-# - OASIS_SINGLE_COMPUTE_NODE: Only run a single compute note
+# - OASIS_SINGLE_COMPUTE_NODE: Only run a single compute node
 
 function paratime_ver {
   echo $PARATIME_VERSION | cut -d \- -f 1 | cut -d + -f 1 | cut -d . -f $1
