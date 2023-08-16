@@ -11,6 +11,7 @@ set -euo pipefail
 # - PARATIME_VERSION: version of the binary. e.g. 3.0.0
 # - OASIS_NODE_DATADIR: path to temporary oasis-node data dir e.g. /tmp/oasis-localnet
 # - KEYMANAGER_BINARY: path to key manager binary e.g. simple-keymanager
+# - OASIS_SINGLE_COMPUTE_NODE: Only run a single compute node
 
 function paratime_ver {
   echo $PARATIME_VERSION | cut -d \- -f 1 | cut -d + -f 1 | cut -d . -f $1
@@ -38,6 +39,16 @@ ${OASIS_NET_RUNNER} dump-fixture \
 RT_IDX=0
 if [ ! -z "${KEYMANAGER_BINARY:-}" ]; then
   RT_IDX=1
+fi
+
+# Use only one compute node
+if [[ ! -z "${OASIS_SINGLE_COMPUTE_NODE:-}" ]]; then
+  jq "
+    .compute_workers = [.compute_workers[0]] |
+    .runtimes[1].executor.group_size = 1 |
+    .runtimes[1].executor.group_backup_size = 0
+  " "$FIXTURE_FILE" >"$FIXTURE_FILE.tmp"
+  mv "$FIXTURE_FILE.tmp" "$FIXTURE_FILE"
 fi
 
 # Enable expensive queries for testing.

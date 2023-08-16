@@ -9,7 +9,9 @@
 # - OASIS_WEB3_GATEWAY_CONFIG_FILE: path to oasis-web3-gateway config file
 # - OASIS_DEPOSIT: path to oasis-deposit binary
 # - SAPPHIRE_BACKEND: uses 'mock' backend by default
+# - OASIS_SINGLE_COMPUTE_NODE: (default: true) if non-empty only run a single compute node
 
+export OASIS_SINGLE_COMPUTE_NODE=${OASIS_SINGLE_COMPUTE_NODE-1}
 OASIS_WEB3_GATEWAY_VERSION=$(${OASIS_WEB3_GATEWAY} -v | head -n1 | cut -d " " -f 3 | sed -r 's/^v//')
 OASIS_CORE_VERSION=$(${OASIS_NODE} -v | head -n1 | cut -d " " -f 3 | sed -r 's/^v//')
 VERSION=$(cat /VERSION)
@@ -33,14 +35,17 @@ function cleanup {
 
 trap cleanup INT TERM EXIT
 
-echo "Starting oasis-net-runner with ${PARATIME_NAME}..."
+echo " * Starting oasis-net-runner with ${PARATIME_NAME}"
 /spinup-oasis-stack.sh 2>1 &>/var/log/spinup-oasis-stack.log &
 OASIS_NODE_PID=$!
 
-echo "Starting postgresql..."
-/etc/init.d/postgresql start >/dev/null
+chown -R postgres:postgres /etc/postgresql /var/run/postgresql /var/log/postgresql /var/lib/postgresql/
+chown postgres:ssl-cert /etc/ssl/private/
+chown postgres:postgres /etc/ssl/private/ssl-cert-snakeoil.key
+chmod 600               /etc/ssl/private/ssl-cert-snakeoil.key
+/etc/init.d/postgresql start
 
-echo "Starting oasis-web3-gateway..."
+echo " * Starting oasis-web3-gateway"
 # Wait for oasis-node socket before starting web3 gateway.
 while ! [[ -S ${OASIS_NODE_SOCKET} ]]; do sleep 1; done
 
@@ -48,27 +53,24 @@ ${OASIS_WEB3_GATEWAY} --config ${OASIS_WEB3_GATEWAY_CONFIG_FILE} 2>1 &>/var/log/
 OASIS_WEB3_GATEWAY_PID=$!
 
 if [[ ${SAPPHIRE_BACKEND} == 'mock' ]]; then
-	echo -n "Bootstrapping network and populating account(s) (this might take a minute)"
+	echo -n " * Bootstrapping network (this might take a minute)"
 
-	# Wait for at least 2 compute nodes
 	echo -n .
 	${OASIS_NODE} debug control wait-nodes -n 2 -a unix:${OASIS_NODE_SOCKET}
 
 	echo -n .
 	${OASIS_NODE} debug control set-epoch --epoch 1 -a unix:${OASIS_NODE_SOCKET}
-	sleep 1
 
 	echo .
 	${OASIS_NODE} debug control set-epoch --epoch 2 -a unix:${OASIS_NODE_SOCKET}
-	sleep 1
-	echo
 else
-	echo "Bootstrapping network and populating account(s) (this might take a minute)..."
-	echo
+	echo " * Bootstrapping network (this might take a minute)"
 	# Wait for compute nodes before initiating deposit.
 	${OASIS_NODE} debug control wait-ready -a unix:${OASIS_NODE_SOCKET}
 fi
 
+echo " * Populating accounts"
+echo ""
 ${OASIS_DEPOSIT} -sock unix:${OASIS_NODE_SOCKET} "$@"
 
 echo

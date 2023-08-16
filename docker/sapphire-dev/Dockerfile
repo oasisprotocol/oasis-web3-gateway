@@ -17,7 +17,7 @@ RUN git clone https://github.com/oasisprotocol/oasis-core.git --branch stable/22
 FROM ubuntu:22.04
 
 # Docker-specific variables
-ENV OASIS_CORE_VERSION=22.2.8
+ENV OASIS_CORE_VERSION=22.2.11
 ENV PARATIME_VERSION=0.5.2
 ENV PARATIME_NAME=sapphire
 ENV GATEWAY__CHAIN_ID=0x5afd
@@ -70,9 +70,14 @@ RUN unzip "paratime.orc" \
 # Write VERSION information.
 RUN echo "${VERSION}" > /VERSION
 
-USER postgres
-RUN /etc/init.d/postgresql start \
-	&& psql --command "ALTER USER postgres WITH SUPERUSER PASSWORD 'postgres';"
+# Initialize PostgreSQL database, permissions need to be setup
+USER root
+RUN chown -R postgres:postgres /etc/postgresql /var/run/postgresql /var/log/postgresql /var/lib/postgresql/ \
+	&& chown postgres:ssl-cert /etc/ssl/private/ \
+	&& chown postgres:postgres /etc/ssl/private/ssl-cert-snakeoil.key \
+	&& chmod 600               /etc/ssl/private/ssl-cert-snakeoil.key  \
+	&& /etc/init.d/postgresql start \
+	&& su -c "psql --command \"ALTER USER postgres WITH SUPERUSER PASSWORD 'postgres';\"" postgres
 
 # Web3 gateway http and ws ports.
 EXPOSE 8545/tcp
