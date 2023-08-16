@@ -34,7 +34,7 @@ func GetRPCAPIs(
 	var apis []ethRpc.API
 
 	web3Service := web3.NewPublicAPI()
-	ethService := eth.NewPublicAPI(client, archiveClient, logging.GetLogger("eth_rpc"), config.ChainID, backend, gasPriceOracle, config.MethodLimits)
+	ethService := eth.NewPublicAPI(client, archiveClient, logging.GetLogger("eth_rpc"), config.ChainID, backend, gasPriceOracle, config.MethodLimits, !config.ExposeOasisRPCs || config.AllowUnencryptedTxs)
 	netService := net.NewPublicAPI(config.ChainID)
 	txpoolService := txpool.NewPublicAPI()
 	filtersService := filters.NewPublicAPI(client, logging.GetLogger("eth_filters"), backend, eventSystem)
