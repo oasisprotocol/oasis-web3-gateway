@@ -227,7 +227,7 @@ func TestEth_GetCode(t *testing.T) {
 	// NOTE: Gas used may vary depending on the nonce value was so this may need updates if other
 	//       tests submit more or less transactions.
 	if tests.TestsConfig.Gateway.ExposeOasisRPCs {
-		require.EqualValues(t, uint64(103629), receipt.GasUsed, "expected contract creation gas used")
+		require.EqualValues(t, uint64(103647), receipt.GasUsed, "expected contract creation gas used")
 	} else {
 		require.EqualValues(t, uint64(103630), receipt.GasUsed, "expected contract creation gas used")
 	}
@@ -379,7 +379,11 @@ func TestERC20(t *testing.T) {
 	require.NotEmpty(t, receipt.Logs, "ERC20-transfer receipt should contain the emitted log")
 	// NOTE: Gas used may vary depending on the nonce value was so this may need updates if other
 	//       tests submit more or less transactions.
-	require.EqualValues(t, uint64(49699), receipt.GasUsed, "ERC20-transfer expected gas use")
+	if tests.TestsConfig.Gateway.ExposeOasisRPCs {
+		require.EqualValues(t, uint64(52499), receipt.GasUsed, "ERC20-transfer expected gas use")
+	} else {
+		require.EqualValues(t, uint64(49699), receipt.GasUsed, "ERC20-transfer expected gas use")
+	}
 
 	// Get balance of token receiver
 	balanceOfCall, err := testabi.Pack("balanceOf", common.Address{1})

@@ -15,6 +15,7 @@ func TestOasis_CallDataPublicKey(t *testing.T) {
 		t.Skip("oasis RPCs are not enabled")
 		return
 	}
+
 	rpcRes := call(t, "oasis_callDataPublicKey", []string{})
 	var res oasis.CallDataPublicKey
 	err := json.Unmarshal(rpcRes.Result, &res)
@@ -22,4 +23,5 @@ func TestOasis_CallDataPublicKey(t *testing.T) {
 	require.Len(t, res.PublicKey, 32)
 	require.NotEmpty(t, res.Checksum)
 	require.NotEmpty(t, res.Signature)
+	require.Greater(t, res.Epoch, uint64(0))
 }
