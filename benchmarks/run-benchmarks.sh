@@ -8,7 +8,7 @@ cleanup() {
 }
 trap "cleanup" EXIT
 
-TEST_BASE_DIR="/tmp/oasis-emerald-benchmarks"
+TEST_BASE_DIR="/tmp/oasis-sapphire-benchmarks"
 CLIENT_SOCK="unix:${TEST_BASE_DIR}/net-runner/network/client-0/internal.sock"
 
 # Generate fixture.
@@ -17,8 +17,8 @@ mkdir -p "${TEST_BASE_DIR}"
 	fixture \
 	--node.binary "${OASIS_NODE}" \
 	--runtime.id "8000000000000000000000000000000000000000000000000000000000000000" \
-	--runtime.version "${EMERALD_PARATIME_VERSION}" \
-	--runtime.binary "${EMERALD_PARATIME}" >"${TEST_BASE_DIR}/fixture.json"
+	--runtime.version "${SAPPHIRE_PARATIME_VERSION}" \
+	--runtime.binary "${SAPPHIRE_PARATIME}" >"${TEST_BASE_DIR}/fixture.json"
 
 # Start the network.
 "${OASIS_NET_RUNNER}" \
@@ -28,7 +28,7 @@ mkdir -p "${TEST_BASE_DIR}"
 
 sleep 10
 
-"${EMERALD_WEB3_GATEWAY}" --config ../conf/benchmarks.yml &
+"${OASIS_WEB3_GATEWAY}" --config ../conf/benchmarks.yml &
 
 ./benchmarks \
 	--address "${CLIENT_SOCK}" \

@@ -28,6 +28,8 @@ type CallDataPublicKey struct {
 	Checksum hexutil.Bytes `json:"checksum"`
 	// Signature is the Sign(sk, (key || checksum)) from the key manager.
 	Signature hexutil.Bytes `json:"signature"`
+	// Epoch is the epoch of the ephemeral runtime key.
+	Epoch uint64 `json:"epoch,omitempty"`
 }
 
 type publicAPI struct {
@@ -54,5 +56,6 @@ func (api *publicAPI) CallDataPublicKey(ctx context.Context) (*CallDataPublicKey
 		PublicKey: res.PublicKey.PublicKey[:],
 		Checksum:  res.PublicKey.Checksum,
 		Signature: res.PublicKey.Signature[:],
+		Epoch:     res.Epoch,
 	}, nil
 }
