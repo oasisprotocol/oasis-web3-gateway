@@ -316,10 +316,9 @@ func (ib *indexBackend) StoreBlockData(ctx context.Context, oasisBlock *block.Bl
 					}
 					// Shouldn't happen unless something is terribly wrong.
 					if txGasUsed != 0 {
-						ib.logger.Error("multiple gas used events for a transaction", "prev_used", txGasUsed, "gas_used", ce, "index", eventIndex)
-						return fmt.Errorf("multiple GasUsedEvent for a transaction")
+						ib.logger.Warn("multiple gas used events for a transaction", "prev_used", txGasUsed, "gas_used", ce, "index", eventIndex)
 					}
-					txGasUsed = ce.GasUsed.Amount
+					txGasUsed += ce.GasUsed.Amount
 				}
 			default:
 				// Ignore any other events.
