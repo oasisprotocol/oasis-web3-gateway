@@ -18,8 +18,12 @@ import (
 
 	"github.com/oasisprotocol/oasis-core/go/common"
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
+	coreSignature "github.com/oasisprotocol/oasis-core/go/common/crypto/signature"
 	cmnGrpc "github.com/oasisprotocol/oasis-core/go/common/grpc"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
+	consensus "github.com/oasisprotocol/oasis-core/go/consensus/api"
+	"github.com/oasisprotocol/oasis-core/go/consensus/api/transaction"
+	staking "github.com/oasisprotocol/oasis-core/go/staking/api"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
@@ -38,8 +42,13 @@ const (
 	derivationPath = "m/44'/60'/0'/0/%d"
 )
 
-// Number of keys to derive from the mnemonic, if provided.
-var numMnemonicDerivations = 5
+var (
+	// Number of keys to derive from the mnemonic, if provided.
+	numMnemonicDerivations = 5
+
+	// Origin account for depositing tokens from.
+	srcAccount = testing.Alice
+)
 
 func sigspecForSigner(signer signature.Signer) types.SignatureAddressSpec {
 	switch pk := signer.Public().(type) {
@@ -54,13 +63,25 @@ func sigspecForSigner(signer signature.Signer) types.SignatureAddressSpec {
 	}
 }
 
-// GetChainContext returns the chain context.
+// GetChainContext returns the runtime chain context.
 func GetChainContext(ctx context.Context, rtc client.RuntimeClient) (signature.Context, error) {
 	info, err := rtc.GetInfo(ctx)
 	if err != nil {
-		return "", err
+		return signature.RawContext{}, err
 	}
 	return info.ChainContext, nil
+}
+
+// consensusSigner extracts the consensus signer from the SDK signer.
+func consensusSigner(testKey testing.TestKey) coreSignature.Signer {
+	type wrappedSigner interface {
+		Unwrap() coreSignature.Signer
+	}
+
+	if ws, ok := testKey.Signer.(wrappedSigner); ok {
+		return ws.Unwrap()
+	}
+	return nil
 }
 
 // EstimateGas estimates the amount of gas the transaction will use.
@@ -79,6 +100,22 @@ func EstimateGas(ctx context.Context, rtc client.RuntimeClient, tx types.Transac
 	// Specify only as much gas as was estimated.
 	tx.AuthInfo.Fee.Gas = gas + extraGas
 	return tx
+}
+
+// SignAndSubmitConsensusTx signs and submits the given consensus transaction.
+func SignAndSubmitConsensusTx(ctx context.Context, cs consensus.ClientBackend, signer coreSignature.Signer, tx *transaction.Transaction) error {
+	chainCtx, err := cs.GetChainContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	sigCtx := coreSignature.Context([]byte(fmt.Sprintf("%s for chain %s", transaction.SignatureContext, chainCtx)))
+	signed, err := coreSignature.SignSigned(signer, sigCtx, tx)
+	if err != nil {
+		return err
+	}
+
+	return cs.SubmitTx(ctx, &transaction.SignedTransaction{Signed: *signed})
 }
 
 // SignAndSubmitTx signs and submits the given transaction.
@@ -141,19 +178,36 @@ func printSummary(addresses []string, keys []string, baseAmount types.BaseUnits,
 	}
 }
 
+func submitAllowance(ctx context.Context, conn *grpc.ClientConn, runtimeID common.Namespace, allowQnt *types.Quantity) error {
+	cs := consensus.NewConsensusClient(conn) // Used for allowance transaction.
+	nonce, err := cs.GetSignerNonce(ctx, &consensus.GetSignerNonceRequest{
+		AccountAddress: srcAccount.Address.ConsensusAddress(),
+		Height:         consensus.HeightLatest,
+	})
+	if err != nil {
+		return err
+	}
+	txa := staking.NewAllowTx(nonce, &transaction.Fee{}, &staking.Allow{
+		Beneficiary:  staking.NewRuntimeAddress(runtimeID),
+		Negative:     false,
+		AmountChange: *allowQnt,
+	})
+	return SignAndSubmitConsensusTx(ctx, cs, consensusSigner(srcAccount), txa)
+}
+
 func main() {
 	flag.Usage = func() {
 		fmt.Fprintln(os.Stderr, "Usage: oasis-deposit [ options ... ]")
-		fmt.Fprintln(os.Stderr, "Deposit native tokens from Alice testing account on the consensus layer to the given address on ParaTime.")
+		fmt.Fprintln(os.Stderr, "Deposit native tokens from Cory testing account on the consensus layer to the given address on ParaTime.")
 		fmt.Fprintln(os.Stderr, "\nOptions:")
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
 
-	amount := flag.String("amount", "100_000_000_000_000_000_000_000", "amount to deposit in ParaTime base units")
+	amount := flag.String("amount", "10_000_000_000_000_000_000_000", "amount to deposit in ParaTime base units")
 	sock := flag.String("sock", "", "oasis-node internal UNIX socket address")
 	rtid := flag.String("rtid", "8000000000000000000000000000000000000000000000000000000000000000", "Runtime ID")
-	to := flag.String("to", "", "deposit address in 0x or oasis1 format or mnemonic phrase. If none provided, new mnemonic will be generated")
+	to := flag.String("to", "", "comma-separated deposit addresses in 0x or oasis1 format or mnemonic phrase. If none provided, new mnemonic will be generated")
 	useTestMnemonic := flag.Bool("test-mnemonic", false, "Use the standard test mnemonic (test test test test test test test test test test test junk)")
 	flag.IntVar(&numMnemonicDerivations, "n", numMnemonicDerivations, "number of addresses to derive from mnemonic")
 	flag.Parse()
@@ -163,15 +217,15 @@ func main() {
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
-	quantity := *quantity.NewQuantity()
+	qnt := *quantity.NewQuantity()
 	amountBigInt, succ := new(big.Int).SetString(*amount, 0)
 	if !succ {
 		panic(fmt.Sprintf("can't parse amount %s, obtained value %s", *amount, amountBigInt.String()))
 	}
-	if err := quantity.FromBigInt(amountBigInt); err != nil {
+	if err := qnt.FromBigInt(amountBigInt); err != nil {
 		panic(fmt.Sprintf("can't parse quantity: %s", err))
 	}
-	baseAmount := types.NewBaseUnits(quantity, types.NativeDenomination)
+	baseAmount := types.NewBaseUnits(qnt, types.NativeDenomination)
 
 	var runtimeID common.Namespace
 	if err := runtimeID.UnmarshalHex(*rtid); err != nil {
@@ -201,7 +255,9 @@ func main() {
 		mnemonic, _ := bip39.NewMnemonic(entropy)
 		*to = mnemonic
 	}
-	if strings.Contains(*to, " ") {
+	if strings.Contains(*to, ",") {
+		toAddresses = strings.Split(*to, ",")
+	} else if strings.Contains(*to, " ") {
 		// Check, if mnemonic was provided instead of the address.
 		var wallet *hdwallet.Wallet
 		wallet, err = hdwallet.NewFromMnemonic(*to)
@@ -227,6 +283,14 @@ func main() {
 			toPrivateKeys = append(toPrivateKeys, privateKey)
 		}
 	}
+
+	// Submit allowance transaction.
+	//allowQnt := qnt.Clone()
+	//allowQnt.Mul(quantity.NewFromUint64(uint64(numMnemonicDerivations)))
+	//if err = submitAllowance(ctx, conn, runtimeID, allowQnt); err != nil {
+	//	panic(fmt.Sprintf("can't allow: %s", err))
+	//}
+
 	for _, a := range toAddresses {
 		var addr types.Address
 		if !strings.HasPrefix(a, "oasis1") {
@@ -241,9 +305,8 @@ func main() {
 		} else if err = addr.UnmarshalText([]byte(a)); err != nil {
 			panic(fmt.Sprintf("unmarshal addr err: %s", err))
 		}
-
 		txb := consAcc.Deposit(&addr, baseAmount).SetFeeConsensusMessages(1)
-		_, err = SignAndSubmitTx(ctx, rtc, testing.Alice.Signer, *txb.GetTransaction(), 0)
+		_, err = SignAndSubmitTx(ctx, rtc, srcAccount.Signer, *txb.GetTransaction(), 0)
 		if err != nil {
 			panic(fmt.Sprintf("can't deposit: %s", err))
 		}
