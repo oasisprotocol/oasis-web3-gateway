@@ -3,13 +3,13 @@
         "max_allowances": 10000,
         "allow_escrow_messages": true
     },
-    "total_supply": "200000000000000",
+    "total_supply": "2000000000000000",
     "ledger": {
         "oasis1qrec770vrek0a9a5lcrv0zvt22504k68svq7kzve": {
             "general": {
-                "balance": "100000000000000",
+                "balance": "1000000000000000",
                 "allowances": {
-                    "oasis1qqdpkrh0v9jn80kymcvgk57v38x38qwdxvvtnjfm": "100000000000000"
+                    "oasis1qqdpkrh0v9jn80kymcvgk57v38x38qwdxvvtnjfm": "1000000000000000"
                 }
             },
             "escrow": {
@@ -27,9 +27,9 @@
         },
         "oasis1qrydpazemvuwtnp3efm7vmfvg3tde044qg6cxwzx": {
             "general": {
-                "balance": "100000000000000",
+                "balance": "1000000000000000",
                 "allowances": {
-                    "oasis1qqdpkrh0v9jn80kymcvgk57v38x38qwdxvvtnjfm": "100000000000000"
+                    "oasis1qqdpkrh0v9jn80kymcvgk57v38x38qwdxvvtnjfm": "1000000000000000"
                 }
             },
             "escrow": {
