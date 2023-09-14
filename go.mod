@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/ethereum/go-ethereum v1.12.1
-	github.com/fxamacker/cbor/v2 v2.4.0
+	github.com/fxamacker/cbor/v2 v2.5.0
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/knadh/koanf v1.5.0
