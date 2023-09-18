@@ -28,7 +28,8 @@ updates:
       # Group bun updates into a single PR as there are three bun packages
       # that need to be updated simultaneously.
       bun:
-        - "github.com/uptrace/bun"
-        - "github.com/uptrace/bun/dialect/pgdialect"
-        - "github.com/uptrace/bun/driver/pgdriver"
+        patterns:
+          - "github.com/uptrace/bun"
+          - "github.com/uptrace/bun/dialect/pgdialect"
+          - "github.com/uptrace/bun/driver/pgdriver"
 
