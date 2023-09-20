@@ -8,9 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"strings"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -48,10 +46,6 @@ var (
 	// estimateGasSigSpec is a dummy signature spec used by the estimate gas method, as
 	// otherwise transactions without signature would be underestimated.
 	estimateGasSigSpec = estimateGasDummySigSpec()
-)
-
-const (
-	revertErrorPrefix = "reverted: "
 )
 
 // API is the eth_ prefixed set of APIs in the Web3 JSON-RPC spec.
@@ -354,39 +348,6 @@ func (api *publicAPI) GetCode(ctx context.Context, address common.Address, block
 	return res, nil
 }
 
-type RevertError struct {
-	error
-	Reason string `json:"reason"`
-}
-
-// ErrorData returns the ABI encoded error reason.
-func (e *RevertError) ErrorData() interface{} {
-	return e.Reason
-}
-
-// NewRevertError returns an revert error with ABI encoded revert reason.
-func (api *publicAPI) NewRevertError(revertErr error) *RevertError {
-	// ABI encoded function.
-	abiReason := []byte{0x08, 0xc3, 0x79, 0xa0} // Keccak256("Error(string)")
-
-	// ABI encode the revert Reason string.
-	revertReason := strings.TrimPrefix(revertErr.Error(), revertErrorPrefix)
-	typ, _ := abi.NewType("string", "", nil)
-	unpacked, err := (abi.Arguments{{Type: typ}}).Pack(revertReason)
-	if err != nil {
-		api.Logger.Error("failed to encode revert error", "revert_reason", revertReason, "err", err)
-		return &RevertError{
-			error: revertErr,
-		}
-	}
-	abiReason = append(abiReason, unpacked...)
-
-	return &RevertError{
-		error:  revertErr,
-		Reason: hexutil.Encode(abiReason),
-	}
-}
-
 func (api *publicAPI) Call(ctx context.Context, args utils.TransactionArgs, blockNrOrHash ethrpc.BlockNumberOrHash, _ *utils.StateOverride) (hexutil.Bytes, error) {
 	logger := api.Logger.With("method", "eth_call", "block_or_hash", blockNrOrHash)
 	logger.Debug("request", "args", args)
@@ -438,13 +399,7 @@ func (api *publicAPI) Call(ctx context.Context, args utils.TransactionArgs, bloc
 		input,
 	)
 	if err != nil {
-		if strings.HasPrefix(err.Error(), revertErrorPrefix) {
-			revertErr := api.NewRevertError(err)
-			logger.Debug("failed to execute SimulateCall, reverted", "err", err, "reason", revertErr.Reason)
-			return nil, revertErr
-		}
-		logger.Debug("failed to execute SimulateCall", "err", err)
-		return nil, err
+		return nil, api.handleCallFailure(ctx, logger, err)
 	}
 
 	logger.Debug("response", "args", args, "resp", res)

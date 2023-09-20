@@ -12,6 +12,7 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/pubsub"
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
@@ -168,8 +169,9 @@ func (cb *cachingBackend) Index(
 	oasisBlock *block.Block,
 	txResults []*client.TransactionWithResults,
 	blockGasLimit uint64,
+	rtInfo *core.RuntimeInfoResponse,
 ) error {
-	return cb.inner.Index(ctx, oasisBlock, txResults, blockGasLimit)
+	return cb.inner.Index(ctx, oasisBlock, txResults, blockGasLimit, rtInfo)
 }
 
 func (cb *cachingBackend) Prune(
@@ -406,6 +408,10 @@ func (cb *cachingBackend) GetLogs(
 
 func (cb *cachingBackend) WatchBlocks(ctx context.Context, buffer int64) (<-chan *BlockData, pubsub.ClosableSubscription, error) {
 	return cb.inner.WatchBlocks(ctx, buffer)
+}
+
+func (cb *cachingBackend) RuntimeInfo() *core.RuntimeInfoResponse {
+	return cb.inner.RuntimeInfo()
 }
 
 func (cb *cachingBackend) pruneCache(
