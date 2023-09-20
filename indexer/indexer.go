@@ -53,8 +53,9 @@ type Service struct {
 	client  client.RuntimeClient
 	core    core.V1
 
-	queryBlockGasLimit bool
-	blockGasLimit      uint64
+	queryEpochParameters bool
+	blockGasLimit        uint64
+	rtInfo               *core.RuntimeInfoResponse
 
 	ctx       context.Context
 	cancelCtx context.CancelFunc
@@ -77,7 +78,7 @@ func (s *Service) indexBlock(ctx context.Context, round uint64) error {
 		return fmt.Errorf("querying block: %w", err)
 	}
 
-	if s.blockGasLimit == 0 || s.queryBlockGasLimit {
+	if s.blockGasLimit == 0 || s.rtInfo == nil || s.queryEpochParameters {
 		// Query parameters for block gas limit.
 		var params *core.Parameters
 		params, err = s.core.Parameters(ctx, round)
@@ -85,6 +86,12 @@ func (s *Service) indexBlock(ctx context.Context, round uint64) error {
 			return fmt.Errorf("querying block parameters: %w", err)
 		}
 		s.blockGasLimit = params.MaxBatchGas
+
+		// Query runtime info.
+		s.rtInfo, err = s.core.RuntimeInfo(ctx)
+		if err != nil {
+			return fmt.Errorf("querying runtime info: %w", err)
+		}
 	}
 
 	txs, err := s.client.GetTransactionsWithResults(ctx, blk.Header.Round)
@@ -92,7 +99,7 @@ func (s *Service) indexBlock(ctx context.Context, round uint64) error {
 		return fmt.Errorf("querying transactions with results: %w", err)
 	}
 
-	err = s.backend.Index(ctx, blk, txs, s.blockGasLimit)
+	err = s.backend.Index(ctx, blk, txs, s.blockGasLimit, s.rtInfo)
 	if err != nil {
 		return fmt.Errorf("indexing block: %w", err)
 	}
@@ -100,11 +107,11 @@ func (s *Service) indexBlock(ctx context.Context, round uint64) error {
 
 	switch {
 	case blk.Header.HeaderType == block.EpochTransition:
-		// Epoch transition block, ensure block gas is queried on next normal round.
-		s.queryBlockGasLimit = true
-	case s.queryBlockGasLimit && blk.Header.HeaderType == block.Normal:
-		// Block gas was queried, no need to query it until next epoch.
-		s.queryBlockGasLimit = false
+		// Epoch transition block, ensure epoch parameters are queried on next normal round.
+		s.queryEpochParameters = true
+	case s.queryEpochParameters && blk.Header.HeaderType == block.Normal:
+		// Epoch parameters were queried in last block, no need to re-query until next epoch.
+		s.queryEpochParameters = false
 	default:
 	}
 

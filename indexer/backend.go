@@ -3,6 +3,7 @@ package indexer
 import (
 	"context"
 	"errors"
+	"sync"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/oasisprotocol/oasis-core/go/common"
@@ -12,6 +13,7 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
 
 	"github.com/oasisprotocol/oasis-web3-gateway/db/model"
 	"github.com/oasisprotocol/oasis-web3-gateway/filters"
@@ -82,6 +84,7 @@ type Backend interface {
 		oasisBlock *block.Block,
 		txResults []*client.TransactionWithResults,
 		blockGasLimit uint64,
+		rtInfo *core.RuntimeInfoResponse,
 	) error
 
 	// Prune removes indexed data for rounds equal to or earlier than the passed round.
@@ -89,6 +92,9 @@ type Backend interface {
 
 	// SetObserver sets the intrusive backend observer.
 	SetObserver(BackendObserver)
+
+	// RuntimeInfo returns the runtime info.
+	RuntimeInfo() *core.RuntimeInfoResponse
 }
 
 // BlockData contains all per block indexed data.
@@ -113,7 +119,11 @@ type BackendObserver interface {
 }
 
 type indexBackend struct {
-	runtimeID     common.Namespace
+	runtimeID common.Namespace
+
+	rtInfoLock sync.RWMutex
+	rtInfo     *core.RuntimeInfoResponse
+
 	logger        *logging.Logger
 	storage       storage.Storage
 	blockNotifier *pubsub.Broker
@@ -130,13 +140,18 @@ func (ib *indexBackend) SetObserver(ob BackendObserver) {
 }
 
 // Index indexes oasis block.
-func (ib *indexBackend) Index(ctx context.Context, oasisBlock *block.Block, txResults []*client.TransactionWithResults, blockGasLimit uint64) error {
+func (ib *indexBackend) Index(ctx context.Context, oasisBlock *block.Block, txResults []*client.TransactionWithResults, blockGasLimit uint64, rtInfo *core.RuntimeInfoResponse) error {
 	round := oasisBlock.Header.Round
 
 	err := ib.StoreBlockData(ctx, oasisBlock, txResults, blockGasLimit)
 	if err != nil {
 		ib.logger.Error("generateEthBlock failed", "err", err)
 		return err
+	}
+	if rtInfo != nil {
+		ib.rtInfoLock.Lock()
+		ib.rtInfo = rtInfo
+		ib.rtInfoLock.Unlock()
 	}
 
 	ib.logger.Info("indexed block", "round", round)
@@ -165,6 +180,12 @@ func (ib *indexBackend) Prune(ctx context.Context, round uint64) error {
 
 		return ib.storage.Delete(ctx, new(model.Receipt), round)
 	})
+}
+
+func (ib *indexBackend) RuntimeInfo() *core.RuntimeInfoResponse {
+	ib.rtInfoLock.RLock()
+	defer ib.rtInfoLock.RUnlock()
+	return ib.rtInfo
 }
 
 func (ib *indexBackend) WatchBlocks(ctx context.Context, buffer int64) (<-chan *BlockData, pubsub.ClosableSubscription, error) {
