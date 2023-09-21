@@ -18,7 +18,7 @@ FROM ubuntu:22.04
 
 # Docker-specific variables
 ENV OASIS_CORE_VERSION=22.2.11
-ENV PARATIME_VERSION=0.6.2-testnet
+ENV PARATIME_VERSION=0.6.3-testnet
 ENV PARATIME_NAME=sapphire
 ENV GATEWAY__CHAIN_ID=0x5afd
 
