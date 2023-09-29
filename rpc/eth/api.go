@@ -384,6 +384,12 @@ func (api *publicAPI) Call(ctx context.Context, args utils.TransactionArgs, bloc
 	if args.Data != nil {
 		input = *args.Data
 	}
+	if args.Input != nil {
+		// "data" and "input" are accepted for backwards-compatibility reasons.
+		// "input" is the newer name and should be preferred by clients.
+		// https://github.com/ethereum/go-ethereum/issues/15628
+		input = *args.Input
+	}
 	if args.From != nil {
 		sender = *args.From
 	}
