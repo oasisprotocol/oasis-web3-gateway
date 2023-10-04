@@ -27,7 +27,7 @@ jobs:
         with:
           install-only: true
           distribution: goreleaser
-          version: 1.2.5
+          version: 1.21.2
 
       - name: Build and publish the next release
         run: |

@@ -26,6 +26,11 @@ checksum:
   name_template: SHA256SUMS-{{.Version}}.txt
   algorithm: sha256
 
+git:
+  # Pick the latest tag if there are multiple tags on the same commit:
+  # https://github.com/goreleaser/goreleaser/issues/4209#issuecomment-1651570723
+  tag_sort: '-version:creatordate'
+
 snapshot:
   name_template: "{{ incpatch .Version }}-next"
 
