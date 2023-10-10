@@ -18,6 +18,7 @@ FROM ubuntu:22.04
 
 # Docker-specific variables
 ENV OASIS_CORE_VERSION=22.2.11
+ENV OASIS_CLI_VERSION=0.5.0
 ENV PARATIME_VERSION=0.6.4-testnet
 ENV PARATIME_NAME=sapphire
 ENV GATEWAY__CHAIN_ID=0x5afd
@@ -41,7 +42,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 # Install Postgresql and other tools packaged by Ubuntu.
 RUN apt update -qq \
 	&& apt dist-upgrade -qq -y \
-	&& apt install jq postgresql unzip -y \
+	&& apt install jq postgresql unzip ca-certificates -y \
 	&& rm -rf /var/lib/apt/lists/*
 
 # simple-keymanager
@@ -66,6 +67,12 @@ RUN mkdir -p "$(dirname ${PARATIME})"
 ADD "https://github.com/oasisprotocol/${PARATIME_NAME}-paratime/releases/download/v${PARATIME_VERSION}/localnet-${PARATIME_NAME}-paratime.orc" "/paratime.orc"
 RUN unzip "paratime.orc" \
     && chmod a+x "runtime.elf"
+
+# Configure oasis-cli.
+ADD "https://github.com/oasisprotocol/cli/releases/download/v${OASIS_CLI_VERSION}/oasis_cli_${OASIS_CLI_VERSION}_linux_amd64.tar.gz" /
+RUN tar -xvf "/oasis_cli_${OASIS_CLI_VERSION}_linux_amd64.tar.gz" \
+	&& mv "/oasis_cli_${OASIS_CLI_VERSION}_linux_amd64/oasis" / \
+	&& rm -rf "/oasis_cli_${OASIS_CLI_VERSION}_linux_amd64/"
 
 # Write VERSION information.
 RUN echo "${VERSION}" > /VERSION
