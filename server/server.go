@@ -11,8 +11,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/gorilla/mux"
-	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"github.com/oasisprotocol/oasis-core/go/common/logging"
 
 	"github.com/oasisprotocol/oasis-web3-gateway/conf"
 	"github.com/oasisprotocol/oasis-web3-gateway/storage"

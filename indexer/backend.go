@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
+
 	"github.com/oasisprotocol/oasis-core/go/common"
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/hash"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
@@ -188,7 +189,7 @@ func (ib *indexBackend) RuntimeInfo() *core.RuntimeInfoResponse {
 	return ib.rtInfo
 }
 
-func (ib *indexBackend) WatchBlocks(ctx context.Context, buffer int64) (<-chan *BlockData, pubsub.ClosableSubscription, error) {
+func (ib *indexBackend) WatchBlocks(_ context.Context, buffer int64) (<-chan *BlockData, pubsub.ClosableSubscription, error) {
 	typedCh := make(chan *BlockData)
 	sub := ib.blockNotifier.SubscribeBuffered(buffer)
 	sub.Unwrap(typedCh)

@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"

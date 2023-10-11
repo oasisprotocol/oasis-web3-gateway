@@ -10,6 +10,11 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+
 	"github.com/oasisprotocol/oasis-core/go/common"
 	cmnGrpc "github.com/oasisprotocol/oasis-core/go/common/grpc"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
@@ -21,10 +26,6 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
 	oasisTesting "github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
-	"github.com/stretchr/testify/require"
-	"github.com/uptrace/bun"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/oasisprotocol/oasis-web3-gateway/filters"
 	"github.com/oasisprotocol/oasis-web3-gateway/gas"
@@ -158,7 +159,7 @@ func Setup() error {
 		return err
 	}
 	backend := indexer.NewIndexBackend(runtimeID, storage, subBackend)
-	indx, backend, err = indexer.New(ctx, backend, rc, runtimeID, storage, tests.TestsConfig)
+	indx, backend, err = indexer.New(ctx, backend, rc, runtimeID, tests.TestsConfig)
 	if err != nil {
 		return err
 	}

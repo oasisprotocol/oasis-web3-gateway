@@ -162,7 +162,7 @@ func stakingGenesis() *api.Genesis {
 	return &genesis
 }
 
-func genesisMain(cmd *cobra.Command, args []string) {
+func genesisMain(cmd *cobra.Command, _ []string) {
 	f := fixture()
 	f.Network.StakingGenesis = stakingGenesis()
 	data, err := json.MarshalIndent(f, "", "    ")

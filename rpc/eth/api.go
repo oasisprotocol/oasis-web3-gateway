@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/eth/filters"
 	"github.com/ethereum/go-ethereum/rlp"
 	ethrpc "github.com/ethereum/go-ethereum/rpc"
+
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/secp256k1"
@@ -283,7 +284,7 @@ func (api *publicAPI) ChainId() (*hexutil.Big, error) {
 	return (*hexutil.Big)(big.NewInt(int64(api.chainID))), nil
 }
 
-func (api *publicAPI) GasPrice(ctx context.Context) (*hexutil.Big, error) {
+func (api *publicAPI) GasPrice(_ context.Context) (*hexutil.Big, error) {
 	logger := api.Logger.With("method", "eth_gasPrice")
 	logger.Debug("request")
 
@@ -715,7 +716,7 @@ func (api *publicAPI) Hashrate() hexutil.Uint64 {
 	return 0
 }
 
-func (api *publicAPI) Syncing(ctx context.Context) (interface{}, error) {
+func (api *publicAPI) Syncing(_ context.Context) (interface{}, error) {
 	logger := api.Logger.With("method", "eth_syncing")
 	logger.Debug("request")
 

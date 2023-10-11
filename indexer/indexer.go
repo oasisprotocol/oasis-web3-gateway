@@ -7,13 +7,14 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+
 	"github.com/oasisprotocol/oasis-core/go/common"
 	"github.com/oasisprotocol/oasis-core/go/common/service"
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"github.com/oasisprotocol/oasis-web3-gateway/conf"
 	"github.com/oasisprotocol/oasis-web3-gateway/storage"
@@ -338,7 +339,6 @@ func New(
 	backend Backend,
 	client client.RuntimeClient,
 	runtimeID common.Namespace,
-	storage storage.Storage,
 	cfg *conf.Config,
 ) (*Service, Backend, error) {
 	ctx, cancelCtx := context.WithCancel(ctxBackend)

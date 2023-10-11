@@ -18,7 +18,7 @@ import (
 	"github.com/oasisprotocol/oasis-web3-gateway/tests"
 )
 
-func InitTests(t *testing.T) *bun.DB {
+func InitTests(_ *testing.T) *bun.DB {
 	tests.MustInitConfig()
 
 	// Init DB.

@@ -26,8 +26,8 @@ func TestConcurentMigrations(t *testing.T) {
 	Migrations.Add(migrator.Migration{
 		Name: "20500109122505",
 		Up: func(ctx context.Context, db *bun.Tx) error {
-			new := atomic.AddUint32(&migrationRuns, 1)
-			require.EqualValues(t, 1, new, "migration run more than once")
+			n := atomic.AddUint32(&migrationRuns, 1)
+			require.EqualValues(t, 1, n, "migration run more than once")
 			return nil
 		},
 	})

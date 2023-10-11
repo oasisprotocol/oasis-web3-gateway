@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/uptrace/bun"
+
+	"github.com/oasisprotocol/oasis-core/go/common/logging"
 
 	"github.com/oasisprotocol/oasis-web3-gateway/db/migrator"
 )

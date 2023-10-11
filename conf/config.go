@@ -9,6 +9,7 @@ import (
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/env"
 	"github.com/knadh/koanf/providers/file"
+
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 )
 
