@@ -1,5 +1,5 @@
 # Build oasis-web3-gateway
-FROM golang:1.20 AS oasis-web3-gateway
+FROM golang:1.21 AS oasis-web3-gateway
 
 COPY . /go/oasis-web3-gateway
 RUN cd oasis-web3-gateway && make build
@@ -50,7 +50,7 @@ RUN tar xfvz "oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz" \
 RUN mkdir -p "$(dirname ${PARATIME})"
 ADD "https://github.com/oasisprotocol/${PARATIME_NAME}-paratime/releases/download/v${PARATIME_VERSION}/localnet-${PARATIME_NAME}-paratime.orc" "/paratime.orc"
 RUN unzip "paratime.orc" \
-    && chmod a+x "runtime.elf"
+	&& chmod a+x "runtime.elf"
 
 # Write VERSION information.
 RUN echo "${VERSION}" > /VERSION
