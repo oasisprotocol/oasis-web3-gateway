@@ -20,9 +20,8 @@ import (
 	cmdCommon "github.com/oasisprotocol/oasis-core/go/oasis-node/cmd/common"
 	"github.com/oasisprotocol/oasis-core/go/oasis-test-runner/oasis"
 	registry "github.com/oasisprotocol/oasis-core/go/registry/api"
-	runtimeRegistry "github.com/oasisprotocol/oasis-core/go/runtime/registry"
+	"github.com/oasisprotocol/oasis-core/go/runtime/config"
 	"github.com/oasisprotocol/oasis-core/go/staking/api"
-	"github.com/oasisprotocol/oasis-core/go/worker/common/p2p"
 
 	"github.com/oasisprotocol/oasis-web3-gateway/benchmarks/util/keys"
 )
@@ -41,25 +40,8 @@ func fixture() *oasis.NetworkFixture {
 	if err := runtimeID.UnmarshalHex(flagRuntimeID); err != nil {
 		cmdCommon.EarlyLogAndExit(err)
 	}
-	computeExtraArgs := []oasis.Argument{
-		{
-			Name:   p2p.CfgP2PPeerOutboundQueueSize,
-			Values: []string{"100_000"},
-		},
-		{
-			Name:   p2p.CfgP2PValidateQueueSize,
-			Values: []string{"100_000"},
-		},
-		{
-			Name:   p2p.CfgP2PValidateConcurrency,
-			Values: []string{"100_000"},
-		},
-		{
-			Name:   p2p.CfgP2PValidateThrottle,
-			Values: []string{"100_000"},
-		},
-	}
 
+	computeExtraArgs := []oasis.Argument{}
 	version, err := version.FromString(viper.GetString(cfgRuntimeVersion))
 	if err != nil {
 		cmdCommon.EarlyLogAndExit(err)
@@ -97,13 +79,13 @@ func fixture() *oasis.NetworkFixture {
 					},
 				},
 				Runtimes:           []int{0},
-				RuntimeProvisioner: runtimeRegistry.RuntimeProvisionerUnconfined,
+				RuntimeProvisioner: config.RuntimeProvisionerUnconfined,
 			},
 		},
 		ComputeWorkers: []oasis.ComputeWorkerFixture{
-			{NodeFixture: oasis.NodeFixture{Name: "compute-0", ExtraArgs: computeExtraArgs}, Entity: 1, Runtimes: []int{0}, RuntimeProvisioner: runtimeRegistry.RuntimeProvisionerUnconfined},
-			{NodeFixture: oasis.NodeFixture{Name: "compute-1", ExtraArgs: computeExtraArgs}, Entity: 1, Runtimes: []int{0}, RuntimeProvisioner: runtimeRegistry.RuntimeProvisionerUnconfined},
-			{NodeFixture: oasis.NodeFixture{Name: "compute-2", ExtraArgs: computeExtraArgs}, Entity: 1, Runtimes: []int{0}, RuntimeProvisioner: runtimeRegistry.RuntimeProvisionerUnconfined},
+			{NodeFixture: oasis.NodeFixture{Name: "compute-0", ExtraArgs: computeExtraArgs}, Entity: 1, Runtimes: []int{0}, RuntimeProvisioner: config.RuntimeProvisionerUnconfined},
+			{NodeFixture: oasis.NodeFixture{Name: "compute-1", ExtraArgs: computeExtraArgs}, Entity: 1, Runtimes: []int{0}, RuntimeProvisioner: config.RuntimeProvisionerUnconfined},
+			{NodeFixture: oasis.NodeFixture{Name: "compute-2", ExtraArgs: computeExtraArgs}, Entity: 1, Runtimes: []int{0}, RuntimeProvisioner: config.RuntimeProvisionerUnconfined},
 		},
 		Seeds: []oasis.SeedFixture{{}},
 		Runtimes: []oasis.RuntimeFixture{
