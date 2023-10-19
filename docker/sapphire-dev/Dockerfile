@@ -16,10 +16,26 @@ RUN git clone https://github.com/oasisprotocol/oasis-core.git --branch stable/22
 # Build sapphire-dev
 FROM ubuntu:22.04
 
+ARG DEBIAN_FRONTEND=noninteractive
+
+# Install Postgresql and other tools packaged by Ubuntu.
+RUN apt update -qq \
+	&& apt dist-upgrade -qq -y \
+	&& apt install jq postgresql unzip ca-certificates wget -y \
+	&& rm -rf /var/lib/apt/lists/* \
+	&& echo "" \
+	&& echo "Initialize PostgreSQL database, permissions need to be setup" \
+	&& chown -R postgres:postgres /etc/postgresql /var/run/postgresql /var/log/postgresql /var/lib/postgresql/ \
+	&& chown postgres:ssl-cert /etc/ssl/private/ \
+	&& chown postgres:postgres /etc/ssl/private/ssl-cert-snakeoil.key \
+	&& chmod 600               /etc/ssl/private/ssl-cert-snakeoil.key  \
+	&& /etc/init.d/postgresql start \
+	&& su -c "psql --command \"ALTER USER postgres WITH SUPERUSER PASSWORD 'postgres';\"" postgres
+
 # Docker-specific variables
 ENV OASIS_CORE_VERSION=22.2.11
 ENV OASIS_CLI_VERSION=0.5.0
-ENV PARATIME_VERSION=0.6.4-testnet
+ENV PARATIME_VERSION=0.6.4
 ENV PARATIME_NAME=sapphire
 ENV GATEWAY__CHAIN_ID=0x5afd
 
@@ -37,13 +53,6 @@ ENV OASIS_UNSAFE_SKIP_KM_POLICY=1
 ENV OASIS_UNSAFE_ALLOW_DEBUG_ENCLAVES=1
 
 ARG VERSION
-ARG DEBIAN_FRONTEND=noninteractive
-
-# Install Postgresql and other tools packaged by Ubuntu.
-RUN apt update -qq \
-	&& apt dist-upgrade -qq -y \
-	&& apt install jq postgresql unzip ca-certificates -y \
-	&& rm -rf /var/lib/apt/lists/*
 
 # simple-keymanager
 COPY --from=oasis-core-dev /oasis-core/target/debug/simple-keymanager ${KEYMANAGER_BINARY}
@@ -56,35 +65,30 @@ COPY docker/common/start.sh /
 COPY tests/tools/* /
 
 # Configure oasis-node and oasis-net-runner.
-ADD "https://github.com/oasisprotocol/oasis-core/releases/download/v${OASIS_CORE_VERSION}/oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz" /
-RUN tar xfvz "oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz" \
+RUN wget --quiet "https://github.com/oasisprotocol/oasis-core/releases/download/v${OASIS_CORE_VERSION}/oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz"  \
+    && tar xfvz "oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz" \
 	&& mkdir -p "$(dirname ${OASIS_NODE})" "$(dirname ${OASIS_NET_RUNNER})" \
 	&& mv "oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-node" "${OASIS_NODE}" \
-	&& mv "oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-net-runner" "${OASIS_NET_RUNNER}"
-
-# Configure the ParaTime.
-RUN mkdir -p "$(dirname ${PARATIME})"
-ADD "https://github.com/oasisprotocol/${PARATIME_NAME}-paratime/releases/download/v${PARATIME_VERSION}/localnet-${PARATIME_NAME}-paratime.orc" "/paratime.orc"
-RUN unzip "paratime.orc" \
-    && chmod a+x "runtime.elf"
-
-# Configure oasis-cli.
-ADD "https://github.com/oasisprotocol/cli/releases/download/v${OASIS_CLI_VERSION}/oasis_cli_${OASIS_CLI_VERSION}_linux_amd64.tar.gz" /
-RUN tar -xvf "/oasis_cli_${OASIS_CLI_VERSION}_linux_amd64.tar.gz" \
+	&& mv "oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-net-runner" "${OASIS_NET_RUNNER}" \
+	&& rm "oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz" \
+	&& rm -rf "oasis_core_${OASIS_CORE_VERSION}_linux_amd64" \
+	&& echo "" \
+	&& echo "Configure the ParaTime." \
+	&& mkdir -p "$(dirname ${PARATIME})" \
+    && wget --quiet "https://github.com/oasisprotocol/${PARATIME_NAME}-paratime/releases/download/v${PARATIME_VERSION}/localnet-${PARATIME_NAME}-paratime.orc" -O "/paratime.orc" \
+    && unzip "paratime.orc" \
+    && chmod a+x "runtime.elf" \
+	&& rm "paratime.orc" \
+	&& echo "" \
+	&& echo "Configure oasis-cli." \
+	&& wget --quiet "https://github.com/oasisprotocol/cli/releases/download/v${OASIS_CLI_VERSION}/oasis_cli_${OASIS_CLI_VERSION}_linux_amd64.tar.gz" \
+    && tar -xvf "/oasis_cli_${OASIS_CLI_VERSION}_linux_amd64.tar.gz" \
 	&& mv "/oasis_cli_${OASIS_CLI_VERSION}_linux_amd64/oasis" / \
-	&& rm -rf "/oasis_cli_${OASIS_CLI_VERSION}_linux_amd64/"
-
-# Write VERSION information.
-RUN echo "${VERSION}" > /VERSION
-
-# Initialize PostgreSQL database, permissions need to be setup
-USER root
-RUN chown -R postgres:postgres /etc/postgresql /var/run/postgresql /var/log/postgresql /var/lib/postgresql/ \
-	&& chown postgres:ssl-cert /etc/ssl/private/ \
-	&& chown postgres:postgres /etc/ssl/private/ssl-cert-snakeoil.key \
-	&& chmod 600               /etc/ssl/private/ssl-cert-snakeoil.key  \
-	&& /etc/init.d/postgresql start \
-	&& su -c "psql --command \"ALTER USER postgres WITH SUPERUSER PASSWORD 'postgres';\"" postgres
+	&& rm -rf "/oasis_cli_${OASIS_CLI_VERSION}_linux_amd64/" \
+	&& rm -rf "/oasis_cli_${OASIS_CLI_VERSION}_linux_amd64.tar.gz" \
+	&& echo "" \
+	&& echo "Write VERSION information." \
+	&& echo "${VERSION}" > /VERSION
 
 # Web3 gateway http and ws ports.
 EXPOSE 8545/tcp

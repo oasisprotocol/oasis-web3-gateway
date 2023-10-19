@@ -80,11 +80,11 @@ echo "Listening on http://localhost:8545 and ws://localhost:8546"
 
 if [[ ${SAPPHIRE_BACKEND} == 'mock' ]]; then
 	# Run background task to switch epochs every 5 minutes
-	epoch=3
 	while true; do
 		sleep $((60*10))
-		${OASIS_NODE} debug control set-epoch --epoch $epoch -a unix:${OASIS_NODE_SOCKET}
+		epoch=`${OASIS_NODE} control status -a unix:${OASIS_NODE_SOCKET} | jq '.consensus.latest_epoch'`
 		epoch=$((epoch + 1))
+		${OASIS_NODE} debug control set-epoch --epoch $epoch -a unix:${OASIS_NODE_SOCKET}
 	done
 else
 	wait
