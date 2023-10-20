@@ -50,7 +50,7 @@ Chain IDs:
 - Sapphire Localnet: `0x5afd` (`23293`)
 
 By default, a random mnemonic will be generated and the first 5 accounts will
-be funded 100 ROSE. Flags `-amount`, `-to`, `-n` can be added to specify an
+be funded 10,000 TEST. Flags `-amount`, `-to`, `-n` can be added to specify an
 initial ROSE deposit, existing mnemonic and the number of addresses to derive
 and fund respectively.
 
