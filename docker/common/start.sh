@@ -52,25 +52,24 @@ while ! [[ -S ${OASIS_NODE_SOCKET} ]]; do sleep 1; done
 ${OASIS_WEB3_GATEWAY} --config ${OASIS_WEB3_GATEWAY_CONFIG_FILE} 2>1 &>/var/log/oasis-web3-gateway.log &
 OASIS_WEB3_GATEWAY_PID=$!
 
+# Wait for compute nodes before initiating deposit.
+echo -n " * Bootstrapping network (this might take a minute)"
 if [[ ${SAPPHIRE_BACKEND} == 'mock' ]]; then
-	echo -n " * Bootstrapping network (this might take a minute)"
-
 	echo -n .
 	${OASIS_NODE} debug control wait-nodes -n 2 -a unix:${OASIS_NODE_SOCKET}
 
 	echo -n .
 	${OASIS_NODE} debug control set-epoch --epoch 1 -a unix:${OASIS_NODE_SOCKET}
 
-	echo .
+	echo -n .
 	${OASIS_NODE} debug control set-epoch --epoch 2 -a unix:${OASIS_NODE_SOCKET}
 else
-	echo " * Bootstrapping network (this might take a minute)"
-	# Wait for compute nodes before initiating deposit.
 	${OASIS_NODE} debug control wait-ready -a unix:${OASIS_NODE_SOCKET}
 fi
 
+echo
 echo " * Populating accounts"
-echo ""
+echo
 ${OASIS_DEPOSIT} -sock unix:${OASIS_NODE_SOCKET} "$@"
 
 echo

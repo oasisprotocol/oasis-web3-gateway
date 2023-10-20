@@ -8,8 +8,8 @@ RUN cd oasis-web3-gateway && make build
 FROM ubuntu:22.04
 
 # Docker-specific variables
-ENV OASIS_CORE_VERSION=22.2.6
-ENV PARATIME_VERSION=10.0.0
+ENV OASIS_CORE_VERSION=23.0.1
+ENV PARATIME_VERSION=11.0.0-testnet
 ENV PARATIME_NAME=emerald
 ENV GATEWAY__CHAIN_ID=0xa514
 
