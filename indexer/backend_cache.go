@@ -9,12 +9,13 @@ import (
 	"time"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+
 	"github.com/oasisprotocol/oasis-core/go/common/pubsub"
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"github.com/oasisprotocol/oasis-web3-gateway/conf"
 	"github.com/oasisprotocol/oasis-web3-gateway/db/model"
@@ -113,7 +114,7 @@ type cachingBackend struct {
 
 // SetObserver sets the intrusive backend observer.
 func (cb *cachingBackend) SetObserver(
-	ob BackendObserver,
+	_ BackendObserver,
 ) {
 	panic("indexer: caching backend does not support an observer")
 }
@@ -355,7 +356,7 @@ func (cb *cachingBackend) GetTransactionReceipt(
 }
 
 func (cb *cachingBackend) BlockNumber(
-	ctx context.Context,
+	_ context.Context,
 ) (uint64, error) {
 	// The underlying backend has a separate notion of BlockNumber and
 	// LastIndexedRound for historical reasons, and even uses two separate

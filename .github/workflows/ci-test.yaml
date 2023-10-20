@@ -35,7 +35,7 @@ jobs:
         ports:
           - 5432:5432
     env:
-      OASIS_CORE_VERSION: "22.2.11"
+      OASIS_CORE_VERSION: "23.0.1"
       OASIS_NODE: ${{ github.workspace }}/oasis_core/oasis-node
       OASIS_NET_RUNNER: ${{ github.workspace }}/oasis_core/oasis-net-runner
       EMERALD_PARATIME_VERSION: 10.0.0
@@ -49,7 +49,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
-          go-version: "1.20.x"
+          go-version: "1.21.x"
 
       - name: Install prerequisites
         run: |
@@ -85,7 +85,9 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: oasis-node-logs
-          path: ${{ env.OASIS_NODE_DATADIR }}/**/*.log
+          path: |
+            ${{ env.OASIS_NODE_DATADIR }}/**/*.log
+            ${{ env.OASIS_NODE_DATADIR }}/fixture.json
 
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v3.1.4
@@ -104,14 +106,14 @@ jobs:
         ports:
           - 5432:5432
     env:
-      OASIS_CORE_VERSION: "22.2.11"
+      OASIS_CORE_VERSION: "23.0.1"
       OASIS_NODE: ${{ github.workspace }}/oasis_core/oasis-node
       OASIS_NET_RUNNER: ${{ github.workspace }}/oasis_core/oasis-net-runner
       SAPPHIRE_PARATIME_VERSION: 0.6.4
       GATEWAY__CHAIN_ID: 23293
       GATEWAY__OASIS_RPCS: true
       SAPPHIRE_PARATIME: ${{ github.workspace }}/oasis_core/sapphire-paratime
-      KEYMANAGER_ARTIFACT_URL: https://buildkite.com/organizations/oasisprotocol/pipelines/oasis-core-ci/builds/11152/jobs/0187e593-7d24-4821-890d-d8b4ffe4966b/artifacts/0187e595-fcc3-4a19-b70d-f42b520e03fa # Find this at https://buildkite.com/oasisprotocol/oasis-core-ci/builds?branch=stable%2F<...> under "Build runtimes".
+      KEYMANAGER_ARTIFACT_URL: https://buildkite.com/organizations/oasisprotocol/pipelines/oasis-core-ci/builds/12039/jobs/018b246a-3e49-4b0e-9d15-a9b7845dce55/artifacts/018b246c-e46c-437d-baa3-9ebd193a676c # Find this at https://buildkite.com/oasisprotocol/oasis-core-ci/builds?branch=stable%2F<...> under "Build runtimes".
       KEYMANAGER_BINARY: ${{ github.workspace }}/oasis_core/simple-keymanager
       OASIS_NODE_DATADIR: /tmp/eth-runtime-test
     steps:
@@ -121,7 +123,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
-          go-version: "1.20.x"
+          go-version: "1.21.x"
 
       - name: Install prerequisites
         run: |
@@ -161,7 +163,9 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: oasis-node-logs-c10l
-          path: ${{ env.OASIS_NODE_DATADIR }}/**/*.log
+          path: |
+            ${{ env.OASIS_NODE_DATADIR }}/**/*.log
+            ${{ env.OASIS_NODE_DATADIR }}/fixture.json
 
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v3.1.4

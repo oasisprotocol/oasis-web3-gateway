@@ -30,7 +30,7 @@ test:
 fmt:
 	@$(ECHO) "$(CYAN)*** Running Go formatters...$(OFF)"
 	@gofumpt -w .
-	@goimports -w -local github.com/oasisprotocol/oasis-web3-gateway .
+	@goimports -w -local github.com/oasisprotocol .
 
 # Lint code, commits and documentation.
 lint-targets := lint-go lint-go-mod-tidy lint-git

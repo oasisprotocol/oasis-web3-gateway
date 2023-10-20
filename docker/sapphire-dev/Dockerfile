@@ -1,5 +1,5 @@
 # Build oasis-web3-gateway
-FROM golang:1.20 AS oasis-web3-gateway
+FROM golang:1.21 AS oasis-web3-gateway
 
 COPY . /go/oasis-web3-gateway
 RUN cd oasis-web3-gateway && make build
@@ -10,8 +10,8 @@ FROM oasisprotocol/oasis-core-dev:stable-22.2.x AS oasis-core-dev
 ENV OASIS_UNSAFE_SKIP_KM_POLICY=1
 
 RUN git clone https://github.com/oasisprotocol/oasis-core.git --branch stable/22.2.x --depth 1 \
-    && cd oasis-core/tests/runtimes/simple-keymanager \
-    && cargo build
+	&& cd oasis-core/tests/runtimes/simple-keymanager \
+	&& cargo build
 
 # Build sapphire-dev
 FROM ubuntu:22.04
@@ -33,7 +33,7 @@ RUN apt update -qq \
 	&& su -c "psql --command \"ALTER USER postgres WITH SUPERUSER PASSWORD 'postgres';\"" postgres
 
 # Docker-specific variables
-ENV OASIS_CORE_VERSION=22.2.11
+ENV OASIS_CORE_VERSION=23.0.1
 ENV OASIS_CLI_VERSION=0.5.0
 ENV PARATIME_VERSION=0.6.4
 ENV PARATIME_NAME=sapphire

@@ -8,12 +8,13 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 	"github.com/oasisprotocol/oasis-core/go/common/service"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"github.com/oasisprotocol/oasis-web3-gateway/db/model"
 	"github.com/oasisprotocol/oasis-web3-gateway/indexer"

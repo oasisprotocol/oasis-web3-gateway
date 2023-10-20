@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestPrintTestAddresses(t *testing.T) {
+func TestPrintTestAddresses(_ *testing.T) {
 	fmt.Println("Test Key 1:")
 	fmt.Printf("Eth: %v Oasis: %v\n", TestKey1.EthAddress, TestKey1.OasisAddress)
 	fmt.Println("Test Key 2:")

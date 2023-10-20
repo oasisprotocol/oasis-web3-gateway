@@ -31,7 +31,7 @@ type PostDB struct {
 
 // InitDB creates postgresql db instance.
 func InitDB(
-	ctx context.Context,
+	_ context.Context,
 	cfg *conf.DatabaseConfig,
 	longTimeouts bool,
 	readOnly bool,

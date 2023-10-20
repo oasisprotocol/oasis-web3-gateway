@@ -7,15 +7,16 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/spf13/cobra"
+	"github.com/uptrace/bun"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+
 	"github.com/oasisprotocol/oasis-core/go/common"
 	cmnGrpc "github.com/oasisprotocol/oasis-core/go/common/grpc"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
-	"github.com/spf13/cobra"
-	"github.com/uptrace/bun"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/oasisprotocol/oasis-web3-gateway/archive"
 	"github.com/oasisprotocol/oasis-web3-gateway/conf"
@@ -87,7 +88,7 @@ func main() {
 	_ = rootCmd.Execute()
 }
 
-func exec(cmd *cobra.Command, args []string) error {
+func exec(_ *cobra.Command, _ []string) error {
 	if err := runRoot(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -95,7 +96,7 @@ func exec(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func truncateExec(cmd *cobra.Command, args []string) error {
+func truncateExec(_ *cobra.Command, _ []string) error {
 	ctx := context.Background()
 	// Initialize server config
 	cfg, err := conf.InitConfig(configFile)
@@ -131,7 +132,7 @@ func truncateExec(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func migrateExec(cmd *cobra.Command, args []string) error {
+func migrateExec(_ *cobra.Command, _ []string) error {
 	ctx := context.Background()
 	// Initialize server config
 	cfg, err := conf.InitConfig(configFile)
@@ -229,7 +230,7 @@ func runRoot() error {
 		return err
 	}
 	backend := indexer.NewIndexBackend(runtimeID, storage, subBackend)
-	indx, backend, err := indexer.New(ctx, backend, rc, runtimeID, storage, cfg)
+	indx, backend, err := indexer.New(ctx, backend, rc, runtimeID, cfg)
 	if err != nil {
 		logger.Error("failed to create indexer", err)
 		return err

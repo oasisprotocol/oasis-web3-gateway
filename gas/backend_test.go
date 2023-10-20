@@ -7,11 +7,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/oasisprotocol/oasis-core/go/common/pubsub"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
-	"github.com/stretchr/testify/require"
 
 	"github.com/oasisprotocol/oasis-web3-gateway/db/model"
 	"github.com/oasisprotocol/oasis-web3-gateway/indexer"
@@ -23,42 +24,42 @@ type mockCoreClient struct {
 }
 
 // EstimateGas implements core.V1.
-func (*mockCoreClient) EstimateGas(ctx context.Context, round uint64, tx *types.Transaction, propagateFailures bool) (uint64, error) {
+func (*mockCoreClient) EstimateGas(_ context.Context, _ uint64, _ *types.Transaction, _ bool) (uint64, error) {
 	panic("unimplemented")
 }
 
 // EstimateGasForCaller implements core.V1.
-func (*mockCoreClient) EstimateGasForCaller(ctx context.Context, round uint64, caller types.CallerAddress, tx *types.Transaction, propagateFailures bool) (uint64, error) {
+func (*mockCoreClient) EstimateGasForCaller(_ context.Context, _ uint64, _ types.CallerAddress, _ *types.Transaction, _ bool) (uint64, error) {
 	panic("unimplemented")
 }
 
 // GetEvents implements core.V1.
-func (*mockCoreClient) GetEvents(ctx context.Context, round uint64) ([]*core.Event, error) {
+func (*mockCoreClient) GetEvents(_ context.Context, _ uint64) ([]*core.Event, error) {
 	panic("unimplemented")
 }
 
 // Parameters implements core.V1.
-func (*mockCoreClient) Parameters(ctx context.Context, round uint64) (*core.Parameters, error) {
+func (*mockCoreClient) Parameters(_ context.Context, _ uint64) (*core.Parameters, error) {
 	panic("unimplemented")
 }
 
 // RuntimeInfo implements core.V1.
-func (*mockCoreClient) RuntimeInfo(ctx context.Context) (*core.RuntimeInfoResponse, error) {
+func (*mockCoreClient) RuntimeInfo(_ context.Context) (*core.RuntimeInfoResponse, error) {
 	panic("unimplemented")
 }
 
 // RuntimeInfo implements core.V1.
-func (*mockCoreClient) CallDataPublicKey(ctx context.Context) (*core.CallDataPublicKeyResponse, error) {
+func (*mockCoreClient) CallDataPublicKey(_ context.Context) (*core.CallDataPublicKeyResponse, error) {
 	panic("unimplemented")
 }
 
 // RuntimeInfo implements core.V1.
-func (*mockCoreClient) ExecuteReadOnlyTx(ctx context.Context, round uint64, tx *types.UnverifiedTransaction) (*core.ExecuteReadOnlyTxResponse, error) {
+func (*mockCoreClient) ExecuteReadOnlyTx(_ context.Context, _ uint64, _ *types.UnverifiedTransaction) (*core.ExecuteReadOnlyTxResponse, error) {
 	panic("unimplemented")
 }
 
 // MinGasPrice implements core.V1.
-func (m *mockCoreClient) MinGasPrice(ctx context.Context) (map[types.Denomination]quantity.Quantity, error) {
+func (m *mockCoreClient) MinGasPrice(_ context.Context) (map[types.Denomination]quantity.Quantity, error) {
 	if m.shouldFail {
 		return nil, fmt.Errorf("failed")
 	}
@@ -76,7 +77,7 @@ func (b *mockBlockEmitter) Emit(data *indexer.BlockData) {
 }
 
 // WatchBlocks implements indexer.BlockWatcher.
-func (b *mockBlockEmitter) WatchBlocks(ctx context.Context, buffer int64) (<-chan *indexer.BlockData, pubsub.ClosableSubscription, error) {
+func (b *mockBlockEmitter) WatchBlocks(_ context.Context, buffer int64) (<-chan *indexer.BlockData, pubsub.ClosableSubscription, error) {
 	typedCh := make(chan *indexer.BlockData)
 	sub := b.notifier.SubscribeBuffered(buffer)
 	sub.Unwrap(typedCh)

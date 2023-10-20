@@ -23,7 +23,6 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 	consensus "github.com/oasisprotocol/oasis-core/go/consensus/api"
 	"github.com/oasisprotocol/oasis-core/go/consensus/api/transaction"
-	staking "github.com/oasisprotocol/oasis-core/go/staking/api"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
@@ -70,18 +69,6 @@ func GetChainContext(ctx context.Context, rtc client.RuntimeClient) (signature.C
 		return signature.RawContext{}, err
 	}
 	return info.ChainContext, nil
-}
-
-// consensusSigner extracts the consensus signer from the SDK signer.
-func consensusSigner(testKey testing.TestKey) coreSignature.Signer {
-	type wrappedSigner interface {
-		Unwrap() coreSignature.Signer
-	}
-
-	if ws, ok := testKey.Signer.(wrappedSigner); ok {
-		return ws.Unwrap()
-	}
-	return nil
 }
 
 // EstimateGas estimates the amount of gas the transaction will use.
@@ -178,23 +165,6 @@ func printSummary(addresses []string, keys []string, baseAmount types.BaseUnits,
 	}
 }
 
-func submitAllowance(ctx context.Context, conn *grpc.ClientConn, runtimeID common.Namespace, allowQnt *types.Quantity) error {
-	cs := consensus.NewConsensusClient(conn) // Used for allowance transaction.
-	nonce, err := cs.GetSignerNonce(ctx, &consensus.GetSignerNonceRequest{
-		AccountAddress: srcAccount.Address.ConsensusAddress(),
-		Height:         consensus.HeightLatest,
-	})
-	if err != nil {
-		return err
-	}
-	txa := staking.NewAllowTx(nonce, &transaction.Fee{}, &staking.Allow{
-		Beneficiary:  staking.NewRuntimeAddress(runtimeID),
-		Negative:     false,
-		AmountChange: *allowQnt,
-	})
-	return SignAndSubmitConsensusTx(ctx, cs, consensusSigner(srcAccount), txa)
-}
-
 func main() {
 	flag.Usage = func() {
 		fmt.Fprintln(os.Stderr, "Usage: oasis-deposit [ options ... ]")
@@ -283,13 +253,6 @@ func main() {
 			toPrivateKeys = append(toPrivateKeys, privateKey)
 		}
 	}
-
-	// Submit allowance transaction.
-	//allowQnt := qnt.Clone()
-	//allowQnt.Mul(quantity.NewFromUint64(uint64(numMnemonicDerivations)))
-	//if err = submitAllowance(ctx, conn, runtimeID, allowQnt); err != nil {
-	//	panic(fmt.Sprintf("can't allow: %s", err))
-	//}
 
 	for _, a := range toAddresses {
 		var addr types.Address

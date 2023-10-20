@@ -7,9 +7,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"golang.org/x/crypto/sha3"
+
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/secp256k1"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
-	"golang.org/x/crypto/sha3"
 )
 
 // TestKey is a key used for testing.

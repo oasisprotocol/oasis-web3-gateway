@@ -11,8 +11,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/gorilla/mux"
-	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/rs/cors"
+
+	"github.com/oasisprotocol/oasis-core/go/common/logging"
 )
 
 // httpConfig is the JSON-RPC/HTTP configuration.

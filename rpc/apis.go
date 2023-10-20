@@ -4,6 +4,7 @@ import (
 	"context"
 
 	ethRpc "github.com/ethereum/go-ethereum/rpc"
+
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 
@@ -23,7 +24,7 @@ import (
 
 // GetRPCAPIs returns the list of all APIs.
 func GetRPCAPIs(
-	ctx context.Context,
+	_ context.Context,
 	client client.RuntimeClient,
 	archiveClient *archive.Client,
 	backend indexer.Backend,

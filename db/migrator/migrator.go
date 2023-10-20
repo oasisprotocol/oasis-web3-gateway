@@ -92,11 +92,7 @@ func (m *Migrator) Migrate(ctx context.Context) error {
 					return err
 				}
 			}
-			if err = markApplied(ctx, &tx, migration); err != nil {
-				return err
-			}
-
-			return nil
+			return markApplied(ctx, &tx, migration)
 		}); err != nil {
 			return fmt.Errorf("applying migration: %w", err)
 		}
@@ -136,11 +132,7 @@ func (m *Migrator) Rollback(ctx context.Context) error {
 				return err
 			}
 		}
-		if err = markUnapplied(ctx, &tx, migration); err != nil {
-			return err
-		}
-
-		return nil
+		return markUnapplied(ctx, &tx, migration)
 	})
 }
 

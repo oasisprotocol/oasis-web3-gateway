@@ -37,4 +37,4 @@ sleep 10
 	--runtime.chain_id "${GATEWAY__CHAIN_ID}" \
 	--gateway_url "http://localhost:8545" \
 	--benchmarks evm_transfer,evm_blockNumber,evm_balance \
-	--benchmarks.concurrency 300
+	--benchmarks.concurrency 10 # Temporary low concurrency due to p2p parameters being not configurable.
