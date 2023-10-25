@@ -3,6 +3,8 @@ package eth
 import (
 	"context"
 	"encoding/base64"
+	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -17,51 +19,77 @@ const (
 	revertErrorPrefix = "reverted: "
 )
 
-type RevertError struct {
+type revertError struct {
 	error
-	Reason string `json:"reason"`
+	// Revert reason hex encoded.
+	reason string
 }
 
-// ErrorData returns the ABI encoded error reason.
-func (e *RevertError) ErrorData() interface{} {
-	return e.Reason
+// ErrorData returns the hex encoded error reason.
+func (e *revertError) ErrorData() interface{} {
+	return e.reason
 }
 
-func (api *publicAPI) newRevertErrorV1(revertErr error) *RevertError {
-	// ABI encoded function.
-	abiReason := []byte{0x08, 0xc3, 0x79, 0xa0} // Keccak256("Error(string)")
+// ErrorCode is the error code for revert errors.
+func (e *revertError) ErrorCode() int {
+	return 3
+}
 
-	// ABI encode the revert Reason string.
+func (api *publicAPI) newRevertErrorV1(revertErr error) *revertError {
 	revertReason := strings.TrimPrefix(revertErr.Error(), revertErrorPrefix)
-	typ, _ := abi.NewType("string", "", nil)
-	unpacked, err := (abi.Arguments{{Type: typ}}).Pack(revertReason)
-	if err != nil {
-		api.Logger.Error("failed to encode V1 revert error", "revert_reason", revertReason, "err", err)
-		return &RevertError{
-			error: revertErr,
-		}
-	}
-	abiReason = append(abiReason, unpacked...)
 
-	return &RevertError{
-		error:  revertErr,
-		Reason: hexutil.Encode(abiReason),
+	var reason string
+	var err error
+	switch revertReason {
+	case "":
+		err = errors.New("execution reverted")
+	default:
+		err = fmt.Errorf("execution reverted: %v", revertReason)
+
+		// ABI encode the revert Reason string.
+		abiReason := []byte{0x08, 0xc3, 0x79, 0xa0} // Keccak256("Error(string)")
+		typ, _ := abi.NewType("string", "", nil)
+		packed, packErr := (abi.Arguments{{Type: typ}}).Pack(revertReason)
+		if packErr != nil {
+			api.Logger.Error("failed to encode V1 revert error", "revert_reason", revertReason, "err", packErr)
+			err = revertErr
+			break
+		}
+		abiReason = append(abiReason, packed...)
+		reason = hexutil.Encode(abiReason)
+	}
+
+	return &revertError{
+		error:  err,
+		reason: reason,
 	}
 }
 
-func (api *publicAPI) newRevertErrorV2(revertErr error) *RevertError {
+func (api *publicAPI) newRevertErrorV2(revertErr error) *revertError {
+	// V2 format: 'reverted: <base64 encoded revert data>'.
+	// Strip the 'reverted: ' prefix and b64 decode the reason.
 	b64Reason := strings.TrimPrefix(revertErr.Error(), revertErrorPrefix)
-	reason, err := base64.RawStdEncoding.DecodeString(b64Reason)
+	rawReason, err := base64.StdEncoding.DecodeString(b64Reason)
 	if err != nil {
-		api.Logger.Error("failed to encode V2 revert error", "revert_reason", b64Reason, "err", err)
-		return &RevertError{
+		api.Logger.Error("failed to decode V2 revert error", "revert_reason", b64Reason, "err", err)
+		return &revertError{
 			error: revertErr,
 		}
 	}
 
-	return &RevertError{
-		error:  revertErr,
-		Reason: hexutil.Encode(reason),
+	// Try to parse the reason from the revert error as string.
+	reason, unpackErr := abi.UnpackRevert(rawReason)
+	switch unpackErr {
+	case nil:
+		// String reason.
+		err = fmt.Errorf("execution reverted: %v", reason)
+	default:
+		// Custom solidity error, raw reason hex-encoded in the ErrorData.
+		err = errors.New("execution reverted")
+	}
+	return &revertError{
+		error:  err,
+		reason: hexutil.Encode(rawReason),
 	}
 }
 
@@ -91,7 +119,7 @@ func (api *publicAPI) handleCallFailure(ctx context.Context, logger *logging.Log
 	// In EVM module version 1 the SDK decoded and returned readable revert reasons.
 	// Since EVM version 2 the raw data is just base64 encoded and returned.
 	// Changed in https://github.com/oasisprotocol/oasis-sdk/pull/1479
-	var revertErr *RevertError
+	var revertErr *revertError
 	switch {
 	case rtInfo == nil || rtInfo.Modules[evm.ModuleName].Version > 1:
 		// EVM version 2 onward (if no runtime info assume >1).
@@ -100,6 +128,6 @@ func (api *publicAPI) handleCallFailure(ctx context.Context, logger *logging.Log
 		// EVM version 1 (deprecated).
 		revertErr = api.newRevertErrorV1(err)
 	}
-	logger.Debug("failed to execute SimulateCall, reverted", "err", err, "reason", revertErr.Reason)
+	logger.Debug("failed to execute SimulateCall, reverted", "err", err, "reason", revertErr.reason)
 	return revertErr
 }
