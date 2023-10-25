@@ -25,6 +25,7 @@ export SAPPHIRE_BACKEND=default
 fi
 
 OASIS_NODE_SOCKET=${OASIS_NODE_DATADIR}/net-runner/network/client-0/internal.sock
+OASIS_KM_SOCKET=${OASIS_NODE_DATADIR}/net-runner/network/keymanager-0/internal.sock
 
 set -euo pipefail
 
@@ -63,6 +64,13 @@ if [[ ${SAPPHIRE_BACKEND} == 'mock' ]]; then
 
 	echo -n .
 	${OASIS_NODE} debug control set-epoch --epoch 2 -a unix:${OASIS_NODE_SOCKET}
+
+	# Transition to the final epoch when the KM generates ephemeral secret.
+	while (${OASIS_NODE} control status -a unix:${OASIS_KM_SOCKET} | jq -e ".keymanager.worker.ephemeral_secrets.last_generated_epoch!=3" >/dev/null); do
+		sleep 0.5
+	done
+	echo -n .
+	${OASIS_NODE} debug control set-epoch --epoch 3 -a unix:${OASIS_NODE_SOCKET}
 else
 	${OASIS_NODE} debug control wait-ready -a unix:${OASIS_NODE_SOCKET}
 fi
