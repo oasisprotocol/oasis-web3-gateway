@@ -104,7 +104,7 @@ func fixture() *oasis.NetworkFixture {
 					MaxBatchSize:      10_000,
 					MaxBatchSizeBytes: 10 * 16 * 1024 * 1024, // 160 MiB
 					BatchFlushTimeout: 1 * time.Second,
-					ProposerTimeout:   5,
+					ProposerTimeout:   5 * time.Second,
 				},
 				AdmissionPolicy: registry.RuntimeAdmissionPolicy{
 					AnyNode: &registry.AnyNodeRuntimeAdmissionPolicy{},
