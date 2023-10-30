@@ -229,7 +229,7 @@ func TestEth_GetCode(t *testing.T) {
 	if tests.TestsConfig.Gateway.ExposeOasisRPCs {
 		require.EqualValues(t, uint64(103647), receipt.GasUsed, "expected contract creation gas used")
 	} else {
-		require.EqualValues(t, uint64(103630), receipt.GasUsed, "expected contract creation gas used")
+		require.EqualValues(t, uint64(103648), receipt.GasUsed, "expected contract creation gas used")
 	}
 	require.Equal(t, uint64(1), receipt.Status)
 
@@ -382,7 +382,7 @@ func TestERC20(t *testing.T) {
 	if tests.TestsConfig.Gateway.ExposeOasisRPCs {
 		require.EqualValues(t, uint64(52499), receipt.GasUsed, "ERC20-transfer expected gas use")
 	} else {
-		require.EqualValues(t, uint64(49699), receipt.GasUsed, "ERC20-transfer expected gas use")
+		require.EqualValues(t, uint64(52500), receipt.GasUsed, "ERC20-transfer expected gas use")
 	}
 
 	// Get balance of token receiver

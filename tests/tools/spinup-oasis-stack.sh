@@ -62,6 +62,8 @@ if [[ ${SAPPHIRE_BACKEND-} == 'mock' ]]; then
   # Set beacon backend to 'debug mock'
   jq ".network.beacon.debug_mock_backend = true" "$FIXTURE_FILE" >"$FIXTURE_FILE.tmp"
   mv "$FIXTURE_FILE.tmp" "$FIXTURE_FILE"
+  jq ".network.beacon.insecure_parameters.interval = 2" "$FIXTURE_FILE" >"$FIXTURE_FILE.tmp"
+  mv "$FIXTURE_FILE.tmp" "$FIXTURE_FILE"
 fi
 
 # Whitelist compute node for key manager.

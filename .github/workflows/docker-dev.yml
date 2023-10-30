@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   docker:
@@ -33,7 +36,24 @@ jobs:
         run: |
           echo "VERSION=$(date +%Y-%m-%d-git$(git rev-parse --short HEAD))" >> $GITHUB_ENV
 
-      - name: Build and push
+      - name: Build
+        uses: docker/build-push-action@v5
+        with:
+          build-args: |
+            VERSION=${{ env.VERSION }}
+          context: .
+          file: docker/${{ matrix.docker_image }}/Dockerfile
+          tags: |
+            ghcr.io/oasisprotocol/${{ matrix.docker_image }}:local
+          load: true
+
+      - name: Test
+        timeout-minutes: 5
+        working-directory: docker/${{ matrix.docker_image }}
+        run: ./test.sh
+
+      - name: Push
+        if: ${{ github.event_name == 'push' }}
         uses: docker/build-push-action@v5
         with:
           build-args: |
@@ -49,6 +69,7 @@ jobs:
             org.opencontainers.image.revision=${{ github.sha }}
 
       - name: Prune old ghcr.io/oasisprotocol/${{ matrix.docker_image }} images
+        if: ${{ github.event_name == 'push' }}
         uses: vlaurin/action-ghcr-prune@v0.5.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
