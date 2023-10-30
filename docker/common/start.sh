@@ -8,7 +8,7 @@
 # - OASIS_WEB3_GATEWAY: path to oasis-web3-gateway binary
 # - OASIS_WEB3_GATEWAY_CONFIG_FILE: path to oasis-web3-gateway config file
 # - OASIS_DEPOSIT: path to oasis-deposit binary
-# - SAPPHIRE_BACKEND: uses 'mock' backend by default
+# - BEACON_BACKEND: beacon epoch transition mode 'mock' (default) or 'default'
 # - OASIS_SINGLE_COMPUTE_NODE: (default: true) if non-empty only run a single compute node
 
 export OASIS_SINGLE_COMPUTE_NODE=${OASIS_SINGLE_COMPUTE_NODE-1}
@@ -18,11 +18,7 @@ VERSION=$(cat /VERSION)
 echo "${PARATIME_NAME}-dev ${VERSION} (oasis-core: ${OASIS_CORE_VERSION}, ${PARATIME_NAME}-paratime: ${PARATIME_VERSION}, oasis-web3-gateway: ${OASIS_WEB3_GATEWAY_VERSION})"
 echo
 
-if [[ ${PARATIME_NAME} == 'sapphire' ]]; then
-export SAPPHIRE_BACKEND=${SAPPHIRE_BACKEND:-mock}
-else
-export SAPPHIRE_BACKEND=default
-fi
+export BEACON_BACKEND=${BEACON_BACKEND:-mock}
 
 OASIS_NODE_SOCKET=${OASIS_NODE_DATADIR}/net-runner/network/client-0/internal.sock
 OASIS_KM_SOCKET=${OASIS_NODE_DATADIR}/net-runner/network/keymanager-0/internal.sock
@@ -55,7 +51,7 @@ OASIS_WEB3_GATEWAY_PID=$!
 
 # Wait for compute nodes before initiating deposit.
 echo -n " * Bootstrapping network (this might take a minute)"
-if [[ ${SAPPHIRE_BACKEND} == 'mock' ]]; then
+if [[ ${BEACON_BACKEND} == 'mock' ]]; then
 	echo -n .
 	${OASIS_NODE} debug control wait-nodes -n 2 -a unix:${OASIS_NODE_SOCKET}
 
@@ -66,11 +62,13 @@ if [[ ${SAPPHIRE_BACKEND} == 'mock' ]]; then
 	${OASIS_NODE} debug control set-epoch --epoch 2 -a unix:${OASIS_NODE_SOCKET}
 
 	# Transition to the final epoch when the KM generates ephemeral secret.
-	while (${OASIS_NODE} control status -a unix:${OASIS_KM_SOCKET} | jq -e ".keymanager.worker.ephemeral_secrets.last_generated_epoch!=3" >/dev/null); do
-		sleep 0.5
-	done
-	echo -n .
-	${OASIS_NODE} debug control set-epoch --epoch 3 -a unix:${OASIS_NODE_SOCKET}
+	if [[ ${PARATIME_NAME} == 'sapphire' ]]; then
+		while (${OASIS_NODE} control status -a unix:${OASIS_KM_SOCKET} | jq -e ".keymanager.worker.ephemeral_secrets.last_generated_epoch!=3" >/dev/null); do
+			sleep 0.5
+		done
+		echo -n .
+		${OASIS_NODE} debug control set-epoch --epoch 3 -a unix:${OASIS_NODE_SOCKET}
+	fi
 else
 	${OASIS_NODE} debug control wait-ready -a unix:${OASIS_NODE_SOCKET}
 fi
@@ -85,7 +83,7 @@ echo "WARNING: The chain is running in ephemeral mode. State will be lost after 
 echo
 echo "Listening on http://localhost:8545 and ws://localhost:8546"
 
-if [[ ${SAPPHIRE_BACKEND} == 'mock' ]]; then
+if [[ ${BEACON_BACKEND} == 'mock' ]]; then
 	# Run background task to switch epochs every 5 minutes
 	while true; do
 		sleep $((60*10))
