@@ -50,7 +50,7 @@ COPY tests/tools/* /
 
 # Configure oasis-node and oasis-net-runner.
 RUN wget --quiet "https://github.com/oasisprotocol/oasis-core/releases/download/v${OASIS_CORE_VERSION}/oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz"  \
-    && tar xfvz "oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz" \
+	&& tar xfvz "oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz" \
 	&& mkdir -p "$(dirname ${OASIS_NODE})" "$(dirname ${OASIS_NET_RUNNER})" \
 	&& mv "oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-node" "${OASIS_NODE}" \
 	&& mv "oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-net-runner" "${OASIS_NET_RUNNER}" \
@@ -59,14 +59,14 @@ RUN wget --quiet "https://github.com/oasisprotocol/oasis-core/releases/download/
 	&& echo "" \
 	&& echo "Configure the ParaTime." \
 	&& mkdir -p "$(dirname ${PARATIME})" \
-    && wget --quiet "https://github.com/oasisprotocol/${PARATIME_NAME}-paratime/releases/download/v${PARATIME_VERSION}/localnet-${PARATIME_NAME}-paratime.orc" -O "/paratime.orc" \
-    && unzip "paratime.orc" \
-    && chmod a+x "runtime.elf" \
+	&& wget --quiet "https://github.com/oasisprotocol/${PARATIME_NAME}-paratime/releases/download/v${PARATIME_VERSION}/localnet-${PARATIME_NAME}-paratime.orc" -O "/paratime.orc" \
+	&& unzip "paratime.orc" \
+	&& chmod a+x "runtime.elf" \
 	&& rm "paratime.orc" \
 	&& echo "" \
 	&& echo "Configure oasis-cli." \
 	&& wget --quiet "https://github.com/oasisprotocol/cli/releases/download/v${OASIS_CLI_VERSION}/oasis_cli_${OASIS_CLI_VERSION}_linux_amd64.tar.gz" \
-    && tar -xvf "/oasis_cli_${OASIS_CLI_VERSION}_linux_amd64.tar.gz" \
+	&& tar -xvf "/oasis_cli_${OASIS_CLI_VERSION}_linux_amd64.tar.gz" \
 	&& mv "/oasis_cli_${OASIS_CLI_VERSION}_linux_amd64/oasis" / \
 	&& rm -rf "/oasis_cli_${OASIS_CLI_VERSION}_linux_amd64/" \
 	&& rm -rf "/oasis_cli_${OASIS_CLI_VERSION}_linux_amd64.tar.gz" \

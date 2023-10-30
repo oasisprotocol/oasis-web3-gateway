@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# Temporarily disabled. See https://github.com/oasisprotocol/oasis-web3-gateway/issues/471
-exit 0
-
 set -euo pipefail
 
 TAG=${TAG:-ghcr.io/oasisprotocol/emerald-dev:local}

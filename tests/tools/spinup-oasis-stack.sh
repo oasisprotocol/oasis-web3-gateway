@@ -45,8 +45,8 @@ fi
 if [[ ! -z "${OASIS_SINGLE_COMPUTE_NODE:-}" ]]; then
   jq "
     .compute_workers = [.compute_workers[0]] |
-    .runtimes[1].executor.group_size = 1 |
-    .runtimes[1].executor.group_backup_size = 0
+    .runtimes[${RT_IDX}].executor.group_size = 1 |
+    .runtimes[${RT_IDX}].executor.group_backup_size = 0
   " "$FIXTURE_FILE" >"$FIXTURE_FILE.tmp"
   mv "$FIXTURE_FILE.tmp" "$FIXTURE_FILE"
 fi
