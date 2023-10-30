@@ -6,7 +6,7 @@ set -euo pipefail
 # Supported ENV Variables:
 # - OASIS_NODE: path to oasis-node binary
 # - OASIS_NET_RUNNER: path to oasis-net-runner binary
-# - SAPPHIRE_BACKEND: choose 'mock' backend (default), or use other behavior
+# - BEACON_BACKEND: choose 'mock' backend (default), or use other behavior
 # - PARATIME: path to ParaTime binary (inside .orc bundle)
 # - PARATIME_VERSION: version of the binary. e.g. 3.0.0
 # - OASIS_NODE_DATADIR: path to temporary oasis-node data dir e.g. /tmp/oasis-localnet
@@ -58,7 +58,7 @@ jq "
 " "$FIXTURE_FILE" >"$FIXTURE_FILE.tmp"
 mv "$FIXTURE_FILE.tmp" "$FIXTURE_FILE"
 
-if [[ ${SAPPHIRE_BACKEND-} == 'mock' ]]; then
+if [[ ${BEACON_BACKEND-} == 'mock' ]]; then
   # Set beacon backend to 'debug mock'
   jq ".network.beacon.debug_mock_backend = true" "$FIXTURE_FILE" >"$FIXTURE_FILE.tmp"
   mv "$FIXTURE_FILE.tmp" "$FIXTURE_FILE"
