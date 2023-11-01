@@ -58,17 +58,15 @@ if [[ ${BEACON_BACKEND} == 'mock' ]]; then
 	echo -n .
 	${OASIS_NODE} debug control set-epoch --epoch 1 -a unix:${OASIS_NODE_SOCKET}
 
-	echo -n .
-	${OASIS_NODE} debug control set-epoch --epoch 2 -a unix:${OASIS_NODE_SOCKET}
-
 	# Transition to the final epoch when the KM generates ephemeral secret.
 	if [[ ${PARATIME_NAME} == 'sapphire' ]]; then
-		while (${OASIS_NODE} control status -a unix:${OASIS_KM_SOCKET} | jq -e ".keymanager.worker.ephemeral_secrets.last_generated_epoch!=3" >/dev/null); do
+		while (${OASIS_NODE} control status -a unix:${OASIS_KM_SOCKET} | jq -e ".keymanager.worker.ephemeral_secrets.last_generated_epoch!=2" >/dev/null); do
 			sleep 0.5
 		done
-		echo -n .
-		${OASIS_NODE} debug control set-epoch --epoch 3 -a unix:${OASIS_NODE_SOCKET}
 	fi
+
+	echo -n .
+	${OASIS_NODE} debug control set-epoch --epoch 2 -a unix:${OASIS_NODE_SOCKET}
 else
 	${OASIS_NODE} debug control wait-ready -a unix:${OASIS_NODE_SOCKET}
 fi
