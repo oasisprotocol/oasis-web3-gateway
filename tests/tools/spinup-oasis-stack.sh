@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -euo pipefail
 
@@ -87,4 +87,4 @@ jq ".runtimes[${RT_IDX}].txn_scheduler.batch_flush_timeout=1000000000" "$FIXTURE
 mv "$FIXTURE_FILE.tmp" "$FIXTURE_FILE"
 
 # Run oasis-node.
-${OASIS_NET_RUNNER} --fixture.file "$FIXTURE_FILE" --basedir "${OASIS_NODE_DATADIR}" --basedir.no_temp_dir
+${OASIS_NET_RUNNER} --fixture.file "$FIXTURE_FILE" --basedir "${OASIS_NODE_DATADIR}" --basedir.no_temp_dir $@

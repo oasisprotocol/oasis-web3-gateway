@@ -2,7 +2,7 @@
 FROM golang:1.21 AS oasis-web3-gateway
 
 COPY . /go/oasis-web3-gateway
-RUN cd oasis-web3-gateway && make build
+RUN cd oasis-web3-gateway && make && strip -S -x oasis-web3-gateway docker/common/oasis-deposit/oasis-deposit
 
 # Build simple-keymanager
 FROM ghcr.io/oasisprotocol/oasis-core-dev:stable-23.0.x AS oasis-core-dev
@@ -11,26 +11,12 @@ ENV OASIS_UNSAFE_SKIP_KM_POLICY=1
 
 RUN git clone https://github.com/oasisprotocol/oasis-core.git --branch stable/23.0.x --depth 1 \
 	&& cd oasis-core/tests/runtimes/simple-keymanager \
-	&& cargo build
+	&& cargo build --release
 
 # Build sapphire-dev
-FROM ubuntu:22.04
-
-ARG DEBIAN_FRONTEND=noninteractive
-
-# Install Postgresql and other tools packaged by Ubuntu.
-RUN apt update -qq \
-	&& apt dist-upgrade -qq -y \
-	&& apt install jq postgresql unzip ca-certificates wget -y \
-	&& rm -rf /var/lib/apt/lists/* \
-	&& echo "" \
-	&& echo "Initialize PostgreSQL database, permissions need to be setup" \
-	&& chown -R postgres:postgres /etc/postgresql /var/run/postgresql /var/log/postgresql /var/lib/postgresql/ \
-	&& chown postgres:ssl-cert /etc/ssl/private/ \
-	&& chown postgres:postgres /etc/ssl/private/ssl-cert-snakeoil.key \
-	&& chmod 600               /etc/ssl/private/ssl-cert-snakeoil.key  \
-	&& /etc/init.d/postgresql start \
-	&& su -c "psql --command \"ALTER USER postgres WITH SUPERUSER PASSWORD 'postgres';\"" postgres
+FROM postgres:16-alpine
+RUN apk add --no-cache bash gcompat libseccomp jq binutils \
+	&& su -c "POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres /usr/local/bin/docker-entrypoint.sh postgres &" postgres
 
 # Docker-specific variables
 ENV OASIS_CORE_VERSION=23.0.6
@@ -55,7 +41,7 @@ ENV OASIS_UNSAFE_ALLOW_DEBUG_ENCLAVES=1
 ARG VERSION
 
 # simple-keymanager
-COPY --from=oasis-core-dev /oasis-core/target/debug/simple-keymanager ${KEYMANAGER_BINARY}
+COPY --from=oasis-core-dev /oasis-core/target/release/simple-keymanager ${KEYMANAGER_BINARY}
 
 # oasis-web3-gateway binary, config, spinup-* scripts and staking_genesis.json.
 COPY --from=oasis-web3-gateway /go/oasis-web3-gateway/oasis-web3-gateway ${OASIS_WEB3_GATEWAY}
@@ -88,7 +74,10 @@ RUN wget --quiet "https://github.com/oasisprotocol/oasis-core/releases/download/
 	&& rm -rf "/oasis_cli_${OASIS_CLI_VERSION}_linux_amd64.tar.gz" \
 	&& echo "" \
 	&& echo "Write VERSION information." \
-	&& echo "${VERSION}" > /VERSION
+	&& echo "${VERSION}" > /VERSION \
+	&& strip -S -x /oasis-net-runner /oasis-node /oasis /simple-keymanager \
+	&& echo "" \
+	&& ls -l /
 
 # Web3 gateway http and ws ports.
 EXPOSE 8545/tcp

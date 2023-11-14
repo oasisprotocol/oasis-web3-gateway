@@ -48,7 +48,7 @@ jobs:
           load: true
 
       - name: Test
-        timeout-minutes: 2
+        timeout-minutes: 3
         working-directory: docker/${{ matrix.docker_image }}
         run: ./test.sh
 

@@ -2,10 +2,12 @@
 FROM golang:1.21 AS oasis-web3-gateway
 
 COPY . /go/oasis-web3-gateway
-RUN cd oasis-web3-gateway && make build
+RUN cd oasis-web3-gateway && make && strip -S -x oasis-web3-gateway docker/common/oasis-deposit/oasis-deposit
 
 # Build emerald-dev
-FROM ubuntu:22.04
+FROM postgres:16-alpine
+RUN apk add --no-cache bash gcompat libseccomp jq binutils \
+	&& su -c "POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres /usr/local/bin/docker-entrypoint.sh postgres &" postgres
 
 # Docker-specific variables
 ENV OASIS_CORE_VERSION=23.0.6
@@ -25,21 +27,6 @@ ENV PARATIME=/runtime.elf
 ENV KEYMANAGER_BINARY=""
 
 ARG VERSION
-ARG DEBIAN_FRONTEND=noninteractive
-
-# Install Postgresql and other tools packaged by Ubuntu.
-RUN apt update -qq \
-	&& apt dist-upgrade -qq -y \
-	&& apt install jq postgresql unzip ca-certificates wget -y \
-	&& rm -rf /var/lib/apt/lists/* \
-	&& echo "" \
-	&& echo "Initialize PostgreSQL database, permissions need to be setup" \
-	&& chown -R postgres:postgres /etc/postgresql /var/run/postgresql /var/log/postgresql /var/lib/postgresql/ \
-	&& chown postgres:ssl-cert /etc/ssl/private/ \
-	&& chown postgres:postgres /etc/ssl/private/ssl-cert-snakeoil.key \
-	&& chmod 600               /etc/ssl/private/ssl-cert-snakeoil.key  \
-	&& /etc/init.d/postgresql start \
-	&& su -c "psql --command \"ALTER USER postgres WITH SUPERUSER PASSWORD 'postgres';\"" postgres
 
 # oasis-web3-gateway binary, config, spinup-* scripts and staking_genesis.json.
 COPY --from=oasis-web3-gateway /go/oasis-web3-gateway/oasis-web3-gateway ${OASIS_WEB3_GATEWAY}
@@ -72,7 +59,8 @@ RUN wget --quiet "https://github.com/oasisprotocol/oasis-core/releases/download/
 	&& rm -rf "/oasis_cli_${OASIS_CLI_VERSION}_linux_amd64.tar.gz" \
 	&& echo "" \
 	&& echo "Write VERSION information." \
-	&& echo "${VERSION}" > /VERSION
+	&& echo "${VERSION}" > /VERSION \
+	&& strip -S -x /oasis-net-runner /oasis-node /oasis
 
 # Web3 gateway http and ws ports.
 EXPOSE 8545/tcp
