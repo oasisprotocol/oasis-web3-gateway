@@ -33,7 +33,7 @@ RUN apt update -qq \
 	&& su -c "psql --command \"ALTER USER postgres WITH SUPERUSER PASSWORD 'postgres';\"" postgres
 
 # Docker-specific variables
-ENV OASIS_CORE_VERSION=23.0.1
+ENV OASIS_CORE_VERSION=23.0.6
 ENV OASIS_CLI_VERSION=0.6.0
 ENV PARATIME_VERSION=0.7.0-testnet
 ENV PARATIME_NAME=sapphire
