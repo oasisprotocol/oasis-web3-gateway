@@ -27,9 +27,16 @@ export BEACON_BACKEND=${BEACON_BACKEND:-mock}
 OASIS_NODE_SOCKET=${OASIS_NODE_DATADIR}/net-runner/network/client-0/internal.sock
 OASIS_KM_SOCKET=${OASIS_NODE_DATADIR}/net-runner/network/keymanager-0/internal.sock
 
+OASIS_WEB3_GATEWAY_PID=""
+OASIS_NODE_PID=""
+
 function cleanup {
-	kill -9 $OASIS_WEB3_GATEWAY_PID
-	kill -9 $OASIS_NODE_PID
+	if [[ -n "${OASIS_WEB3_GATEWAY_PID}" ]]; then
+		kill -9 ${OASIS_WEB3_GATEWAY_PID}
+	fi
+	if [[ -n "${OASIS_NODE_PID}" ]]; then
+		kill -9 ${OASIS_NODE_PID}
+	fi
 }
 
 trap cleanup INT TERM EXIT
