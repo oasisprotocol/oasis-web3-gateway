@@ -42,8 +42,7 @@ function cleanup {
 trap cleanup INT TERM EXIT
 
 # If we have an interactive terminal, use colors.
-ISATTY="$([ -t 0 ] && echo yes)"
-if [[ "x${ISATTY}" == "xyes" ]]; then
+if [[ -t 0 ]]; then
 	GREEN="\e[32;1m"
 	YELLOW="\e[33;1m"
 	CYAN="\e[36;1m"
