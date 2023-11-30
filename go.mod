@@ -20,7 +20,7 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.1
 	github.com/knadh/koanf v1.5.0
-	github.com/oasisprotocol/oasis-core/go v0.2300.6
+	github.com/oasisprotocol/oasis-core/go v0.2300.9
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.7.0
 	github.com/prometheus/client_golang v1.17.0
 	github.com/rs/cors v1.10.1

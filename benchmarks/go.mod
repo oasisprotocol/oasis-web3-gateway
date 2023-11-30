@@ -16,7 +16,7 @@ replace (
 
 require (
 	github.com/ethereum/go-ethereum v1.13.4
-	github.com/oasisprotocol/oasis-core/go v0.2300.6
+	github.com/oasisprotocol/oasis-core/go v0.2300.9
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.7.0
 	github.com/prometheus/client_golang v1.17.0
 	github.com/spf13/cobra v1.7.0
