@@ -9,9 +9,11 @@ FROM ghcr.io/oasisprotocol/oasis-core-dev:stable-23.0.x AS oasis-core-dev
 
 ENV OASIS_UNSAFE_SKIP_KM_POLICY=1
 
-RUN git clone https://github.com/oasisprotocol/oasis-core.git --branch stable/23.0.x --depth 1 \
+RUN git clone https://github.com/oasisprotocol/oasis-core.git --branch ptrus/stable/23.0.x/backports --depth 1 \
 	&& cd oasis-core/tests/runtimes/simple-keymanager \
 	&& cargo build --release
+
+RUN cd oasis-core/ && make build-go
 
 # Build sapphire-dev
 FROM postgres:16-alpine
@@ -19,8 +21,8 @@ RUN apk add --no-cache bash gcompat libseccomp jq binutils \
 	&& su -c "POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres /usr/local/bin/docker-entrypoint.sh postgres &" postgres
 
 # Docker-specific variables
-ENV OASIS_CORE_VERSION=23.0.6
-ENV OASIS_CLI_VERSION=0.6.0
+ENV OASIS_CORE_VERSION=23.0.8
+ENV OASIS_CLI_VERSION=0.7.0
 ENV PARATIME_VERSION=0.7.0-testnet
 ENV PARATIME_NAME=sapphire
 ENV GATEWAY__CHAIN_ID=0x5afd
@@ -50,16 +52,20 @@ COPY docker/common/localnet.yml ${OASIS_WEB3_GATEWAY_CONFIG_FILE}
 COPY docker/common/start.sh /
 COPY tests/tools/* /
 
+COPY --from=oasis-core-dev /oasis-core/go/oasis-node/oasis-node /
+COPY --from=oasis-core-dev /oasis-core/go/oasis-net-runner/oasis-net-runner /
+
 # Configure oasis-node and oasis-net-runner.
-RUN wget --quiet "https://github.com/oasisprotocol/oasis-core/releases/download/v${OASIS_CORE_VERSION}/oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz"  \
-    && tar xfvz "oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz" \
-	&& mkdir -p "$(dirname ${OASIS_NODE})" "$(dirname ${OASIS_NET_RUNNER})" \
-	&& mv "oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-node" "${OASIS_NODE}" \
-	&& mv "oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-net-runner" "${OASIS_NET_RUNNER}" \
-	&& rm "oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz" \
-	&& rm -rf "oasis_core_${OASIS_CORE_VERSION}_linux_amd64" \
-	&& echo "" \
-	&& echo "Configure the ParaTime." \
+#RUN wget --quiet "https://github.com/oasisprotocol/oasis-core/releases/download/v${OASIS_CORE_VERSION}/oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz"  \
+#    && tar xfvz "oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz" \
+#	&& mkdir -p "$(dirname ${OASIS_NODE})" "$(dirname ${OASIS_NET_RUNNER})" \
+#	&& mv "oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-node" "${OASIS_NODE}" \
+#	&& mv "oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-net-runner" "${OASIS_NET_RUNNER}" \
+#	&& rm "oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz" \
+#	&& rm -rf "oasis_core_${OASIS_CORE_VERSION}_linux_amd64" \
+#	&& echo ""
+
+RUN echo "Configure the ParaTime." \
 	&& mkdir -p "$(dirname ${PARATIME})" \
     && wget --quiet "https://github.com/oasisprotocol/${PARATIME_NAME}-paratime/releases/download/v${PARATIME_VERSION}/localnet-${PARATIME_NAME}-paratime.orc" -O "/paratime.orc" \
     && unzip "paratime.orc" \
