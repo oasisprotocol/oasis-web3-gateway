@@ -19,7 +19,7 @@ RUN apk add --no-cache bash gcompat libseccomp jq binutils \
 	&& su -c "POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres /usr/local/bin/docker-entrypoint.sh postgres &" postgres
 
 # Docker-specific variables
-ENV OASIS_CORE_VERSION=23.0.6
+ENV OASIS_CORE_VERSION=23.0.9
 ENV OASIS_CLI_VERSION=0.6.0
 ENV PARATIME_VERSION=0.7.0-testnet
 ENV PARATIME_NAME=sapphire

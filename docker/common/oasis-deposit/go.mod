@@ -15,7 +15,7 @@ replace (
 )
 
 require (
-	github.com/oasisprotocol/oasis-core/go v0.2300.6
+	github.com/oasisprotocol/oasis-core/go v0.2300.9
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.7.0
 	google.golang.org/grpc v1.59.0
 )
