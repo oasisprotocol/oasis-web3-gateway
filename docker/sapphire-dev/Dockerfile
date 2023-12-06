@@ -8,10 +8,15 @@ RUN cd oasis-web3-gateway && make && strip -S -x oasis-web3-gateway docker/commo
 FROM ghcr.io/oasisprotocol/oasis-core-dev:stable-23.0.x AS oasis-core-dev
 
 ENV OASIS_UNSAFE_SKIP_KM_POLICY=1
+ENV OASIS_CLI_VERSION=0.7.1
 
 RUN git clone https://github.com/oasisprotocol/oasis-core.git --branch stable/23.0.x --depth 1 \
 	&& cd oasis-core/tests/runtimes/simple-keymanager \
-	&& cargo build --release
+	&& cargo build --release \
+	&& cd ../../../../ \
+	&& git clone https://github.com/oasisprotocol/cli.git --branch v${OASIS_CLI_VERSION} --depth 1 \
+	&& cd cli \
+	&& make CGO_ENABLED=0
 
 # Build sapphire-dev
 FROM postgres:16-alpine
@@ -20,7 +25,6 @@ RUN apk add --no-cache bash gcompat libseccomp jq binutils \
 
 # Docker-specific variables
 ENV OASIS_CORE_VERSION=23.0.9
-ENV OASIS_CLI_VERSION=0.6.0
 ENV PARATIME_VERSION=0.7.0-testnet
 ENV PARATIME_NAME=sapphire
 ENV GATEWAY__CHAIN_ID=0x5afd
@@ -42,6 +46,9 @@ ARG VERSION
 
 # simple-keymanager
 COPY --from=oasis-core-dev /oasis-core/target/release/simple-keymanager ${KEYMANAGER_BINARY}
+
+# cli
+COPY --from=oasis-core-dev /cli/oasis /oasis
 
 # oasis-web3-gateway binary, config, spinup-* scripts and staking_genesis.json.
 COPY --from=oasis-web3-gateway /go/oasis-web3-gateway/oasis-web3-gateway ${OASIS_WEB3_GATEWAY}
@@ -66,18 +73,18 @@ RUN wget --quiet "https://github.com/oasisprotocol/oasis-core/releases/download/
     && chmod a+x "runtime.elf" \
 	&& rm "paratime.orc" \
 	&& echo "" \
-	&& echo "Configure oasis-cli." \
-	&& wget --quiet "https://github.com/oasisprotocol/cli/releases/download/v${OASIS_CLI_VERSION}/oasis_cli_${OASIS_CLI_VERSION}_linux_amd64.tar.gz" \
-    && tar -xvf "/oasis_cli_${OASIS_CLI_VERSION}_linux_amd64.tar.gz" \
-	&& mv "/oasis_cli_${OASIS_CLI_VERSION}_linux_amd64/oasis" / \
-	&& rm -rf "/oasis_cli_${OASIS_CLI_VERSION}_linux_amd64/" \
-	&& rm -rf "/oasis_cli_${OASIS_CLI_VERSION}_linux_amd64.tar.gz" \
-	&& echo "" \
 	&& echo "Write VERSION information." \
 	&& echo "${VERSION}" > /VERSION \
-	&& strip -S -x /oasis-net-runner /oasis-node /oasis /simple-keymanager \
+	&& strip -S -x ${OASIS_NET_RUNNER} ${OASIS_NODE} /oasis /simple-keymanager \
 	&& echo "" \
-	&& ls -l /
+	&& ls -l / \
+	&& echo "" \
+	&& echo "*** Oasis Node:" \
+	&& ${OASIS_NODE} --version \
+	&& echo "" \
+	&& echo "*** Oasis CLI:" \
+	&& /oasis --version \
+	&& echo ""
 
 # Web3 gateway http and ws ports.
 EXPOSE 8545/tcp
