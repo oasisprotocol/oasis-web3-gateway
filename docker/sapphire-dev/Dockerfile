@@ -25,7 +25,7 @@ RUN apk add --no-cache bash gcompat libseccomp jq binutils \
 
 # Docker-specific variables
 ENV OASIS_CORE_VERSION=23.0.9
-ENV PARATIME_VERSION=0.7.0-testnet
+ENV PARATIME_VERSION=0.7.0
 ENV PARATIME_NAME=sapphire
 ENV GATEWAY__CHAIN_ID=0x5afd
 
