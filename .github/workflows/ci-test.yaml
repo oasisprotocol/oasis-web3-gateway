@@ -82,7 +82,7 @@ jobs:
 
       - name: Upload oasis-node logs artifacts
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: oasis-node-logs
           path: |
@@ -160,7 +160,7 @@ jobs:
 
       - name: Upload oasis-node logs artifacts
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: oasis-node-logs-c10l
           path: |
