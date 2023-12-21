@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
+	_ "net/http/pprof" // nolint:gosec,G108
 	"os"
 	"os/signal"
 	"syscall"
@@ -170,6 +172,15 @@ func runRoot() error {
 	// Initialize logging.
 	if err = log.InitLogging(cfg); err != nil {
 		return err
+	}
+
+	// Enable pprof if configured.
+	if cfg.PprofAddr != "" {
+		go func() {
+			if err = http.ListenAndServe(cfg.PprofAddr, nil); err != nil { // nolint:gosec,G114
+				logging.GetLogger("pprof").Error("server stopped", "err", err)
+			}
+		}()
 	}
 
 	logger := logging.GetLogger("main")
