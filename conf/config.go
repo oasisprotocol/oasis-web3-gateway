@@ -39,6 +39,8 @@ type Config struct {
 	// with it's own SQL database instance, this parameter should not
 	// be needed.
 	ArchiveHeightMax uint64 `koanf:"archive_height_max"`
+
+	PprofAddr string `koanf:"pprof_addr"`
 }
 
 // Validate performs config validation.
