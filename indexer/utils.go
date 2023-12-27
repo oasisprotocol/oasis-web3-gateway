@@ -104,9 +104,8 @@ func blockToModels(
 	bshash := block.Header.StateRoot.Hex()
 	logsBloom := ethtypes.BytesToBloom(ethtypes.LogsBloom(logs))
 	bloomData, _ := logsBloom.MarshalText()
+	bloomHex := hex.EncodeToString(bloomData)
 	baseFee := big.NewInt(10)
-	number := big.NewInt(0)
-	number.SetUint64(block.Header.Round)
 	var btxHash string
 	if len(transactions) == 0 {
 		btxHash = ethtypes.EmptyRootHash.Hex()
@@ -123,7 +122,7 @@ func blockToModels(
 		ReceiptHash: ethtypes.EmptyRootHash.Hex(),
 		Bloom:       string(bloomData),
 		Difficulty:  big.NewInt(0).String(),
-		Number:      number.Uint64(),
+		Number:      block.Header.Round,
 		GasLimit:    blockGasLimit,
 		Time:        uint64(block.Header.Timestamp),
 		Extra:       "",
@@ -136,6 +135,7 @@ func blockToModels(
 	innerReceipts := make([]*model.Receipt, 0, len(transactions))
 	cumulativeGasUsed := uint64(0)
 	for idx, ethTx := range transactions {
+		ethTxHex := ethTx.Hash().Hex()
 		v, r, s := ethTx.RawSignatureValues()
 		signer := ethtypes.LatestSignerForChainID(ethTx.ChainId())
 		from, _ := signer.Sender(ethTx)
@@ -153,12 +153,12 @@ func blockToModels(
 			accList = append(accList, acc)
 		}
 		tx := &model.Transaction{
-			Hash:       ethTx.Hash().Hex(),
+			Hash:       ethTxHex,
 			Type:       ethTx.Type(),
 			ChainID:    ethTx.ChainId().String(),
 			Status:     uint(txsStatus[idx]),
 			BlockHash:  bhash,
-			Round:      number.Uint64(),
+			Round:      block.Header.Round,
 			Index:      uint32(idx),
 			Gas:        ethTx.Gas(),
 			GasPrice:   ethTx.GasPrice().String(),
@@ -186,9 +186,9 @@ func blockToModels(
 		receipt := &model.Receipt{
 			Status:            uint(txsStatus[idx]),
 			CumulativeGasUsed: cumulativeGasUsed,
-			Logs:              txLogs[ethTx.Hash().Hex()],
-			LogsBloom:         hex.EncodeToString(bloomData),
-			TransactionHash:   ethTx.Hash().Hex(),
+			Logs:              txLogs[ethTxHex],
+			LogsBloom:         bloomHex,
+			TransactionHash:   ethTxHex,
 			BlockHash:         bhash,
 			GasUsed:           txsGasUsed[idx],
 			Type:              uint(ethTx.Type()),
@@ -213,7 +213,7 @@ func blockToModels(
 
 	innerBlock := &model.Block{
 		Hash:         bhash,
-		Round:        number.Uint64(),
+		Round:        block.Header.Round,
 		Header:       innerHeader,
 		Transactions: innerTxs,
 	}

@@ -427,13 +427,11 @@ func (cb *cachingBackend) pruneCache(
 		panic("indexer: cached entry block height != queried height")
 	}
 
-	cb.blockByHashHex.Delete(bd.Block.Hash)
-	cb.logsByBlockNumber.Delete(bd.Block.Round)
-
-	// Note: Load followed by delete is safe since the only routine that
-	// mutates those caches is the caller.
+	// Prune transaction cache.
 	for i := range bd.UniqueTxes {
 		txHash := bd.UniqueTxes[i].Hash
+		// Note: Load followed by delete is safe since the only routine that
+		// mutates those caches is the caller.
 		if untypedTxEntry, ok := cb.txByHashHex.Load(txHash); ok {
 			txEntry := untypedTxEntry.(*txCacheEntry)
 			if txEntry.blockNumber == blockNumber {
@@ -441,6 +439,7 @@ func (cb *cachingBackend) pruneCache(
 			}
 		}
 	}
+	// Prune receipts cache.
 	for i := range bd.Receipts {
 		txHash := bd.Receipts[i].TransactionHash
 		if untypedReceiptEntry, ok := cb.receiptByTxHashHex.Load(txHash); ok {
@@ -450,6 +449,11 @@ func (cb *cachingBackend) pruneCache(
 			}
 		}
 	}
+
+	// Prune block caches.
+	cb.blockByHashHex.Delete(bd.Block.Hash)
+	cb.logsByBlockNumber.Delete(bd.Block.Round)
+	cb.blockDataByNumber.Delete(blockNumber)
 
 	cb.cacheSize--
 }
