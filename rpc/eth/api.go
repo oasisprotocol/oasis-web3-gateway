@@ -11,6 +11,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/common/math"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/eth/filters"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -43,6 +44,7 @@ var (
 	ErrMalformedTransaction = errors.New("malformed transaction")
 	ErrMalformedBlockNumber = errors.New("malformed blocknumber")
 	ErrInvalidRequest       = errors.New("invalid request")
+	ErrInvalidPercentile    = errors.New("invalid reward percentile")
 
 	// estimateGasSigSpec is a dummy signature spec used by the estimate gas method, as
 	// otherwise transactions without signature would be underestimated.
@@ -63,6 +65,8 @@ type API interface {
 	ChainId() (*hexutil.Big, error)
 	// GasPrice returns a suggestion for a gas price for legacy transactions.
 	GasPrice(ctx context.Context) (*hexutil.Big, error)
+	// FeeHistory returns the transaction base fee per gas and effective priority fee per gas for the requested/supported block range.
+	FeeHistory(ctx context.Context, blockCount math.HexOrDecimal64, lastBlock ethrpc.BlockNumber, rewardPercentiles []float64) (*gas.FeeHistoryResult, error)
 	// GetBlockTransactionCountByHash returns the number of transactions in the block identified by hash.
 	GetBlockTransactionCountByHash(ctx context.Context, blockHash common.Hash) (hexutil.Uint, error)
 	// GetTransactionCount returns the number of transactions the given address has sent for the given block number.
@@ -289,6 +293,29 @@ func (api *publicAPI) GasPrice(_ context.Context) (*hexutil.Big, error) {
 	logger.Debug("request")
 
 	return api.gasPriceOracle.GasPrice(), nil
+}
+
+func (api *publicAPI) FeeHistory(_ context.Context, blockCount math.HexOrDecimal64, lastBlock ethrpc.BlockNumber, rewardPercentiles []float64) (*gas.FeeHistoryResult, error) {
+	logger := api.Logger.With("method", "eth_feeHistory", "block_count", blockCount, "last_block", lastBlock, "reward_percentiles", rewardPercentiles)
+	logger.Debug("request")
+
+	// Validate blockCount.
+	if blockCount < 1 {
+		// Returning with no data and no error means there are no retrievable blocks.
+		return &gas.FeeHistoryResult{OldestBlock: (*hexutil.Big)(common.Big0)}, nil
+	}
+
+	// Validate reward percentiles.
+	for i, p := range rewardPercentiles {
+		if p < 0 || p > 100 {
+			return nil, fmt.Errorf("%w: %f", ErrInvalidPercentile, p)
+		}
+		if i > 0 && p < rewardPercentiles[i-1] {
+			return nil, fmt.Errorf("%w: #%d:%f > #%d:%f", ErrInvalidPercentile, i-1, rewardPercentiles[i-1], i, p)
+		}
+	}
+
+	return api.gasPriceOracle.FeeHistory(uint64(blockCount), lastBlock, rewardPercentiles), nil
 }
 
 func (api *publicAPI) GetBlockTransactionCountByHash(ctx context.Context, blockHash common.Hash) (hexutil.Uint, error) {

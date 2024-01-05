@@ -6,6 +6,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/common/math"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/eth/filters"
 	ethrpc "github.com/ethereum/go-ethereum/rpc"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 
+	"github.com/oasisprotocol/oasis-web3-gateway/gas"
 	"github.com/oasisprotocol/oasis-web3-gateway/indexer"
 	"github.com/oasisprotocol/oasis-web3-gateway/rpc/eth"
 	"github.com/oasisprotocol/oasis-web3-gateway/rpc/metrics"
@@ -143,6 +145,15 @@ func (m *metricsWrapper) GasPrice(ctx context.Context) (res *hexutil.Big, err er
 	defer metrics.InstrumentCaller(r, s, f, i, d, &err)()
 
 	res, err = m.api.GasPrice(ctx)
+	return
+}
+
+// FeeHistory implements eth.API.
+func (m *metricsWrapper) FeeHistory(ctx context.Context, blockCount math.HexOrDecimal64, lastBlock ethrpc.BlockNumber, rewardPercentiles []float64) (res *gas.FeeHistoryResult, err error) {
+	r, s, f, i, d := metrics.GetAPIMethodMetrics("eth_feeHistory")
+	defer metrics.InstrumentCaller(r, s, f, i, d, &err)()
+
+	res, err = m.api.FeeHistory(ctx, blockCount, lastBlock, rewardPercentiles)
 	return
 }
 

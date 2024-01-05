@@ -115,6 +115,11 @@ func TestGasPriceOracle(t *testing.T) {
 	// Default gas price should be returned by the oracle.
 	require.EqualValues(defaultGasPrice.ToBigInt(), gasPriceOracle.GasPrice(), "oracle should return default gas price")
 
+	fh := gasPriceOracle.FeeHistory(10, 10, []float64{0.25, 0.5})
+	require.EqualValues(0, fh.OldestBlock.ToInt().Int64(), "fee history should be empty")
+	require.Empty(0, fh.GasUsedRatio, "fee history should be empty")
+	require.Empty(0, fh.Reward, "fee history should be empty")
+
 	// Emit a non-full block.
 	emitBlock(&emitter, false, nil)
 
@@ -169,4 +174,7 @@ func TestGasPriceOracle(t *testing.T) {
 
 	require.EqualValues(coreClient.minGasPrice.ToBigInt(), gasPriceOracle.GasPrice(), "oracle should return gas reported by the node query")
 	gasPriceOracle.Stop()
+
+	// Fee history should return zeroes (no transactions in the blocks).
+	// TODO: emit blocks with transactions, to test fee history.
 }

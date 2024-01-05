@@ -4,10 +4,15 @@ package gas
 import (
 	"context"
 	"math"
+	"math/big"
+	"slices"
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	ethMath "github.com/ethereum/go-ethereum/common/math"
+	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
@@ -25,18 +30,32 @@ var (
 	metricComputedPrice = promauto.NewGauge(prometheus.GaugeOpts{Name: "oasis_oasis_web3_gateway_gas_oracle_computed_price", Help: "Computed recommended gas price based on recent full blocks. -1 if none (no recent full blocks)."})
 )
 
+// FeeHistoryResult is the result of a fee history query.
+type FeeHistoryResult struct {
+	OldestBlock  *hexutil.Big     `json:"oldestBlock"`
+	Reward       [][]*hexutil.Big `json:"reward,omitempty"`
+	BaseFee      []*hexutil.Big   `json:"baseFeePerGas,omitempty"`
+	GasUsedRatio []float64        `json:"gasUsedRatio"`
+}
+
 // Backend is the gas price oracle backend.
 type Backend interface {
 	service.BackgroundService
 
 	// GasPrice returns the currently recommended minimum gas price.
 	GasPrice() *hexutil.Big
+
+	// FeeHistory returns the fee history for the given blocks and percentiles.
+	FeeHistory(blockCount uint64, lastBlock rpc.BlockNumber, percentiles []float64) *FeeHistoryResult
 }
 
 const (
 	// windowSize is the number of recent blocks to use for calculating min gas price.
 	// NOTE: code assumes that this is relatively small.
 	windowSize = 12
+
+	// feeHistoryWindowSize is the number of recent blocks to store for the fee history query.
+	feeHistoryWindowSize = 20
 
 	// fullBlockThreshold is the percentage of block used gas over which a block should
 	// be considered full.
@@ -56,6 +75,53 @@ var (
 	// full blocks in last `windowSize` blocks.
 	defaultGasPrice = *quantity.NewFromUint64(100_000_000_000) // 100 "gwei".
 )
+
+type txGasAndReward struct {
+	gasUsed uint64
+	reward  *hexutil.Big
+}
+
+type feeHistoryData struct {
+	height       uint64
+	baseFee      *hexutil.Big
+	gasUsedRatio float64
+	gasUsed      uint64
+
+	// Sorted list of transaction gas prices and rewards. This is used to
+	// compute the provided percentiles.
+	sortedTxs []*txGasAndReward
+}
+
+// rewards computes the reward percentiles for the given block data.
+func (d *feeHistoryData) rewards(percentiles []float64) []*hexutil.Big {
+	rewards := make([]*hexutil.Big, len(percentiles))
+
+	if len(percentiles) == 0 {
+		// No percentiles requested.
+		return rewards
+	}
+	if len(d.sortedTxs) == 0 {
+		// All zeros if there are no transactions in the block.
+		for i := range rewards {
+			rewards[i] = (*hexutil.Big)(common.Big0)
+		}
+		return rewards
+	}
+
+	// Compute the requested percentiles.
+	var txIndex int
+	sumGasUsed := d.sortedTxs[0].gasUsed
+	for i, p := range percentiles {
+		thresholdGasUsed := uint64(float64(d.gasUsed) * p / 100)
+		for sumGasUsed < thresholdGasUsed && txIndex < len(d.sortedTxs)-1 {
+			txIndex++
+			sumGasUsed += d.sortedTxs[txIndex].gasUsed
+		}
+		rewards[i] = d.sortedTxs[txIndex].reward
+	}
+
+	return rewards
+}
 
 // gasPriceOracle implements the gas price backend by looking at transaction costs in previous blocks.
 //
@@ -89,6 +155,12 @@ type gasPriceOracle struct {
 	// tracks the current index of the blockPrices rolling array.:w
 	blockPricesCurrentIdx int
 
+	// protects feeHistoryData.
+	feeHistoryLock sync.RWMutex
+	// feeHistoryData contains the data needed to compute the fee history for the
+	// last `feeHistoryWindowSize` blocks.
+	feeHistoryData []*feeHistoryData
+
 	blockWatcher indexer.BlockWatcher
 	coreClient   core.V1
 }
@@ -100,6 +172,7 @@ func New(ctx context.Context, blockWatcher indexer.BlockWatcher, coreClient core
 		ctx:                   ctxB,
 		cancelCtx:             cancelCtx,
 		blockPrices:           make([]*quantity.Quantity, 0, windowSize),
+		feeHistoryData:        make([]*feeHistoryData, 0, feeHistoryWindowSize),
 		blockWatcher:          blockWatcher,
 		coreClient:            coreClient,
 	}
@@ -149,6 +222,63 @@ func (g *gasPriceOracle) GasPrice() *hexutil.Big {
 	return &price
 }
 
+func (g *gasPriceOracle) FeeHistory(blockCount uint64, lastBlock rpc.BlockNumber, percentiles []float64) *FeeHistoryResult {
+	g.feeHistoryLock.RLock()
+	defer g.feeHistoryLock.RUnlock()
+
+	if len(g.feeHistoryData) == 0 {
+		return &FeeHistoryResult{OldestBlock: (*hexutil.Big)(common.Big0)}
+	}
+
+	var lastBlockIdx int
+	switch lastBlock {
+	case rpc.PendingBlockNumber, rpc.LatestBlockNumber, rpc.FinalizedBlockNumber, rpc.SafeBlockNumber:
+		// Take the latest available block.
+		lastBlockIdx = len(g.feeHistoryData) - 1
+	case rpc.EarliestBlockNumber:
+		// Doesn't make sense to start at earliest block.
+		return &FeeHistoryResult{OldestBlock: (*hexutil.Big)(common.Big0)}
+	default:
+		// Check if the requested block number is available.
+		var found bool
+		for i, d := range g.feeHistoryData {
+			if d.height == uint64(lastBlock) {
+				lastBlockIdx = i
+				found = true
+				break
+			}
+		}
+		// Data for requested block number not available.
+		if !found {
+			return &FeeHistoryResult{OldestBlock: (*hexutil.Big)(common.Big0)}
+		}
+	}
+
+	// Compute the oldest block to return.
+	var oldestBlockIdx int
+	if blockCount > uint64(lastBlockIdx) {
+		// Not enough blocks available, return all available blocks.
+		oldestBlockIdx = 0
+	} else {
+		oldestBlockIdx = lastBlockIdx + 1 - int(blockCount)
+	}
+
+	// Return the requested fee history.
+	result := &FeeHistoryResult{
+		OldestBlock:  (*hexutil.Big)(big.NewInt(int64(g.feeHistoryData[oldestBlockIdx].height))),
+		Reward:       make([][]*hexutil.Big, lastBlockIdx-oldestBlockIdx+1),
+		BaseFee:      make([]*hexutil.Big, lastBlockIdx-oldestBlockIdx+1),
+		GasUsedRatio: make([]float64, lastBlockIdx-oldestBlockIdx+1),
+	}
+	for i := oldestBlockIdx; i <= lastBlockIdx; i++ {
+		result.Reward[i-oldestBlockIdx] = g.feeHistoryData[i].rewards(percentiles)
+		result.BaseFee[i-oldestBlockIdx] = g.feeHistoryData[i].baseFee
+		result.GasUsedRatio[i-oldestBlockIdx] = g.feeHistoryData[i].gasUsedRatio
+	}
+
+	return result
+}
+
 func (g *gasPriceOracle) nodeMinGasPriceFetcher() {
 	for {
 		// Fetch and update min gas price from the node.
@@ -193,12 +323,13 @@ func (g *gasPriceOracle) indexedBlockWatcher() {
 		case <-g.ctx.Done():
 			return
 		case blk := <-ch:
-			g.onBlock(blk.Block, blk.LastTransactionPrice)
+			g.trackMinPrice(blk.Block, blk.LastTransactionPrice)
+			g.trackFeeHistory(blk.Block, blk.UniqueTxes, blk.Receipts)
 		}
 	}
 }
 
-func (g *gasPriceOracle) onBlock(b *model.Block, lastTxPrice *quantity.Quantity) {
+func (g *gasPriceOracle) trackMinPrice(b *model.Block, lastTxPrice *quantity.Quantity) {
 	// Consider block full if block gas used is greater than `fullBlockThreshold` of gas limit.
 	blockFull := (float64(b.Header.GasLimit) * fullBlockThreshold) <= float64(b.Header.GasUsed)
 	if !blockFull {
@@ -254,4 +385,46 @@ func (g *gasPriceOracle) trackPrice(price *quantity.Quantity) {
 		return
 	}
 	g.blockPrices[g.blockPricesCurrentIdx] = price
+}
+
+func (g *gasPriceOracle) trackFeeHistory(block *model.Block, txs []*model.Transaction, receipts []*model.Receipt) {
+	// TODO: could populate old blocks on first received block (if available).
+
+	d := &feeHistoryData{
+		height: block.Round,
+		// Base fee is always zero.
+		// https://github.com/oasisprotocol/oasis-sdk/blob/da9d86d52abca27930ec4e63c7735ca30f2f16b8/runtime-sdk/modules/evm/src/raw_tx.rs#L102-L105
+		baseFee:      (*hexutil.Big)(common.Big0),
+		gasUsed:      block.Header.GasUsed,
+		gasUsedRatio: float64(block.Header.GasUsed) / float64(block.Header.GasLimit),
+		sortedTxs:    make([]*txGasAndReward, len(receipts)),
+	}
+	for i, tx := range txs {
+		var tipGas, feeCap big.Int
+		if err := feeCap.UnmarshalText([]byte(tx.GasFeeCap)); err != nil {
+			g.Logger.Error("unmarshal gas fee cap", "fee_cap", tx.GasFeeCap, "block", block, "tx", tx, "err", err)
+			return
+		}
+		if err := tipGas.UnmarshalText([]byte(tx.GasTipCap)); err != nil {
+			g.Logger.Error("unmarshal gas tip cap", "tip_cap", tx.GasTipCap, "block", block, "tx", tx, "err", err)
+			return
+		}
+		d.sortedTxs[i] = &txGasAndReward{
+			gasUsed: receipts[i].GasUsed,
+			reward:  (*hexutil.Big)(ethMath.BigMin(&tipGas, &feeCap)),
+		}
+	}
+	slices.SortStableFunc(d.sortedTxs, func(a, b *txGasAndReward) int {
+		return a.reward.ToInt().Cmp(b.reward.ToInt())
+	})
+
+	// Add new data to the history.
+	g.feeHistoryLock.Lock()
+	defer g.feeHistoryLock.Unlock()
+
+	// Delete oldest entry if we are at capacity.
+	if len(g.feeHistoryData) == feeHistoryWindowSize {
+		g.feeHistoryData = g.feeHistoryData[1:]
+	}
+	g.feeHistoryData = append(g.feeHistoryData, d)
 }
