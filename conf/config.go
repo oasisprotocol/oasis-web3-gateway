@@ -243,6 +243,8 @@ type GasConfig struct {
 	WindowSize uint64 `koanf:"window_size"`
 	// ComputedPriceMargin is the gas price to add to the computed gas price.
 	ComputedPriceMargin uint64 `koanf:"computed_price_margin"`
+	// FeeHistorySize is the number of recent blocks to store for the fee history query.
+	FeeHistorySize uint64 `koanf:"fee_history_size"`
 }
 
 // Validate validates the gas configuration.

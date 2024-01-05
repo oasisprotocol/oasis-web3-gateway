@@ -55,7 +55,7 @@ type Service struct {
 	core    core.V1
 
 	queryEpochParameters bool
-	blockGasLimit        uint64
+	coreParameters       *core.Parameters
 	rtInfo               *core.RuntimeInfoResponse
 
 	ctx       context.Context
@@ -79,14 +79,14 @@ func (s *Service) indexBlock(ctx context.Context, round uint64) error {
 		return fmt.Errorf("querying block: %w", err)
 	}
 
-	if s.blockGasLimit == 0 || s.rtInfo == nil || s.queryEpochParameters {
+	if s.coreParameters == nil || s.rtInfo == nil || s.queryEpochParameters {
 		// Query parameters for block gas limit.
 		var params *core.Parameters
 		params, err = s.core.Parameters(ctx, round)
 		if err != nil {
 			return fmt.Errorf("querying block parameters: %w", err)
 		}
-		s.blockGasLimit = params.MaxBatchGas
+		s.coreParameters = params
 
 		// Query runtime info.
 		s.rtInfo, err = s.core.RuntimeInfo(ctx)
@@ -100,7 +100,7 @@ func (s *Service) indexBlock(ctx context.Context, round uint64) error {
 		return fmt.Errorf("querying transactions with results: %w", err)
 	}
 
-	err = s.backend.Index(ctx, blk, txs, s.blockGasLimit, s.rtInfo)
+	err = s.backend.Index(ctx, blk, txs, s.coreParameters, s.rtInfo)
 	if err != nil {
 		return fmt.Errorf("indexing block: %w", err)
 	}

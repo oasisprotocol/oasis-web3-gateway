@@ -145,10 +145,10 @@ func DB2EthLogs(dbLogs []*model.Log) []*ethtypes.Log {
 
 // DB2EthHeader converts block in db to ethereum header.
 func DB2EthHeader(block *model.Block) *ethtypes.Header {
-	v1 := big.NewInt(0)
-	diff, _ := v1.SetString(block.Header.Difficulty, 10)
+	diff, _ := new(big.Int).SetString(block.Header.Difficulty, 10)
 	noPrefix := block.Header.Bloom[2 : len(block.Header.Bloom)-1]
 	bloomData, _ := hex.DecodeString(noPrefix)
+	baseFee, _ := new(big.Int).SetString(block.Header.BaseFee, 10)
 	res := &ethtypes.Header{
 		ParentHash:  common.HexToHash(block.Header.ParentHash),
 		UncleHash:   common.HexToHash(block.Header.UncleHash),
@@ -165,8 +165,7 @@ func DB2EthHeader(block *model.Block) *ethtypes.Header {
 		Extra:       []byte(block.Header.Extra),
 		MixDigest:   common.HexToHash(block.Header.MixDigest),
 		Nonce:       ethtypes.EncodeNonce(block.Header.Nonce),
-		// BaseFee was added by EIP-1559 and is ignored in legacy headers.
-		BaseFee: big.NewInt(0),
+		BaseFee:     baseFee,
 	}
 
 	return res
