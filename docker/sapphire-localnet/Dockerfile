@@ -18,7 +18,7 @@ RUN git clone https://github.com/oasisprotocol/oasis-core.git --branch stable/23
 	&& cd cli \
 	&& make CGO_ENABLED=0
 
-# Build sapphire-dev
+# Build sapphire-localnet
 FROM postgres:16-alpine
 RUN apk add --no-cache bash gcompat libseccomp jq binutils \
 	&& su -c "POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres /usr/local/bin/docker-entrypoint.sh postgres &" postgres

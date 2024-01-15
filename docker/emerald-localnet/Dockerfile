@@ -4,7 +4,7 @@ FROM golang:1.21 AS oasis-web3-gateway
 COPY . /go/oasis-web3-gateway
 RUN cd oasis-web3-gateway && make && strip -S -x oasis-web3-gateway docker/common/oasis-deposit/oasis-deposit
 
-# Build emerald-dev
+# Build emerald-localnet
 FROM postgres:16-alpine
 RUN apk add --no-cache bash gcompat libseccomp jq binutils \
 	&& su -c "POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres /usr/local/bin/docker-entrypoint.sh postgres &" postgres

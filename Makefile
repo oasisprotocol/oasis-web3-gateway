@@ -55,13 +55,13 @@ lint: $(lint-targets)
 release-build:
 	@goreleaser release --rm-dist
 
-docker: docker-emerald-dev docker-sapphire-dev
+docker: docker-emerald-localnet docker-sapphire-localnet
 
-docker-emerald-dev:
-	@docker build -t ghcr.io/oasisprotocol/emerald-dev:local --build-arg VERSION=local -f docker/emerald-dev/Dockerfile .
+docker-emerald-localnet:
+	@docker build -t ghcr.io/oasisprotocol/emerald-localnet:local --build-arg VERSION=local -f docker/emerald-localnet/Dockerfile .
 
-docker-sapphire-dev:
-	@docker build -t ghcr.io/oasisprotocol/sapphire-dev:local --build-arg VERSION=local -f docker/sapphire-dev/Dockerfile .
+docker-sapphire-localnet:
+	@docker build -t ghcr.io/oasisprotocol/sapphire-localnet:local --build-arg VERSION=local -f docker/sapphire-localnet/Dockerfile .
 
 
 # List of targets that are not actual files.
