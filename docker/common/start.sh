@@ -112,7 +112,7 @@ T_END="$(date +%s)"
 
 echo
 printf "${YELLOW}WARNING: The chain is running in ephemeral mode. State will be lost after restart!${OFF}\n\n"
-notice "Listening on ${CYAN}http://localhost:8545${OFF} and ${CYAN}ws://localhost:8546${OFF}\n"
+notice "Listening on ${CYAN}http://localhost:8545${OFF} and ${CYAN}ws://localhost:8546${OFF}. Chain ID: ${GATEWAY__CHAIN_ID}\n"
 notice "Container start-up took ${CYAN}$((T_END-T_START))${OFF} seconds.\n"
 
 if [[ ${BEACON_BACKEND} == 'mock' ]]; then
