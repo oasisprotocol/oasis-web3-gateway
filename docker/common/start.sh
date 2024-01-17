@@ -19,7 +19,7 @@ export OASIS_SINGLE_COMPUTE_NODE=${OASIS_SINGLE_COMPUTE_NODE-1}
 OASIS_WEB3_GATEWAY_VERSION=$(${OASIS_WEB3_GATEWAY} -v | head -n1 | cut -d " " -f 3 | sed -r 's/^v//')
 OASIS_CORE_VERSION=$(${OASIS_NODE} -v | head -n1 | cut -d " " -f 3 | sed -r 's/^v//')
 VERSION=$(cat /VERSION)
-echo "${PARATIME_NAME}-dev ${VERSION} (oasis-core: ${OASIS_CORE_VERSION}, ${PARATIME_NAME}-paratime: ${PARATIME_VERSION}, oasis-web3-gateway: ${OASIS_WEB3_GATEWAY_VERSION})"
+echo "${PARATIME_NAME}-localnet ${VERSION} (oasis-core: ${OASIS_CORE_VERSION}, ${PARATIME_NAME}-paratime: ${PARATIME_VERSION}, oasis-web3-gateway: ${OASIS_WEB3_GATEWAY_VERSION})"
 echo
 
 export BEACON_BACKEND=${BEACON_BACKEND:-mock}
@@ -112,7 +112,7 @@ T_END="$(date +%s)"
 
 echo
 printf "${YELLOW}WARNING: The chain is running in ephemeral mode. State will be lost after restart!${OFF}\n\n"
-notice "Listening on ${CYAN}http://localhost:8545${OFF} and ${CYAN}ws://localhost:8546${OFF}\n"
+notice "Listening on ${CYAN}http://localhost:8545${OFF} and ${CYAN}ws://localhost:8546${OFF}. Chain ID: ${GATEWAY__CHAIN_ID}\n"
 notice "Container start-up took ${CYAN}$((T_END-T_START))${OFF} seconds.\n"
 
 if [[ ${BEACON_BACKEND} == 'mock' ]]; then

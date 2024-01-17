@@ -1,4 +1,4 @@
-name: docker-dev
+name: docker-localnet
 
 on:
   push:
@@ -12,7 +12,7 @@ jobs:
   docker:
     strategy:
       matrix:
-        docker_image: [emerald-dev, sapphire-dev]
+        docker_image: [emerald-localnet, sapphire-localnet]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

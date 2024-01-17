@@ -10,8 +10,8 @@ set up localnet for developing dApps running on Emerald or Sapphire:
 
 ## Prebuilt images
 
-Oasis provides prebuilt `emerald-dev` and `sapphire-dev` docker images. `latest`
-versions are based on:
+Oasis provides prebuilt `emerald-localnet` and `sapphire-localnet` docker
+images. `latest` versions are based on:
 - `stable` branch of `oasis-core`,
 - `master` branch of `oasis-sdk`,
 - `main` branch of `oasis-web3-gateway` repository.
@@ -19,8 +19,8 @@ versions are based on:
 To use the precompiled images, run:
 
 ```sh
-docker run -it -p8545:8545 -p8546:8546 ghcr.io/oasisprotocol/emerald-dev # Emerald
-docker run -it -p8545:8545 -p8546:8546 ghcr.io/oasisprotocol/sapphire-dev # Sapphire
+docker run -it -p8545:8545 -p8546:8546 ghcr.io/oasisprotocol/emerald-localnet # Emerald
+docker run -it -p8545:8545 -p8546:8546 ghcr.io/oasisprotocol/sapphire-localnet # Sapphire
 ```
 
 ## Build image locally
@@ -35,8 +35,8 @@ make docker
 To run the compiled image type:
 
 ```sh
-docker run -it -p8545:8545 -p8546:8546 ghcr.io/oasisprotocol/emerald-dev:local
-docker run -it -p8545:8545 -p8546:8546 ghcr.io/oasisprotocol/sapphire-dev:local
+docker run -it -p8545:8545 -p8546:8546 ghcr.io/oasisprotocol/emerald-localnet:local
+docker run -it -p8545:8545 -p8546:8546 ghcr.io/oasisprotocol/sapphire-localnet:local
 ```
 
 ## Usage
