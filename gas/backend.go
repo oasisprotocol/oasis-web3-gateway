@@ -41,9 +41,6 @@ const (
 	// fullBlockThreshold is the percentage of block used gas over which a block should
 	// be considered full.
 	fullBlockThreshold = 0.8
-
-	// period for querying oasis node for minimum gas price.
-	nodeMinGasPriceTimeout = 60 * time.Second
 )
 
 var (
@@ -65,10 +62,18 @@ var (
 //   - if block gas used is greater than some threshold, consider it "full" (controlled by `fullBlockThresholdParameter`)
 //   - set recommended gas price to the lowest-priced transaction from the full blocks + a small constant (controlled by `minPriceEps`)
 //
-// (b) Query gas price configured on the oasis-node:
-//   - periodically query the oasis-node for it's configured gas price
+// This handles the case when most blocks are full and the cheapest transactions are higher than the configured min gas price.
+// This can be the case if dynamic min gas price is disabled for the runtime, or the transactions are increasing in price faster
+// than the dynamic gas price adjustments.
 //
-// Return the greater of the (a) and (b), default to a `defaultGasPrice `if neither are available.
+// (b) Query gas price configured on the oasis-node:
+//   - after every block, query the oasis-node for it's configured gas price
+//
+// This handles the case when min gas price is higher than the heuristically computed price in (a).
+// This can happen if node has overridden the min gas price configuration or if dynamic min gas price is enabled and
+// has just increased.
+//
+// Return the greater of (a) and (b), default to a `defaultGasPrice `if neither are available.
 type gasPriceOracle struct {
 	service.BaseBackgroundService
 
@@ -109,7 +114,6 @@ func New(ctx context.Context, blockWatcher indexer.BlockWatcher, coreClient core
 
 // Start starts service.
 func (g *gasPriceOracle) Start() error {
-	go g.nodeMinGasPriceFetcher()
 	go g.indexedBlockWatcher()
 
 	return nil
@@ -149,19 +153,6 @@ func (g *gasPriceOracle) GasPrice() *hexutil.Big {
 	return &price
 }
 
-func (g *gasPriceOracle) nodeMinGasPriceFetcher() {
-	for {
-		// Fetch and update min gas price from the node.
-		g.fetchMinGasPrice(g.ctx)
-
-		select {
-		case <-g.ctx.Done():
-			return
-		case <-time.After(nodeMinGasPriceTimeout):
-		}
-	}
-}
-
 func (g *gasPriceOracle) fetchMinGasPrice(ctx context.Context) {
 	ctx, cancel := context.WithTimeout(ctx, time.Second*10)
 	defer cancel()
@@ -188,11 +179,32 @@ func (g *gasPriceOracle) indexedBlockWatcher() {
 	}
 	defer sub.Close()
 
+	// Guards against multiple concurrent queries in case web3 is catching up
+	// with the chain.
+	var queryLock sync.Mutex
+	var queryInProgress bool
+
 	for {
 		select {
 		case <-g.ctx.Done():
 			return
 		case blk := <-ch:
+			// After every block fetch the reported min gas price from the node.
+			// The returned price will reflect min price changes in the next block if
+			// dynamic min gas price is enabled for the runtime.
+			queryLock.Lock()
+			if !queryInProgress {
+				queryInProgress = true
+				go func() {
+					g.fetchMinGasPrice(g.ctx)
+					queryLock.Lock()
+					queryInProgress = false
+					queryLock.Unlock()
+				}()
+			}
+			queryLock.Unlock()
+
+			// Track price for the block.
 			g.onBlock(blk.Block, blk.LastTransactionPrice)
 		}
 	}

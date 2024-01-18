@@ -147,8 +147,13 @@ func TestGasPriceOracle(t *testing.T) {
 	gasPriceOracle = New(context.Background(), &emitter, &coreClient)
 	require.NoError(gasPriceOracle.Start())
 
+	// Emit a non-full block.
+	emitBlock(&emitter, false, nil)
+	// Emit a non-full block.
+	emitBlock(&emitter, false, nil)
+
 	// Wait a bit so that a MinGasPrice query is made.
-	time.Sleep(1 * time.Second)
+	time.Sleep(3 * time.Second)
 	require.EqualValues(coreClient.minGasPrice.ToBigInt(), gasPriceOracle.GasPrice(), "oracle should return gas reported by the node query")
 
 	// Emit a full block.
