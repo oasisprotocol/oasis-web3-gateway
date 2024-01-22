@@ -13,7 +13,7 @@ import (
 
 var ErrInternalError = errors.New("internal error")
 
-// API is the net_ prefixed set of APIs in the Web3 JSON-RPC spec.
+// API is the oasis_ prefixed set of APIs.
 type API interface {
 	// CallDataPublicKey returns the calldata public key for the runtime with the provided ID.
 	CallDataPublicKey(ctx context.Context) (*CallDataPublicKey, error)
@@ -38,7 +38,7 @@ type publicAPI struct {
 	Logger *logging.Logger
 }
 
-// NewPublicAPI creates an instance of the Web3 API.
+// NewPublicAPI creates an instance of the Web3 API and accompanying health check.
 func NewPublicAPI(
 	client client.RuntimeClient,
 	logger *logging.Logger,
