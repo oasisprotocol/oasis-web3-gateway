@@ -22,7 +22,7 @@ import (
 
 var requestHeights = promauto.NewHistogramVec(
 	prometheus.HistogramOpts{
-		Name:    "oasis_oasis_web3_gateway_api_request_heights",
+		Name:    "oasis_web3_gateway_api_request_heights",
 		Buckets: []float64{0, 1, 2, 3, 5, 10, 50, 100, 500, 1000},
 		Help:    "Histogram of eth API request heights (difference from the latest  height).",
 	},

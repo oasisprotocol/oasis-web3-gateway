@@ -48,7 +48,6 @@ func GetRPCAPIs(
 		ethService = ethmetrics.NewMetricsWrapper(ethService, logging.GetLogger("eth_rpc_metrics"), backend)
 		txpoolService = txpool.NewMetricsWrapper(txpoolService)
 		filtersService = filters.NewMetricsWrapper(filtersService)
-
 	}
 	apis = append(apis,
 		ethRpc.API{

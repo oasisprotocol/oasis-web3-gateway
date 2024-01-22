@@ -13,7 +13,7 @@ import (
 	"github.com/oasisprotocol/oasis-web3-gateway/storage"
 )
 
-var durations = promauto.NewHistogramVec(prometheus.HistogramOpts{Name: "oasis_oasis_web3_gateway_psql_query_seconds", Buckets: []float64{0.001, .005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10}, Help: "Histogram for the postgresql query duration."}, []string{"query"})
+var durations = promauto.NewHistogramVec(prometheus.HistogramOpts{Name: "oasis_web3_gateway_psql_query_seconds", Buckets: []float64{0.001, .005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10}, Help: "Histogram for the postgresql query duration."}, []string{"query"})
 
 func measureDuration(label string) func() {
 	timer := prometheus.NewTimer(durations.WithLabelValues(label))
