@@ -9,11 +9,12 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
+	"github.com/oasisprotocol/oasis-web3-gateway/server"
 )
 
 var ErrInternalError = errors.New("internal error")
 
-// API is the net_ prefixed set of APIs in the Web3 JSON-RPC spec.
+// API is the oasis_ prefixed set of APIs.
 type API interface {
 	// CallDataPublicKey returns the calldata public key for the runtime with the provided ID.
 	CallDataPublicKey(ctx context.Context) (*CallDataPublicKey, error)
@@ -35,19 +36,23 @@ type CallDataPublicKey struct {
 
 type publicAPI struct {
 	client client.RuntimeClient
-	Logger *logging.Logger
+	logger *logging.Logger
 }
 
-// NewPublicAPI creates an instance of the Web3 API.
+// NewPublicAPI creates an instance of the Web3 API and accompanying health check.
 func NewPublicAPI(
+	ctx context.Context,
 	client client.RuntimeClient,
 	logger *logging.Logger,
-) API {
-	return &publicAPI{client: client, Logger: logger}
+) (API, server.HealthCheck) {
+	health := &healthChecker{ctx: ctx, client: client, logger: logger}
+	go health.run()
+
+	return &publicAPI{client: client, logger: logger}, health
 }
 
 func (api *publicAPI) CallDataPublicKey(ctx context.Context) (*CallDataPublicKey, error) {
-	logger := api.Logger.With("method", "oasis_callDataPublicKey")
+	logger := api.logger.With("method", "oasis_callDataPublicKey")
 	res, err := core.NewV1(api.client).CallDataPublicKey(ctx)
 	if err != nil {
 		logger.Error("failed to fetch public key", "err", err)

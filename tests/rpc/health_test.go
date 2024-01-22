@@ -11,7 +11,7 @@ import (
 
 func TestHealthCheck(t *testing.T) {
 	// Ensure the initial health-check was done.
-	<-time.After(20 * time.Second)
+	<-time.After(50 * time.Second)
 
 	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
 	defer cancel()

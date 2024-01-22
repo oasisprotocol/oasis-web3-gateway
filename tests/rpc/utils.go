@@ -179,8 +179,10 @@ func Setup() error {
 		return fmt.Errorf("setup: failed starting gas price oracle: %w", err)
 	}
 
-	w3.RegisterAPIs(rpc.GetRPCAPIs(context.Background(), rc, nil, backend, gasPriceOracle, tests.TestsConfig.Gateway, es))
-	w3.RegisterHealthChecks([]server.HealthCheck{indx})
+	apis, checks := rpc.GetRPCAPIs(ctx, rc, nil, backend, gasPriceOracle, tests.TestsConfig.Gateway, es)
+	w3.RegisterAPIs(apis)
+	checks = append(checks, indx)
+	w3.RegisterHealthChecks(checks)
 
 	if err = w3.Start(); err != nil {
 		w3.Close()

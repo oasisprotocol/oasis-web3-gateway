@@ -271,8 +271,10 @@ func runRoot() error {
 		}
 	}
 
-	w3.RegisterAPIs(rpc.GetRPCAPIs(ctx, rc, archiveClient, backend, gasPriceOracle, cfg.Gateway, es))
-	w3.RegisterHealthChecks([]server.HealthCheck{indx})
+	apis, checks := rpc.GetRPCAPIs(ctx, rc, archiveClient, backend, gasPriceOracle, cfg.Gateway, es)
+	w3.RegisterAPIs(apis)
+	checks = append(checks, indx)
+	w3.RegisterHealthChecks(checks)
 
 	svr := server.Server{
 		Config: cfg,

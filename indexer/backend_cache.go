@@ -27,21 +27,21 @@ const periodicMetricsInterval = 60 * time.Second
 var (
 	metricCacheHits = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "oasis_oasis_web3_gateway_cache_hits",
+			Name: "oasis_web3_gateway_cache_hits",
 			Help: "Number of cache hits.",
 		},
 		[]string{"cache"},
 	)
 	metricCacheMisses = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "oasis_oasis_web3_gateway_cache_misses",
+			Name: "oasis_web3_gateway_cache_misses",
 			Help: "Number of cache misses.",
 		},
 		[]string{"cache"},
 	)
 	metricCacheHitRatio = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "oasis_oasis_web3_gateway_cache_hit_ratio",
+			Name: "oasis_web3_gateway_cache_hit_ratio",
 			Help: "Percent of Hits over all accesses (Hits + Misses).",
 		},
 		[]string{"cache"},

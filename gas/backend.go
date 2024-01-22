@@ -21,8 +21,8 @@ import (
 )
 
 var (
-	metricNodeMinPrice  = promauto.NewGauge(prometheus.GaugeOpts{Name: "oasis_oasis_web3_gateway_gas_orcale_node_min_price", Help: "Min gas price periodically queried from the node."})
-	metricComputedPrice = promauto.NewGauge(prometheus.GaugeOpts{Name: "oasis_oasis_web3_gateway_gas_oracle_computed_price", Help: "Computed recommended gas price based on recent full blocks. -1 if none (no recent full blocks)."})
+	metricNodeMinPrice  = promauto.NewGauge(prometheus.GaugeOpts{Name: "oasis_web3_gateway_gas_orcale_node_min_price", Help: "Min gas price periodically queried from the node."})
+	metricComputedPrice = promauto.NewGauge(prometheus.GaugeOpts{Name: "oasis_web3_gateway_gas_oracle_computed_price", Help: "Computed recommended gas price based on recent full blocks. -1 if none (no recent full blocks)."})
 )
 
 // Backend is the gas price oracle backend.

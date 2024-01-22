@@ -11,10 +11,14 @@ import (
 
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/gorilla/mux"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/rs/cors"
 
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 )
+
+var metricHealthy = promauto.NewGauge(prometheus.GaugeOpts{Name: "oasis_web3_gateway_health", Help: "1 if gateway healthcheck is reporting as healthy, 0 otherwise."})
 
 // httpConfig is the JSON-RPC/HTTP configuration.
 type httpConfig struct {
@@ -77,9 +81,11 @@ func healthCheckHandler(healthChecks []HealthCheck) func(w http.ResponseWriter, 
 		for _, h := range healthChecks {
 			if err := h.Health(); err != nil {
 				w.WriteHeader(http.StatusServiceUnavailable)
+				metricHealthy.Set(0)
 				return
 			}
 		}
+		metricHealthy.Set(1)
 		w.WriteHeader(http.StatusOK)
 	}
 }
