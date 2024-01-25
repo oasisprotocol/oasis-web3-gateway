@@ -13,7 +13,11 @@
 
 set -euo pipefail
 
+export OASIS_NODE_LOG_LEVEL=${OASIS_NODE_LOG_LEVEL:-warn}
+
 export OASIS_DOCKER_USE_TIMESTAMPS_IN_NOTICES=${OASIS_DOCKER_USE_TIMESTAMPS_IN_NOTICES:-no}
+
+export OASIS_DOCKER_DEBUG_DISK_AND_CPU_USAGE=${OASIS_DOCKER_DEBUG_DISK_AND_CPU_USAGE:-no}
 
 export OASIS_SINGLE_COMPUTE_NODE=${OASIS_SINGLE_COMPUTE_NODE-1}
 OASIS_WEB3_GATEWAY_VERSION=$(${OASIS_WEB3_GATEWAY} -v | head -n1 | cut -d " " -f 3 | sed -r 's/^v//')
@@ -67,7 +71,7 @@ fi
 T_START="$(date +%s)"
 
 notice "Starting oasis-net-runner with ${CYAN}${PARATIME_NAME}${OFF}...\n"
-/spinup-oasis-stack.sh --log.level info 2>1 &>/var/log/spinup-oasis-stack.log &
+/spinup-oasis-stack.sh --log.level ${OASIS_NODE_LOG_LEVEL} 2>1 &>/var/log/spinup-oasis-stack.log &
 OASIS_NODE_PID=$!
 
 notice "Starting postgres...\n"
@@ -113,12 +117,38 @@ T_END="$(date +%s)"
 echo
 printf "${YELLOW}WARNING: The chain is running in ephemeral mode. State will be lost after restart!${OFF}\n\n"
 notice "Listening on ${CYAN}http://localhost:8545${OFF} and ${CYAN}ws://localhost:8546${OFF}. Chain ID: ${GATEWAY__CHAIN_ID}\n"
-notice "Container start-up took ${CYAN}$((T_END-T_START))${OFF} seconds.\n"
+notice "Container start-up took ${CYAN}$((T_END-T_START))${OFF} seconds, node log level is set to ${CYAN}${OASIS_NODE_LOG_LEVEL}${OFF}.\n"
+
+if [[ "x${OASIS_DOCKER_DEBUG_DISK_AND_CPU_USAGE}" == "xyes" ]]; then
+	# When debugging disk and CPU usage, we terminate the container
+	# after 60 minutes.
+	QUIT_AFTER_N_REPORTS=6
+	NUM_REPORTS=0
+
+	# Also print a header for the readings below.
+	echo
+	echo "Uptime [minutes],Total node dir size [kB],Size of node logs [kB],Percent usage by logs [%],Load average (1 min),Load average (5 min),Load average (15 min)"
+fi
 
 if [[ ${BEACON_BACKEND} == 'mock' ]]; then
-	# Run background task to switch epochs every 5 minutes
+	# Run background task to switch epochs every 10 minutes.
 	while true; do
+		if [[ "x${OASIS_DOCKER_DEBUG_DISK_AND_CPU_USAGE}" == "xyes" ]]; then
+			LOADAVG=$(uptime | cut -d':' -f5 | tr -d ' ')
+			TOTAL_NODE_DIR_SIZE_KB=$(du -sk /serverdir/node | cut -f1)
+			TOTAL_NODE_LOGS_SIZE_KB=$(du -skc /serverdir/node/net-runner/network/*/*.log | tail -1 | cut -f1)
+			LOGS_PCT=$(echo "scale=4; (${TOTAL_NODE_LOGS_SIZE_KB} / ${TOTAL_NODE_DIR_SIZE_KB}) * 100" | bc)
+
+			echo "$((NUM_REPORTS * 10)),${TOTAL_NODE_DIR_SIZE_KB},${TOTAL_NODE_LOGS_SIZE_KB},${LOGS_PCT},${LOADAVG}"
+
+			if [[ ${NUM_REPORTS} -ge ${QUIT_AFTER_N_REPORTS} ]]; then
+				exit 0
+			fi
+			NUM_REPORTS=$((NUM_REPORTS + 1))
+		fi
+
 		sleep $((60*10))
+
 		epoch=`${OASIS_NODE} control status -a unix:${OASIS_NODE_SOCKET} | jq '.consensus.latest_epoch'`
 		epoch=$((epoch + 1))
 		${OASIS_NODE} debug control set-epoch --epoch $epoch -a unix:${OASIS_NODE_SOCKET}
