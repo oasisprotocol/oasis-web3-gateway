@@ -70,7 +70,7 @@ jobs:
 
       - name: Prune old ghcr.io/oasisprotocol/${{ matrix.docker_image }} images
         if: ${{ github.event_name == 'push' }}
-        uses: vlaurin/action-ghcr-prune@v0.5.0
+        uses: vlaurin/action-ghcr-prune@v0.6.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           organization: oasisprotocol
