@@ -176,9 +176,9 @@ func TestEth_GetBlockByNumberAndGetBlockByHash(t *testing.T) {
 		// Emerald Mainnet.
 		0xa516: 10_000_000,
 		// Sapphire Localnet.
-		0x5afd: 30_000_000,
+		0x5afd: 15_000_000,
 		// Sapphire Testnet.
-		0x5aff: 30_000_000,
+		0x5aff: 15_000_000,
 		// Sapphire Mainnet.
 		0x5afe: 15_000_000,
 	}
