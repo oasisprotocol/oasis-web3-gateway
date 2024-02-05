@@ -103,13 +103,13 @@ type BlockData struct {
 	Block      *model.Block
 	Receipts   []*model.Receipt
 	UniqueTxes []*model.Transaction
-	// LastTransactionPrice is the price of the last transaction in the runtime block in base units.
-	// This can be different than the price of the last transaction in the `BlockData.Block`
+	// MedianTransactionGasPrice is the price of the median transaction in the runtime block in base units.
+	// This can be different than the price of the median transaction in the `BlockData.Block`
 	// as `BlockData.Block` contains only EVM transactions.
 	// When https://github.com/oasisprotocol/oasis-web3-gateway/issues/84 is implemented
 	// this will need to be persisted in the DB, so that instances without the indexer can
 	// obtain this as well.
-	LastTransactionPrice *quantity.Quantity
+	MedianTransactionGasPrice *quantity.Quantity
 }
 
 // BackendObserver is the intrusive backend observer interaface.

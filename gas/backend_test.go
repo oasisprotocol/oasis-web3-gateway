@@ -14,6 +14,7 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 
+	"github.com/oasisprotocol/oasis-web3-gateway/conf"
 	"github.com/oasisprotocol/oasis-web3-gateway/db/model"
 	"github.com/oasisprotocol/oasis-web3-gateway/indexer"
 )
@@ -85,18 +86,23 @@ func (b *mockBlockEmitter) WatchBlocks(_ context.Context, buffer int64) (<-chan 
 	return typedCh, sub, nil
 }
 
-func emitBlock(emitter *mockBlockEmitter, fullBlock bool, lastTxPrice *quantity.Quantity) {
+func emitBlock(emitter *mockBlockEmitter, fullBlock bool, txPrice *quantity.Quantity) {
 	// Wait a bit after emitting so that a the block is processed.
 	defer time.Sleep(100 * time.Millisecond)
 
 	if fullBlock {
-		emitter.Emit(&indexer.BlockData{Block: &model.Block{Header: &model.Header{GasLimit: 10_000, GasUsed: 10_000}}, LastTransactionPrice: lastTxPrice})
+		emitter.Emit(&indexer.BlockData{Block: &model.Block{Header: &model.Header{GasLimit: 10_000, GasUsed: 10_000}}, MedianTransactionGasPrice: txPrice})
 		return
 	}
 	emitter.Emit(&indexer.BlockData{Block: &model.Block{Header: &model.Header{GasLimit: 10_000, GasUsed: 10}}})
 }
 
 func TestGasPriceOracle(t *testing.T) {
+	windowSize := 5
+	cfg := &conf.GasConfig{
+		BlockFullThreshold: 0.8,
+		WindowSize:         uint64(windowSize),
+	}
 	require := require.New(t)
 
 	emitter := mockBlockEmitter{
@@ -104,12 +110,12 @@ func TestGasPriceOracle(t *testing.T) {
 	}
 
 	coreClient := mockCoreClient{
-		minGasPrice: *quantity.NewFromUint64(42),
+		minGasPrice: *quantity.NewFromUint64(142_000_000_000), // 142 gwei.
 		shouldFail:  true,
 	}
 
 	// Gas price oracle with failing core client.
-	gasPriceOracle := New(context.Background(), &emitter, &coreClient)
+	gasPriceOracle := New(context.Background(), cfg, &emitter, &coreClient)
 	require.NoError(gasPriceOracle.Start())
 
 	// Default gas price should be returned by the oracle.
@@ -144,7 +150,7 @@ func TestGasPriceOracle(t *testing.T) {
 
 	// Create a new gas price oracle with working coreClient.
 	coreClient.shouldFail = false
-	gasPriceOracle = New(context.Background(), &emitter, &coreClient)
+	gasPriceOracle = New(context.Background(), cfg, &emitter, &coreClient)
 	require.NoError(gasPriceOracle.Start())
 
 	// Emit a non-full block.

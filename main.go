@@ -257,7 +257,7 @@ func runRoot() error {
 		logger.Error("failed to create web3", err)
 		return err
 	}
-	gasPriceOracle := gas.New(ctx, backend, core.NewV1(rc))
+	gasPriceOracle := gas.New(ctx, cfg.Gas, backend, core.NewV1(rc))
 	if err = gasPriceOracle.Start(); err != nil {
 		logger.Error("failed to start gas price oracle", err)
 		return err
