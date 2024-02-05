@@ -174,7 +174,7 @@ func Setup() error {
 		return fmt.Errorf("setup: failed creating server: %w", err)
 	}
 
-	gasPriceOracle = gas.New(ctx, backend, core.NewV1(rc))
+	gasPriceOracle = gas.New(ctx, tests.TestsConfig.Gas, backend, core.NewV1(rc))
 	if err = gasPriceOracle.Start(); err != nil {
 		return fmt.Errorf("setup: failed starting gas price oracle: %w", err)
 	}

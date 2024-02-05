@@ -232,21 +232,21 @@ func (ib *indexBackend) StoreBlockData(ctx context.Context, oasisBlock *block.Bl
 	txsStatus := []uint8{}
 	txsGasUsed := []uint64{}
 	results := []types.CallResult{}
-	lastTransactionPrice := quantity.NewQuantity()
+	var medianTransactionGasPrice *quantity.Quantity
 
 	// Decode tx and get logs
 	for txIndex, item := range txResults {
 		oasisTx := item.Tx
 		if len(oasisTx.AuthProofs) != 1 || oasisTx.AuthProofs[0].Module != "evm.ethereum.v0" {
-			// Skip non-Ethereum transactions unless this is the last transaction.
-			if txIndex == len(txResults)-1 {
+			// Skip non-Ethereum transactions unless this is the median transaction (or after it, and we don't have the median price yet).
+			if txIndex >= (len(txResults)/2)-1 && medianTransactionGasPrice == nil {
 				// Try parsing the transaction to extract the gas price.
 				var tx types.Transaction
 				if err := cbor.Unmarshal(oasisTx.Body, &tx); err != nil {
 					ib.logger.Warn("failed to unmarshal last transaction in the block", "err", err)
 					continue
 				}
-				lastTransactionPrice = tx.AuthInfo.Fee.GasPrice()
+				medianTransactionGasPrice = tx.AuthInfo.Fee.GasPrice()
 			}
 			continue
 		}
@@ -259,11 +259,14 @@ func (ib *indexBackend) StoreBlockData(ctx context.Context, oasisBlock *block.Bl
 			return err
 		}
 
-		// Update the last transaction gas price. This is done for every transaction
-		// since the last transaction could be a non-ethereum transaction and failing to
-		// parse it should not be fatal.
-		if err = lastTransactionPrice.FromBigInt(ethTx.GasPrice()); err != nil {
-			ib.logger.Warn("failed to decode gas price", "err", err)
+		// If we are after median tx, and there's no median transaction gas price (parsing failed), set median to current gas price.
+		if txIndex > (len(txResults)/2)-1 && medianTransactionGasPrice == nil {
+			var gasPrice quantity.Quantity
+			if err = gasPrice.FromBigInt(ethTx.GasPrice()); err != nil {
+				ib.logger.Warn("failed to decode gas price", "err", err)
+			} else {
+				medianTransactionGasPrice = &gasPrice
+			}
 		}
 
 		var status uint8
@@ -450,10 +453,10 @@ func (ib *indexBackend) StoreBlockData(ctx context.Context, oasisBlock *block.Bl
 	ib.logger.Debug("sent chain event to event system", "height", blockNum)
 
 	bd := &BlockData{
-		Block:                blk,
-		Receipts:             upsertedReceipts,
-		UniqueTxes:           upsertedTxes,
-		LastTransactionPrice: lastTransactionPrice,
+		Block:                     blk,
+		Receipts:                  upsertedReceipts,
+		UniqueTxes:                upsertedTxes,
+		MedianTransactionGasPrice: medianTransactionGasPrice,
 	}
 
 	// Notify the observer if any.

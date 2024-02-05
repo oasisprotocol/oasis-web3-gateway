@@ -3,7 +3,6 @@ package gas
 
 import (
 	"context"
-	"math"
 	"sync"
 	"time"
 
@@ -16,6 +15,7 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 
+	"github.com/oasisprotocol/oasis-web3-gateway/conf"
 	"github.com/oasisprotocol/oasis-web3-gateway/db/model"
 	"github.com/oasisprotocol/oasis-web3-gateway/indexer"
 )
@@ -34,18 +34,18 @@ type Backend interface {
 }
 
 const (
-	// windowSize is the number of recent blocks to use for calculating min gas price.
+	// defaultWindowSize is the default number of recent blocks to use for calculating min gas price.
 	// NOTE: code assumes that this is relatively small.
-	windowSize = 12
+	defaultWindowSize uint64 = 6
 
-	// fullBlockThreshold is the percentage of block used gas over which a block should
-	// be considered full.
-	fullBlockThreshold = 0.8
+	// defaultFullBlockThreshold is the default percentage of block used gas over which a block
+	// should be considered full.
+	defaultFullBlockThreshold float64 = 0.5
 )
 
 var (
-	// minPriceEps is a constant added to the cheapest transaction executed in last windowSize blocks.
-	minPriceEps = *quantity.NewFromUint64(1_000_000_000) // 1 "gwei".
+	// defaultComputedPriceMargin is the default constant added to the median transaction gas price.
+	defaultComputedPriceMargin = *quantity.NewFromUint64(1_000_000_000) // 1 "gwei".
 
 	// defaultGasPrice is the default gas price reported if no better estimate can be returned.
 	//
@@ -60,14 +60,14 @@ var (
 // (a) Compute the recommended gas price based on recent blocks:
 //   - look at the most recent block(s) (controlled by `windowSize` parameter)
 //   - if block gas used is greater than some threshold, consider it "full" (controlled by `fullBlockThresholdParameter`)
-//   - set recommended gas price to the lowest-priced transaction from the full blocks + a small constant (controlled by `minPriceEps`)
+//   - set recommended gas price to the maximum of the median-priced transactions from recent full blocks + a small constant (controlled by `computedPriceMargin`)
 //
 // This handles the case when most blocks are full and the cheapest transactions are higher than the configured min gas price.
 // This can be the case if dynamic min gas price is disabled for the runtime, or the transactions are increasing in price faster
 // than the dynamic gas price adjustments.
 //
 // (b) Query gas price configured on the oasis-node:
-//   - after every block, query the oasis-node for it's configured gas price
+//   - after every block, query the oasis-node for its configured gas price
 //
 // This handles the case when min gas price is higher than the heuristically computed price in (a).
 // This can happen if node has overridden the min gas price configuration or if dynamic min gas price is enabled and
@@ -85,8 +85,8 @@ type gasPriceOracle struct {
 	// nodeMinGasPrice is the minimum gas price as reported by the oasis node.
 	// This is queried from the node and updated periodically.
 	nodeMinGasPrice *quantity.Quantity
-	// computedMinGasPrice is the computed min gas price by observing recent blocks.
-	computedMinGasPrice *quantity.Quantity
+	// computedGasPrice is the computed suggested gas price by observing recent blocks.
+	computedGasPrice *quantity.Quantity
 
 	// blockPrices is a rolling-array containing minimum transaction prices for
 	// last up to `windowSize` blocks.
@@ -94,17 +94,47 @@ type gasPriceOracle struct {
 	// tracks the current index of the blockPrices rolling array.:w
 	blockPricesCurrentIdx int
 
+	// Configuration parameters.
+	windowSize          uint64
+	fullBlockThreshold  float64
+	defaultGasPrice     quantity.Quantity
+	computedPriceMargin quantity.Quantity
+
 	blockWatcher indexer.BlockWatcher
 	coreClient   core.V1
 }
 
-func New(ctx context.Context, blockWatcher indexer.BlockWatcher, coreClient core.V1) Backend {
+func New(ctx context.Context, cfg *conf.GasConfig, blockWatcher indexer.BlockWatcher, coreClient core.V1) Backend {
 	ctxB, cancelCtx := context.WithCancel(ctx)
+
+	windowSize := defaultWindowSize
+	blockFullThreshold := defaultFullBlockThreshold
+	minGasPrice := defaultGasPrice
+	computedPriceMargin := defaultComputedPriceMargin
+	if cfg != nil {
+		if cfg.WindowSize != 0 {
+			windowSize = cfg.WindowSize
+		}
+		if cfg.BlockFullThreshold != 0 {
+			blockFullThreshold = cfg.BlockFullThreshold
+		}
+		if cfg.MinGasPrice != 0 {
+			minGasPrice = *quantity.NewFromUint64(cfg.MinGasPrice)
+		}
+		if cfg.ComputedPriceMargin != 0 {
+			computedPriceMargin = *quantity.NewFromUint64(cfg.ComputedPriceMargin)
+		}
+	}
+
 	g := &gasPriceOracle{
 		BaseBackgroundService: *service.NewBaseBackgroundService("gas-price-oracle"),
 		ctx:                   ctxB,
 		cancelCtx:             cancelCtx,
 		blockPrices:           make([]*quantity.Quantity, 0, windowSize),
+		windowSize:            windowSize,
+		fullBlockThreshold:    blockFullThreshold,
+		defaultGasPrice:       minGasPrice,
+		computedPriceMargin:   computedPriceMargin,
 		blockWatcher:          blockWatcher,
 		coreClient:            coreClient,
 	}
@@ -128,28 +158,23 @@ func (g *gasPriceOracle) GasPrice() *hexutil.Big {
 	g.priceLock.RLock()
 	defer g.priceLock.RUnlock()
 
-	if g.computedMinGasPrice == nil && g.nodeMinGasPrice == nil {
+	if g.computedGasPrice == nil && g.nodeMinGasPrice == nil {
 		// No blocks tracked yet and no min gas price from the node,
 		// default to a default value.
-		price := hexutil.Big(*defaultGasPrice.ToBigInt())
+		price := hexutil.Big(*g.defaultGasPrice.ToBigInt())
 		return &price
 	}
 
-	// Set minPrice to the larger of the `nodeMinGasPrice` and `computedMinGasPrice`.
-	minPrice := quantity.NewQuantity()
+	// Set maxPrice to the larger of the `nodeMinGasPrice` and `computedGasPrice`.
+	maxPrice := quantity.NewQuantity()
 	if g.nodeMinGasPrice != nil {
-		minPrice = g.nodeMinGasPrice.Clone()
+		maxPrice = g.nodeMinGasPrice.Clone()
 	}
-	if g.computedMinGasPrice != nil && g.computedMinGasPrice.Cmp(minPrice) > 0 {
-		minPrice = g.computedMinGasPrice.Clone()
-		// Add small constant to the min price.
-		if err := minPrice.Add(&minPriceEps); err != nil {
-			g.Logger.Error("failed to add minPriceEps to minPrice", "err", err, "min_price", minPrice, "min_price_eps", minPriceEps)
-			minPrice = &defaultGasPrice
-		}
+	if g.computedGasPrice != nil && g.computedGasPrice.Cmp(maxPrice) > 0 {
+		maxPrice = g.computedGasPrice.Clone()
 	}
 
-	price := hexutil.Big(*minPrice.ToBigInt())
+	price := hexutil.Big(*maxPrice.ToBigInt())
 	return &price
 }
 
@@ -172,7 +197,7 @@ func (g *gasPriceOracle) fetchMinGasPrice(ctx context.Context) {
 }
 
 func (g *gasPriceOracle) indexedBlockWatcher() {
-	ch, sub, err := g.blockWatcher.WatchBlocks(g.ctx, windowSize)
+	ch, sub, err := g.blockWatcher.WatchBlocks(g.ctx, int64(g.windowSize))
 	if err != nil {
 		g.Logger.Error("indexed block watcher failed to watch blocks", "err", err)
 		return
@@ -205,63 +230,66 @@ func (g *gasPriceOracle) indexedBlockWatcher() {
 			queryLock.Unlock()
 
 			// Track price for the block.
-			g.onBlock(blk.Block, blk.LastTransactionPrice)
+			g.onBlock(blk.Block, blk.MedianTransactionGasPrice)
 		}
 	}
 }
 
-func (g *gasPriceOracle) onBlock(b *model.Block, lastTxPrice *quantity.Quantity) {
+func (g *gasPriceOracle) onBlock(b *model.Block, medTxPrice *quantity.Quantity) {
 	// Consider block full if block gas used is greater than `fullBlockThreshold` of gas limit.
-	blockFull := (float64(b.Header.GasLimit) * fullBlockThreshold) <= float64(b.Header.GasUsed)
+	blockFull := (float64(b.Header.GasLimit) * g.fullBlockThreshold) <= float64(b.Header.GasUsed)
 	if !blockFull {
 		// Track 0 for non-full blocks.
 		g.trackPrice(quantity.NewFromUint64(0))
 		return
 	}
-
-	if lastTxPrice == nil {
-		g.Logger.Error("no last tx gas price for block", "block", b)
+	if medTxPrice == nil {
+		g.Logger.Error("no med tx gas price for block", "block", b)
 		return
 	}
-	g.trackPrice(lastTxPrice)
+
+	trackPrice := medTxPrice.Clone()
+	if err := trackPrice.Add(&g.computedPriceMargin); err != nil {
+		g.Logger.Error("failed to add minPriceEps to medTxPrice", "err", err)
+	}
+
+	g.trackPrice(trackPrice)
 }
 
 func (g *gasPriceOracle) trackPrice(price *quantity.Quantity) {
 	// One item always gets added added to the prices array.
 	// Bump the current index for next iteration.
 	defer func() {
-		g.blockPricesCurrentIdx = (g.blockPricesCurrentIdx + 1) % windowSize
+		g.blockPricesCurrentIdx = (g.blockPricesCurrentIdx + 1) % int(g.windowSize)
 	}()
 
-	// Recalculate min-price over the block window.
+	// Recalculate the maximum median-price over the block window.
 	defer func() {
-		minPrice := quantity.NewFromUint64(math.MaxUint64)
-		// Find smallest non-zero gas price.
+		// Find maximum gas price.
+		maxPrice := quantity.NewFromUint64(0)
 		for _, price := range g.blockPrices {
-			if price.IsZero() {
-				continue
-			}
-			if price.Cmp(minPrice) < 0 {
-				minPrice = price
+			if price.Cmp(maxPrice) > 0 {
+				maxPrice = price
 			}
 		}
 
 		// No full blocks among last `windowSize` blocks.
-		if minPrice.Cmp(quantity.NewFromUint64(math.MaxUint64)) == 0 {
+		if maxPrice.IsZero() {
 			g.priceLock.Lock()
-			g.computedMinGasPrice = nil
+			g.computedGasPrice = nil
 			g.priceLock.Unlock()
 			metricComputedPrice.Set(float64(-1))
 
 			return
 		}
+
 		g.priceLock.Lock()
-		g.computedMinGasPrice = minPrice
+		g.computedGasPrice = maxPrice
 		g.priceLock.Unlock()
-		metricComputedPrice.Set(float64(minPrice.ToBigInt().Int64()))
+		metricComputedPrice.Set(float64(maxPrice.ToBigInt().Int64()))
 	}()
 
-	if len(g.blockPrices) < windowSize {
+	if len(g.blockPrices) < int(g.windowSize) {
 		g.blockPrices = append(g.blockPrices, price)
 		return
 	}

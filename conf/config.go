@@ -31,6 +31,8 @@ type Config struct {
 	Database *DatabaseConfig `koanf:"database"`
 	Gateway  *GatewayConfig  `koanf:"gateway"`
 
+	Gas *GasConfig `koanf:"gas"`
+
 	// ArchiveURI is the URI of an archival web3 gateway instance
 	// for servicing historical queries.
 	ArchiveURI string `koanf:"archive_uri"`
@@ -65,6 +67,11 @@ func (cfg *Config) Validate() error {
 	if cfg.Gateway != nil {
 		if err := cfg.Gateway.Validate(); err != nil {
 			return fmt.Errorf("gateway: %w", err)
+		}
+	}
+	if cfg.Gas != nil {
+		if err := cfg.Gas.Validate(); err != nil {
+			return fmt.Errorf("gas: %w", err)
 		}
 	}
 
@@ -224,6 +231,26 @@ type GatewayWSConfig struct {
 type MethodLimits struct {
 	// GetLogsMaxRounds is the maximum number of rounds to query for in a get logs query.
 	GetLogsMaxRounds uint64 `koanf:"get_logs_max_rounds"`
+}
+
+// GasConfig is the gas price oracle configuration.
+type GasConfig struct {
+	// MinGasPrice is the minimum gas price to accept for transactions.
+	MinGasPrice uint64 `koanf:"min_gas_price"`
+	// BlockFullThreshold is the percentage block gas used threshold to consider a block full.
+	BlockFullThreshold float64 `koanf:"block_full_threshold"`
+	// WindowSize is the number of past blocks to consider for gas price computation.
+	WindowSize uint64 `koanf:"window_size"`
+	// ComputedPriceMargin is the gas price to add to the computed gas price.
+	ComputedPriceMargin uint64 `koanf:"computed_price_margin"`
+}
+
+// Validate validates the gas configuration.
+func (cfg *GasConfig) Validate() error {
+	if cfg.BlockFullThreshold < 0 || cfg.BlockFullThreshold > 1 {
+		return fmt.Errorf("block full threshold must be in range [0, 1]")
+	}
+	return nil
 }
 
 // InitConfig initializes configuration from file.
