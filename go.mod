@@ -15,7 +15,7 @@ replace (
 )
 
 require (
-	github.com/ethereum/go-ethereum v1.13.11
+	github.com/ethereum/go-ethereum v1.13.12
 	github.com/fxamacker/cbor/v2 v2.5.0
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.1
