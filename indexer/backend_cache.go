@@ -143,7 +143,7 @@ func (cb *cachingBackend) OnBlockIndexed(
 		// need to be all that large to service the vast majority of
 		// requests.
 		rounds := make([]uint64, 0, cb.cacheSize)
-		cb.blockDataByNumber.Range(func(key, value interface{}) bool {
+		cb.blockDataByNumber.Range(func(key, _ interface{}) bool {
 			rounds = append(rounds, key.(uint64))
 			return true
 		})

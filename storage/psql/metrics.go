@@ -161,7 +161,7 @@ func (m *metricsWrapper) RunInTransaction(ctx context.Context, fn func(storage.S
 		return fmt.Errorf("already in a transaction")
 	}
 
-	return bdb.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+	return bdb.RunInTx(ctx, nil, func(_ context.Context, tx bun.Tx) error {
 		db := NewMetricsWrapper(transactionStorage(&tx))
 		return fn(db)
 	})

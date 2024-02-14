@@ -11,7 +11,7 @@ Web3 Gateway for Oasis-SDK Paratime EVM module.
 
 ### Prerequisites
 
-- [Go](https://go.dev/) (at least version 1.21).
+- [Go](https://go.dev/) (at least version 1.22).
 - [PostgreSQL](https://www.postgresql.org/) (at least version 13.3).
 
 Additionally, for testing:
