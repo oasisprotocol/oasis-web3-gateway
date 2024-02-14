@@ -369,7 +369,7 @@ func (db *PostDB) RunInTransaction(ctx context.Context, fn func(storage.Storage)
 	if !ok {
 		return fmt.Errorf("already in a transaction")
 	}
-	return bdb.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+	return bdb.RunInTx(ctx, nil, func(_ context.Context, tx bun.Tx) error {
 		db := transactionStorage(&tx)
 		return fn(db)
 	})

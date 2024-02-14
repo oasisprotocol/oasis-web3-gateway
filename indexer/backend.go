@@ -167,19 +167,19 @@ func (ib *indexBackend) Prune(ctx context.Context, round uint64) error {
 			return err
 		}
 
-		if err := ib.storage.Delete(ctx, new(model.Block), round); err != nil {
+		if err := s.Delete(ctx, new(model.Block), round); err != nil {
 			return err
 		}
 
-		if err := ib.storage.Delete(ctx, new(model.Log), round); err != nil {
+		if err := s.Delete(ctx, new(model.Log), round); err != nil {
 			return err
 		}
 
-		if err := ib.storage.Delete(ctx, new(model.Transaction), round); err != nil {
+		if err := s.Delete(ctx, new(model.Transaction), round); err != nil {
 			return err
 		}
 
-		return ib.storage.Delete(ctx, new(model.Receipt), round)
+		return s.Delete(ctx, new(model.Receipt), round)
 	})
 }
 
