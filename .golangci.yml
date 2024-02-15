@@ -78,7 +78,6 @@ linters-settings:
           - github.com/uptrace/bun
           - github.com/gorilla
           - github.com/prometheus
-          - github.com/fxamacker/
           - github.com/knadh/koanf
           - github.com/rs/cors
           - github.com/spf13/cobra
