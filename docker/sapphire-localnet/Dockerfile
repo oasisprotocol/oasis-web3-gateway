@@ -24,7 +24,7 @@ RUN git clone https://github.com/oasisprotocol/oasis-core.git --branch ${OASIS_C
 
 # Build sapphire-localnet
 FROM postgres:16-alpine
-RUN apk add --no-cache bash gcompat libseccomp jq binutils \
+RUN apk add --no-cache bash gcompat libseccomp jq binutils curl \
 	&& su -c "POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres /usr/local/bin/docker-entrypoint.sh postgres &" postgres
 
 # Docker-specific variables

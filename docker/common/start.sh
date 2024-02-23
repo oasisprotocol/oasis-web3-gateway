@@ -74,12 +74,18 @@ notice "Starting oasis-net-runner with ${CYAN}${PARATIME_NAME}${OFF}...\n"
 /spinup-oasis-stack.sh --log.level ${OASIS_NODE_LOG_LEVEL} 2>1 &>/var/log/spinup-oasis-stack.log &
 OASIS_NODE_PID=$!
 
-notice "Starting postgres...\n"
+notice "Waiting for Postgres to start"
 su -c "POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres /usr/local/bin/docker-entrypoint.sh postgres &" postgres 2>1 &>/var/log/postgres.log
+function is_postgres_ready() {
+	pg_isready -h 127.0.0.1 -p 5432 2>1 &>/dev/null
+}
+until is_postgres_ready; do echo -n .; sleep 1; done
+echo
 
-notice "Waiting for Oasis node to start...\n"
+notice "Waiting for Oasis node to start..."
 # Wait for oasis-node socket before starting web3 gateway.
-while [[ ! -S ${OASIS_NODE_SOCKET} ]]; do sleep 1; done
+while [[ ! -S ${OASIS_NODE_SOCKET} ]]; do echo -n .; sleep 1; done
+echo
 
 notice "Starting oasis-web3-gateway...\n"
 ${OASIS_WEB3_GATEWAY} --config ${OASIS_WEB3_GATEWAY_CONFIG_FILE} 2>1 &>/var/log/oasis-web3-gateway.log &
@@ -107,8 +113,29 @@ else
 	echo -n ...
 	${OASIS_NODE} debug control wait-ready -a unix:${OASIS_NODE_SOCKET}
 fi
-
 echo
+
+if [[ ${PARATIME_NAME} == 'sapphire' ]]; then
+	notice "Waiting for key manager..."
+	function is_km_ready() {
+		curl -X POST -s \
+		  -H 'Content-Type: application/json' \
+		  --data '{"jsonrpc":"2.0","method":"oasis_callDataPublicKey","params":[],"id":1}' \
+		  http://127.0.0.1:8545 2>1 | jq -e '.result | has("key")' 2>1 &>/dev/null
+	}
+	until is_km_ready; do
+		if [[ ${BEACON_BACKEND} == 'mock' ]]; then
+			epoch=`${OASIS_NODE} control status -a unix:${OASIS_NODE_SOCKET} | jq '.consensus.latest_epoch'`
+			epoch=$((epoch + 1))
+			${OASIS_NODE} debug control set-epoch --epoch $epoch -a unix:${OASIS_NODE_SOCKET}
+		fi
+
+		echo -n .
+		sleep 1
+	done
+	echo
+fi
+
 notice "Populating accounts...\n\n"
 ${OASIS_DEPOSIT} -sock unix:${OASIS_NODE_SOCKET} "$@"
 
