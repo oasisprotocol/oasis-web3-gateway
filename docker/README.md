@@ -56,3 +56,12 @@ and fund respectively.
 
 WARNING: The image is running in *ephemeral mode*. A new chain state will be
 initialized each time you start the container!
+
+## Debugging
+
+You can run the Docker container with `-e OASIS_NODE_LOG_LEVEL=debug` to increase
+the verbosity of messages logged.
+
+Additionally, you can view the gateway log messages from within the Docker container
+with `tail -f /var/log/oasis-web3-gateway.log`, and see additional network logs in
+this directory `/serverdir/node/net-runner/network/`.
