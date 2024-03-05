@@ -416,7 +416,7 @@ func (api *publicAPI) Call(ctx context.Context, args utils.TransactionArgs, bloc
 
 func (api *publicAPI) SendRawTransaction(ctx context.Context, data hexutil.Bytes) (common.Hash, error) {
 	logger := api.Logger.With("method", "eth_sendRawTransaction")
-	logger.Debug("request", "length", len(data))
+	logger.Debug("request", "tx", data)
 
 	// Decode the Ethereum transaction.
 	ethTx := &ethtypes.Transaction{}
