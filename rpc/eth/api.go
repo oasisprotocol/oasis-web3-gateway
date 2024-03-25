@@ -371,7 +371,8 @@ func (api *publicAPI) Call(ctx context.Context, args utils.TransactionArgs, bloc
 	)
 
 	if args.To == nil {
-		return []byte{}, errors.New("to address not specified")
+		// When simulating a contract deploy the To address may not be specified
+		args.To = &common.Address{}
 	}
 	if args.GasPrice != nil {
 		gasPrice = args.GasPrice.ToInt().Bytes()
@@ -396,14 +397,14 @@ func (api *publicAPI) Call(ctx context.Context, args utils.TransactionArgs, bloc
 	}
 
 	res, err := evm.NewV1(api.client).SimulateCall(
-		ctx,
-		round,
-		gasPrice,
-		gas,
-		sender.Bytes(),
-		args.To.Bytes(),
-		amount,
-		input,
+		ctx,             // context
+		round,           // round
+		gasPrice,        // gasPrice
+		gas,             // gasLimit
+		sender.Bytes(),  // caller
+		args.To.Bytes(), // address
+		amount,          // value
+		input,           // data
 	)
 	if err != nil {
 		return nil, api.handleCallFailure(ctx, logger, err)
