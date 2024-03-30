@@ -196,7 +196,7 @@ func TestContractCreateInCall(t *testing.T) {
 	require.Equal(t, len(result), 20)
 }
 
-func testContractCreation(t *testing.T, value *big.Int) uint64 {
+func testContractCreation(t *testing.T, value *big.Int, txEIP int) uint64 {
 	ec := localClient(t, false)
 
 	t.Logf("compiled contract: %s", evmSolTestCompiledHex)
@@ -209,13 +209,35 @@ func testContractCreation(t *testing.T, value *big.Int) uint64 {
 	require.Nil(t, err, "get nonce failed")
 
 	// Create transaction
-	tx := types.NewTx(&types.LegacyTx{
-		Nonce:    nonce,
-		Value:    value,
-		Gas:      GasLimit,
-		GasPrice: GasPrice,
-		Data:     code,
-	})
+	gasPrice, err := ec.SuggestGasPrice(context.Background())
+	require.Nil(t, err, "get price failed")
+	var tx *types.Transaction
+	switch txEIP {
+	case 155:
+		tx = types.NewTx(&types.LegacyTx{
+			Nonce:    nonce,
+			Value:    value,
+			GasPrice: gasPrice,
+			Data:     code,
+		})
+	case 1559:
+		tx = types.NewTx(&types.DynamicFeeTx{
+			Nonce:     nonce,
+			Value:     value,
+			GasFeeCap: gasPrice,
+			Data:      code,
+		})
+	case 2930:
+		tx = types.NewTx(&types.AccessListTx{
+			Nonce:    nonce,
+			Value:    value,
+			GasPrice: gasPrice,
+			Data:     code,
+		})
+	default:
+		require.Fail(t, "Unsupported transaction EIP-%d", txEIP)
+	}
+
 	signer := types.LatestSignerForChainID(chainID)
 	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), tests.TestKey1.Private)
 	require.Nil(t, err, "sign tx")
@@ -237,6 +259,9 @@ func testContractCreation(t *testing.T, value *big.Int) uint64 {
 
 	t.Logf("Contract address: %s", receipt.ContractAddress)
 
+	// Ensure the effective gas price is what was returned from `eth_gasPrice`
+	require.Equal(t, receipt.EffectiveGasPrice, gasPrice)
+
 	balanceAfter, err := ec.BalanceAt(context.Background(), tests.TestKey1.EthAddress, nil)
 	require.NoError(t, err)
 
@@ -254,13 +279,33 @@ func testContractCreation(t *testing.T, value *big.Int) uint64 {
 	return receipt.Status
 }
 
-func TestContractCreation(t *testing.T) {
-	status := testContractCreation(t, big.NewInt(0))
+func TestContractCreation155(t *testing.T) {
+	status := testContractCreation(t, big.NewInt(0), 155)
 	require.Equal(t, uint64(1), status)
 }
 
-func TestContractFailCreation(t *testing.T) {
-	status := testContractCreation(t, big.NewInt(1))
+func TestContractFailCreation155(t *testing.T) {
+	status := testContractCreation(t, big.NewInt(1), 155)
+	require.Equal(t, uint64(0), status)
+}
+
+func TestContractCreation1559(t *testing.T) {
+	status := testContractCreation(t, big.NewInt(0), 1559)
+	require.Equal(t, uint64(1), status)
+}
+
+func TestContractFailCreation1559(t *testing.T) {
+	status := testContractCreation(t, big.NewInt(1), 1559)
+	require.Equal(t, uint64(0), status)
+}
+
+func TestContractCreation2930(t *testing.T) {
+	status := testContractCreation(t, big.NewInt(0), 2930)
+	require.Equal(t, uint64(1), status)
+}
+
+func TestContractFailCreation2930(t *testing.T) {
+	status := testContractCreation(t, big.NewInt(1), 2930)
 	require.Equal(t, uint64(0), status)
 }
 

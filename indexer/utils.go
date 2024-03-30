@@ -11,7 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/rlp"
 
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
@@ -252,7 +251,7 @@ func (ib *indexBackend) StoreBlockData(ctx context.Context, oasisBlock *block.Bl
 
 		// Decode the Ethereum transaction.
 		ethTx := &ethtypes.Transaction{}
-		err := rlp.DecodeBytes(oasisTx.Body, ethTx)
+		err := ethTx.UnmarshalBinary(oasisTx.Body)
 		if err != nil {
 			ib.logger.Error("Failed to decode UnverifiedTransaction", "height", blockNum, "index", txIndex, "err", err)
 			return err
