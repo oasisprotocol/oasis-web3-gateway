@@ -4,6 +4,7 @@ import (
 	"context"
 	_ "embed"
 	"math/big"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -69,6 +70,130 @@ func waitTransaction(ctx context.Context, ec *ethclient.Client, txhash common.Ha
 		case <-queryTicker.C:
 		}
 	}
+}
+
+/*
+contract ExampleRequire {
+    constructor () {
+        require(false, "ExampleErrorRequire");
+    }
+}
+*/
+//go:embed contracts/evm_constructor_require.hex
+var evmConstructorRequireHex string
+
+/*
+contract ExampleCustomError {
+    error Example(string x);
+    constructor () {
+        revert Example("ExampleCustomError");
+    }
+}
+*/
+//go:embed contracts/evm_constructor_revert.hex
+var evmConstructorRevertHex string
+
+// extractDataFromUnexportedError extracts the "Data" field from *rpc.jsonError
+// that is not exported using reflection.
+func extractDataFromUnexportedError(err error) string {
+	if err == nil {
+		return ""
+	}
+
+	val := reflect.ValueOf(err)
+	if val.Kind() == reflect.Ptr && !val.IsNil() {
+		// Assuming jsonError is a struct
+		errVal := val.Elem()
+
+		// Check if the struct has a field named "Data".
+		dataField := errVal.FieldByName("Data")
+		if dataField.IsValid() && dataField.CanInterface() {
+			// Assuming the data field is a string
+			return dataField.Interface().(string)
+		}
+	}
+
+	return ""
+}
+
+func skipIfNotSapphire(t *testing.T, ec *ethclient.Client) {
+	chainID, err := ec.ChainID(context.Background())
+	require.Nil(t, err, "get chainid")
+
+	switch chainID.Uint64() {
+	case 0x5afd, 0x5afe, 0x5aff: // For sapphire chain IDs, do nothing
+	default:
+		t.Skip("Skipping contract constructor tests on non-Sapphire chain")
+	}
+}
+
+// Verifies  that require(false,"...") in constructor works as expected.
+func testContractConstructorError(t *testing.T, contractCode string, expectedError string) {
+	ec := localClient(t, false)
+	skipIfNotSapphire(t, ec)
+
+	t.Logf("compiled contract: %s", contractCode)
+	code := common.FromHex(strings.TrimSpace(contractCode))
+
+	callMsg := ethereum.CallMsg{
+		From: tests.TestKey1.EthAddress,
+		Gas:  0,
+		Data: code,
+	}
+
+	// Estimate contract creation gas requirements.
+	gasCost, err := ec.EstimateGas(context.Background(), callMsg)
+	require.Nil(t, err, "estimate gas failed")
+	require.Greater(t, gasCost, uint64(0), "gas estimate must be positive")
+	t.Logf("gas estimate for contract creation: %d", gasCost)
+
+	// Evaluate the contract creation via `eth_call`.
+	callMsg.Gas = 250000 // gasCost
+	result, err := ec.CallContract(context.Background(), callMsg, nil)
+	require.NotNil(t, err, "constructor expected to throw error")
+	require.Equal(t, expectedError, extractDataFromUnexportedError(err))
+	require.Nil(t, result)
+}
+
+func TestContractConstructorRequire(t *testing.T) {
+	testContractConstructorError(t, evmConstructorRequireHex, "0x08c379a0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000134578616d706c654572726f725265717569726500000000000000000000000000")
+}
+
+func TestContractConstructorRevert(t *testing.T) {
+	testContractConstructorError(t, evmConstructorRevertHex, "0x547796ff000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000124578616d706c65437573746f6d4572726f720000000000000000000000000000")
+}
+
+// Verify contract creation can be simulated and returns an address.
+func TestContractCreateInCall(t *testing.T) {
+	ec := localClient(t, false)
+	skipIfNotSapphire(t, ec)
+
+	t.Logf("compiled contract: %s", evmSolTestCompiledHex)
+	code := common.FromHex(strings.TrimSpace(evmSolTestCompiledHex))
+
+	gasPrice, err := ec.SuggestGasPrice(context.Background())
+	require.Nil(t, err, "get gasPrice failed")
+
+	callMsg := ethereum.CallMsg{
+		From:     tests.TestKey1.EthAddress,
+		Gas:      0,
+		GasPrice: gasPrice,
+		Data:     code,
+	}
+
+	// Estimate contract creation gas requirements.
+	gasCost, err := ec.EstimateGas(context.Background(), callMsg)
+	require.NoError(t, err, "estimate gas failed")
+	require.Greater(t, gasCost, uint64(0), "gas estimate must be positive")
+	t.Logf("gas estimate for contract creation: %d", gasCost)
+
+	// Evaluate the contract creation via `eth_call`.
+	callMsg.Gas = 250000 // gasCost
+	result, err := ec.CallContract(context.Background(), callMsg, nil)
+	require.Nil(t, err, "call contract")
+
+	require.NotNil(t, result)
+	require.Equal(t, len(result), 20)
 }
 
 func testContractCreation(t *testing.T, value *big.Int) uint64 {

@@ -21,13 +21,13 @@ database:
   max_open_conns: 0
 
 gateway:
-  chain_id: 42262
+  chain_id: 23293
   http:
     host: "localhost"
-    port: 8545
+    port: 8945
   ws:
     host: "localhost"
-    port: 8546
+    port: 8946
   monitoring:
     host: "localhost"
     port: 9999

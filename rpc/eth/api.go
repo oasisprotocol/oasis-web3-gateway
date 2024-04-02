@@ -367,11 +367,13 @@ func (api *publicAPI) Call(ctx context.Context, args utils.TransactionArgs, bloc
 		sender   = common.Address{1}
 		gasPrice = []byte{1}
 		// This gas cap should be enough for SimulateCall an ethereum transaction
-		gas uint64 = 30_000_000
+		gas     uint64 = 30_000_000
+		toBytes        = []byte{}
 	)
 
-	if args.To == nil {
-		return []byte{}, errors.New("to address not specified")
+	// When simulating a contract deploy the To address may not be specified
+	if args.To != nil {
+		toBytes = args.To.Bytes()
 	}
 	if args.GasPrice != nil {
 		gasPrice = args.GasPrice.ToInt().Bytes()
@@ -396,14 +398,14 @@ func (api *publicAPI) Call(ctx context.Context, args utils.TransactionArgs, bloc
 	}
 
 	res, err := evm.NewV1(api.client).SimulateCall(
-		ctx,
-		round,
-		gasPrice,
-		gas,
-		sender.Bytes(),
-		args.To.Bytes(),
-		amount,
-		input,
+		ctx,            // context
+		round,          // round
+		gasPrice,       // gasPrice
+		gas,            // gasLimit
+		sender.Bytes(), // caller
+		toBytes,        // address
+		amount,         // value
+		input,          // data
 	)
 	if err != nil {
 		return nil, api.handleCallFailure(ctx, logger, err)
