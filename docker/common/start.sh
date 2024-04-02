@@ -87,6 +87,13 @@ notice "Waiting for Oasis node to start..."
 while [[ ! -S ${OASIS_NODE_SOCKET} ]]; do echo -n .; sleep 1; done
 echo
 
+# Fixes permissions so oasis-web3-gateway tests can be run
+# While /serverdir/node is bind-mounted to /tmp/eth-runtime-test
+chmod 755 /serverdir/node/net-runner/
+chmod 755 /serverdir/node/net-runner/network/
+chmod 755 /serverdir/node/net-runner/network/client-0/
+chmod a+rw /serverdir/node/net-runner/network/client-0/internal.sock
+
 notice "Starting oasis-web3-gateway...\n"
 ${OASIS_WEB3_GATEWAY} --config ${OASIS_WEB3_GATEWAY_CONFIG_FILE} 2>1 &>/var/log/oasis-web3-gateway.log &
 OASIS_WEB3_GATEWAY_PID=$!

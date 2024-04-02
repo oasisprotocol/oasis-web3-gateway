@@ -19,8 +19,12 @@ function paratime_ver {
 export FIXTURE_FILE="${OASIS_NODE_DATADIR}/fixture.json"
 export STAKING_GENESIS_FILE="$(dirname "$0")/staking_genesis.json"
 
-rm -rf "$OASIS_NODE_DATADIR"
-mkdir -p "$OASIS_NODE_DATADIR"
+rm -rf "$OASIS_NODE_DATADIR/net-runner"
+rm -rf "$OASIS_NODE_DATADIR/net-runner.log"
+rm -rf "$OASIS_NODE_DATADIR/fixture.json"
+# When $OASIS_NODE_DATADIR is bind-mounted, below fails, but the above succeed
+rm -rf "$OASIS_NODE_DATADIR" || true
+mkdir -p "$OASIS_NODE_DATADIR" || true
 
 # Prepare configuration for oasis-node (fixture).
 ${OASIS_NET_RUNNER} dump-fixture \
