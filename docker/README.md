@@ -23,7 +23,7 @@ docker run -it -p8545:8545 -p8546:8546 ghcr.io/oasisprotocol/emerald-localnet # 
 docker run -it -p8545:8545 -p8546:8546 ghcr.io/oasisprotocol/sapphire-localnet # Sapphire
 ```
 
-### Mac M Chips exception
+### Mac M Chips
 
 There is currently no arm64 build available for M Macs, so make sure to force the docker image to use _linux/x86_64_, 
 like this:
