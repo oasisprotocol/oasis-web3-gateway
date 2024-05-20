@@ -28,7 +28,7 @@ RUN apk add --no-cache bash gcompat libseccomp jq binutils curl \
 	&& su -c "POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres /usr/local/bin/docker-entrypoint.sh postgres &" postgres
 
 # Docker-specific variables
-ENV PARATIME_VERSION=0.7.2-testnet
+ENV PARATIME_VERSION=0.7.3-testnet
 ENV PARATIME_NAME=sapphire
 ENV GATEWAY__CHAIN_ID=0x5afd
 
