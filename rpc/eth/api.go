@@ -13,7 +13,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/eth/filters"
-	"github.com/ethereum/go-ethereum/rlp"
 	ethrpc "github.com/ethereum/go-ethereum/rpc"
 
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
@@ -422,7 +421,7 @@ func (api *publicAPI) SendRawTransaction(ctx context.Context, data hexutil.Bytes
 
 	// Decode the Ethereum transaction.
 	ethTx := &ethtypes.Transaction{}
-	if err := rlp.DecodeBytes(data, ethTx); err != nil {
+	if err := ethTx.UnmarshalBinary(data); err != nil {
 		logger.Debug("failed to decode raw transaction data", "err", err)
 		return common.Hash{}, ErrMalformedTransaction
 	}

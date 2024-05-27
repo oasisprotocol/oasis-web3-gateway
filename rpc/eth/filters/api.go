@@ -67,10 +67,6 @@ func (api *publicFilterAPI) NewHeads(ctx context.Context) (*ethrpc.Subscription,
 				// client send an unsubscribe request
 				headersSub.Unsubscribe()
 				return
-			case <-notifier.Closed():
-				// connection dropped
-				headersSub.Unsubscribe()
-				return
 			}
 		}
 	}()
@@ -103,10 +99,6 @@ func (api *publicFilterAPI) Logs(ctx context.Context, crit ethfilters.FilterCrit
 				}
 			case <-rpcSub.Err():
 				// client send an unsubscribe request
-				logsSub.Unsubscribe()
-				return
-			case <-notifier.Closed():
-				// connection dropped
 				logsSub.Unsubscribe()
 				return
 			}

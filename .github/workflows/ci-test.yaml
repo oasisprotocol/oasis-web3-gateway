@@ -35,7 +35,7 @@ jobs:
         ports:
           - 5432:5432
     env:
-      OASIS_CORE_VERSION: "23.0.9"
+      OASIS_CORE_VERSION: "24.0"
       OASIS_NODE: ${{ github.workspace }}/oasis_core/oasis-node
       OASIS_NET_RUNNER: ${{ github.workspace }}/oasis_core/oasis-net-runner
       EMERALD_PARATIME_VERSION: 11.0.0-testnet
@@ -106,14 +106,14 @@ jobs:
         ports:
           - 5432:5432
     env:
-      OASIS_CORE_VERSION: "23.0.10"
+      OASIS_CORE_VERSION: "24.0"
       OASIS_NODE: ${{ github.workspace }}/oasis_core/oasis-node
       OASIS_NET_RUNNER: ${{ github.workspace }}/oasis_core/oasis-net-runner
       SAPPHIRE_PARATIME_VERSION: 0.7.3-testnet
       GATEWAY__CHAIN_ID: 23293
       GATEWAY__OASIS_RPCS: true
       SAPPHIRE_PARATIME: ${{ github.workspace }}/oasis_core/sapphire-paratime
-      KEYMANAGER_ARTIFACT_URL: https://buildkite.com/organizations/oasisprotocol/pipelines/oasis-core-ci/builds/12411/jobs/018c1053-3187-4498-9317-cc122f6e6808/artifacts/018c1056-039a-45bd-bdac-9fd267052c75 # Find this at https://buildkite.com/oasisprotocol/oasis-core-ci/builds?branch=stable%2F<...> under "Build runtimes".
+      KEYMANAGER_ARTIFACT_URL: https://buildkite.com/organizations/oasisprotocol/pipelines/oasis-core-ci/builds/13622/jobs/018fb976-afd1-442d-a628-7b61a0c234a5/artifacts/018fb97b-3100-4035-b1ca-4295076e9ec3 # Find this at https://buildkite.com/oasisprotocol/oasis-core-ci/builds?branch=stable%2F<...> under "Build runtimes".
       KEYMANAGER_BINARY: ${{ github.workspace }}/oasis_core/simple-keymanager
       OASIS_NODE_DATADIR: /tmp/eth-runtime-test
     steps:
