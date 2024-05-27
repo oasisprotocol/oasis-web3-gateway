@@ -13,6 +13,8 @@
 
 set -euo pipefail
 
+export OASIS_DOCKER_NO_GATEWAY=${OASIS_DOCKER_NO_GATEWAY:-no}
+
 export OASIS_NODE_LOG_LEVEL=${OASIS_NODE_LOG_LEVEL:-warn}
 
 export OASIS_DOCKER_USE_TIMESTAMPS_IN_NOTICES=${OASIS_DOCKER_USE_TIMESTAMPS_IN_NOTICES:-no}
@@ -118,9 +120,13 @@ chmod 755 /serverdir/node/net-runner/network/
 chmod 755 /serverdir/node/net-runner/network/client-0/
 chmod a+rw /serverdir/node/net-runner/network/client-0/internal.sock
 
-notice "Starting oasis-web3-gateway...\n"
-${OASIS_WEB3_GATEWAY} --config ${OASIS_WEB3_GATEWAY_CONFIG_FILE} 2>1 &>/var/log/oasis-web3-gateway.log &
-OASIS_WEB3_GATEWAY_PID=$!
+if [[ $OASIS_DOCKER_NO_GATEWAY == 'yes' ]]; then
+    notice "Skipping oasis-web3-gateway start-up...\n"
+else
+    notice "Starting oasis-web3-gateway...\n"
+    ${OASIS_WEB3_GATEWAY} --config ${OASIS_WEB3_GATEWAY_CONFIG_FILE} 2>1 &>/var/log/oasis-web3-gateway.log &
+    OASIS_WEB3_GATEWAY_PID=$!
+fi
 
 # Wait for compute nodes before initiating deposit.
 notice "Bootstrapping network (this might take a minute)"
@@ -151,7 +157,7 @@ else
 fi
 echo
 
-if [[ ${PARATIME_NAME} == 'sapphire' ]]; then
+if [[ $OASIS_DOCKER_NO_GATEWAY != 'yes' && $PARATIME_NAME == 'sapphire' ]]; then
     notice "Waiting for key manager..."
     function is_km_ready() {
         curl -X POST -s \

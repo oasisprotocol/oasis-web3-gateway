@@ -29,45 +29,27 @@ make build
 
 ### Testing on Localnet
 
-Start PostgreSQL (for testing [Postgres Docker](https://hub.docker.com/_/postgres) container can be used):
+The Docker containers can be used to test changes to the gateway or run tests by
+bind-mounting the runtime state directory (`/serverdir/node`) into your local
+filesystem.
 
 ```bash
-docker run --rm --name postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:13.3-alpine
+docker run --rm -ti -p5432:5432 -p8545:8545 -p8546:8546 -v /tmp/eth-runtime-test:/serverdir/node ghcr.io/oasisprotocol/sapphire-localnet:local -test-mnemonic -n 4
 ```
 
-Next, download and extract the latest [oasis-core] release to get `oasis-node`
-and `oasis-net-runner` binaries.
+If needed, the `oasis-web3-gateway` or `sapphire-paratime` executables could also be
+bind-mounted into the container, allowing for quick turnaround time when testing
+the full gateway & paratime stack together.
 
-In a separate terminal, start the Oasis development local network.
+### Running tests
 
-For non-confidential ParaTimes (e.g. Emerald), this can be done as follows:
+For running tests, start the docker network without the gateway, by setting the `OASIS_DOCKER_NO_GATEWAY=yes` environment variable:
 
 ```bash
-export OASIS_NODE=<path-to-oasis-node-binary>
-export OASIS_NET_RUNNER=<path-to-oasis-net-runner-binary>
-export PARATIME=<path-to-paratime-localnet-binary-elf>
-export PARATIME_VERSION=<paratime-version>
-export OASIS_NODE_DATADIR=/tmp/eth-runtime-test
-
-./tests/tools/spinup-oasis-stack.sh
+docker run --rm -ti -e OASIS_DOCKER_NO_GATEWAY=yes -p5432:5432 -p8545:8545 -p8546:8546 -v /tmp/eth-runtime-test:/serverdir/node ghcr.io/oasisprotocol/sapphire-localnet:local -test-mnemonic -n 4
 ```
 
-Confidential ParaTimes (e.g. Sapphire) also require a key manager. You can use
-`simple-keymanager` which you will need to compile yourself. It is part of the
-[oasis-core] repository. Then, run the following:
-
-```bash
-export OASIS_NODE=<path-to-oasis-node-binary>
-export OASIS_NET_RUNNER=<path-to-oasis-net-runner-binary>
-export PARATIME=<path-to-paratime-localnet-binary-elf>
-export PARATIME_VERSION=<paratime-version>
-export KEYMANAGER_BINARY=<path-to-simple-keymanager-binary>
-export OASIS_NODE_DATADIR=/tmp/eth-runtime-test
-
-./tests/tools/spinup-oasis-stack.sh
-```
-
-Finally, run the tests:
+Once bootstrapped, run the tests:
 
 ```bash
 make test

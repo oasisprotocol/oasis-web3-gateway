@@ -108,6 +108,11 @@ func init() {
 			Name: "20220324091030",
 			Up:   migrator.NewSQLMigrationFunc(migrations, "20220324091030_receipt_round_index.up.sql"),
 		},
+		// Add effective gas price field to receipt.
+		{
+			Name: "20240527164010",
+			Up:   migrator.NewSQLMigrationFunc(migrations, "20240527164010_receipt_effective_gas_price.up.sql"),
+		},
 	} {
 		Migrations.Add(m)
 	}
