@@ -11,6 +11,7 @@ import (
 
 	"github.com/oasisprotocol/oasis-core/go/common/pubsub"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 
@@ -67,6 +68,10 @@ func (m *mockCoreClient) MinGasPrice(_ context.Context) (map[types.Denomination]
 	return map[types.Denomination]quantity.Quantity{
 		types.NativeDenomination: m.minGasPrice,
 	}, nil
+}
+
+func (m *mockCoreClient) DecodeEvent(*types.Event) ([]client.DecodedEvent, error) {
+	panic("unimplemented")
 }
 
 type mockBlockEmitter struct {

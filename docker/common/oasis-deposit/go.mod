@@ -1,6 +1,6 @@
 module github.com/oasisprotocol/web3-tests/test/tools/oasis-deposit
 
-go 1.22.1
+go 1.22.3
 
 replace (
 	// Should be synced with Oasis Core as replace directives are not propagated.

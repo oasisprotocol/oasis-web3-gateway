@@ -5,10 +5,11 @@ COPY . /go/oasis-web3-gateway
 RUN cd oasis-web3-gateway && make && strip -S -x oasis-web3-gateway docker/common/oasis-deposit/oasis-deposit
 
 # Build simple-keymanager
-FROM ghcr.io/oasisprotocol/oasis-core-dev:stable-23.0.x AS oasis-core-dev
+FROM ghcr.io/oasisprotocol/oasis-core-dev:stable-24.0.x AS oasis-core-dev
 
 ENV OASIS_UNSAFE_SKIP_KM_POLICY=1
-ENV OASIS_CORE_VERSION=stable/23.0.x
+ENV OASIS_UNSAFE_ALLOW_DEBUG_ENCLAVES=1
+ENV OASIS_CORE_VERSION=stable/24.0.x
 ENV OASIS_CLI_VERSION=0.8.1
 
 RUN git clone https://github.com/oasisprotocol/oasis-core.git --branch ${OASIS_CORE_VERSION} --depth 1 \
