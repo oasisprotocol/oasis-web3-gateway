@@ -455,12 +455,18 @@ func (api *publicAPI) EstimateGas(ctx context.Context, args utils.TransactionArg
 	if args.Value == nil {
 		args.Value = (*hexutil.Big)(big.NewInt(0))
 	}
-	if args.Data == nil {
-		args.Data = (*hexutil.Bytes)(&[]byte{})
+	// "data" and "input" are accepted for backwards-compatibility reasons.
+	// "input" is the newer name and should be preferred by clients.
+	// https://github.com/ethereum/go-ethereum/issues/15628
+	if args.Data != nil && args.Input == nil {
+		args.Input = args.Data
+	}
+	if args.Input == nil {
+		args.Input = (*hexutil.Bytes)(&[]byte{})
 	}
 
 	ethTxValue := args.Value.ToInt().Bytes()
-	ethTxData := args.Data
+	ethTxInput := args.Input
 
 	var tx *types.Transaction
 	round := client.RoundLatest
@@ -473,10 +479,10 @@ func (api *publicAPI) EstimateGas(ctx context.Context, args utils.TransactionArg
 	}
 	if args.To == nil {
 		// evm.create
-		tx = evm.NewV1(api.client).Create(ethTxValue, *ethTxData).AppendAuthSignature(estimateGasSigSpec, 0).GetTransaction()
+		tx = evm.NewV1(api.client).Create(ethTxValue, *ethTxInput).AppendAuthSignature(estimateGasSigSpec, 0).GetTransaction()
 	} else {
 		// evm.call
-		tx = evm.NewV1(api.client).Call(args.To.Bytes(), ethTxValue, *ethTxData).AppendAuthSignature(estimateGasSigSpec, 0).GetTransaction()
+		tx = evm.NewV1(api.client).Call(args.To.Bytes(), ethTxValue, *ethTxInput).AppendAuthSignature(estimateGasSigSpec, 0).GetTransaction()
 	}
 
 	var ethAddress [20]byte
