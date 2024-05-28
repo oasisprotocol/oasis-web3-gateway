@@ -16,6 +16,7 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/accounts"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/evm"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
@@ -90,7 +91,7 @@ func blockToModels(
 	transactions ethtypes.Transactions,
 	logs []*ethtypes.Log,
 	txsStatus []uint8,
-	txsGasUsed []uint64,
+	txsGas []txGas,
 	results []types.CallResult,
 	blockGasLimit uint64,
 ) (*model.Block, []*model.Transaction, []*model.Receipt, []*model.Log, error) {
@@ -180,7 +181,7 @@ func blockToModels(
 		innerTxs = append(innerTxs, tx)
 
 		// receipts
-		cumulativeGasUsed += txsGasUsed[idx]
+		cumulativeGasUsed += txsGas[idx].used
 		receipt := &model.Receipt{
 			Status:            uint(txsStatus[idx]),
 			CumulativeGasUsed: cumulativeGasUsed,
@@ -188,7 +189,8 @@ func blockToModels(
 			LogsBloom:         bloomHex,
 			TransactionHash:   ethTxHex,
 			BlockHash:         bhash,
-			GasUsed:           txsGasUsed[idx],
+			GasUsed:           txsGas[idx].used,
+			EffectiveGasPrice: txsGas[idx].effectivePrice.String(),
 			Type:              uint(ethTx.Type()),
 			Round:             block.Header.Round,
 			TransactionIndex:  uint64(idx),
@@ -219,6 +221,11 @@ func blockToModels(
 	return innerBlock, innerTxs, innerReceipts, dbLogs, nil
 }
 
+type txGas struct {
+	used           uint64
+	effectivePrice *big.Int
+}
+
 // StoreBlockData parses oasis block and stores in db.
 func (ib *indexBackend) StoreBlockData(ctx context.Context, oasisBlock *block.Block, txResults []*client.TransactionWithResults, blockGasLimit uint64) error { //nolint: gocyclo
 	encoded := oasisBlock.Header.EncodedHash()
@@ -228,7 +235,7 @@ func (ib *indexBackend) StoreBlockData(ctx context.Context, oasisBlock *block.Bl
 	ethTxs := ethtypes.Transactions{}
 	logs := []*ethtypes.Log{}
 	txsStatus := []uint8{}
-	txsGasUsed := []uint64{}
+	txsGas := []txGas{}
 	results := []types.CallResult{}
 	var medianTransactionGasPrice *quantity.Quantity
 
@@ -278,6 +285,7 @@ func (ib *indexBackend) StoreBlockData(ctx context.Context, oasisBlock *block.Bl
 		ethTxs = append(ethTxs, ethTx)
 
 		var txGasUsed uint64
+		txGasSpent := big.NewInt(0)
 		var oasisLogs []*Log
 		resEvents := item.Events
 		for eventIndex, event := range resEvents {
@@ -322,6 +330,35 @@ func (ib *indexBackend) StoreBlockData(ctx context.Context, oasisBlock *block.Bl
 					}
 					txGasUsed = ce.GasUsed.Amount
 				}
+			case event.Module == accounts.ModuleName && event.Code == accounts.TransferEventCode:
+				// Parse fee transfer event, to obtain fee payment.
+				events, err := accounts.DecodeEvent(event)
+				if err != nil {
+					ib.logger.Error("failed to decode accounts transfer event", "index", eventIndex, "err", err)
+					continue
+				}
+				for _, ev := range events {
+					ae, ok := ev.(*accounts.Event)
+					if !ok {
+						ib.logger.Error("invalid accounts event", "event", ev, "index", eventIndex)
+						continue
+					}
+					te := ae.Transfer
+					if te == nil {
+						ib.logger.Error("invalid accounts transfer event", "event", ev, "index", eventIndex)
+						continue
+					}
+					// Skip transfers that are not to the fee accumulator.
+					if !te.To.Equal(accounts.FeeAccumulatorAddress) {
+						continue
+					}
+					// Skip non native denom.
+					if !te.Amount.Denomination.IsNative() {
+						continue
+					}
+					txGasSpent.Add(txGasSpent, te.Amount.Amount.ToBigInt())
+				}
+
 			default:
 				// Ignore any other events.
 			}
@@ -334,11 +371,23 @@ func (ib *indexBackend) StoreBlockData(ctx context.Context, oasisBlock *block.Bl
 			ib.logger.Debug("no GasUsedEvent for a transaction, defaulting to gas limit", "transaction_index", txIndex, "round", oasisBlock.Header.Round)
 			txGasUsed = ethTx.Gas()
 		}
-		txsGasUsed = append(txsGasUsed, txGasUsed)
+
+		var txEffectivePrice *big.Int
+		switch {
+		case txGasSpent.Cmp(big.NewInt(0)) > 0:
+			// If there was a fee payment event observed, calculate effective gas price.
+			txEffectivePrice = new(big.Int).Div(txGasSpent, new(big.Int).SetUint64(txGasUsed))
+		default:
+			// In old runtimes, there was no transfer events emitted for fee payments, just use gas price in those cases.
+			// Gas price should likely be correct since those runtimes also didn't support EIP-1559 transactions, so
+			// gas price should match effective gas price.
+			txEffectivePrice = ethTx.GasPrice()
+		}
+		txsGas = append(txsGas, txGas{used: txGasUsed, effectivePrice: txEffectivePrice})
 	}
 
 	// Convert to DB models.
-	blk, txs, receipts, dbLogs, err := blockToModels(oasisBlock, ethTxs, logs, txsStatus, txsGasUsed, results, blockGasLimit)
+	blk, txs, receipts, dbLogs, err := blockToModels(oasisBlock, ethTxs, logs, txsStatus, txsGas, results, blockGasLimit)
 	if err != nil {
 		ib.logger.Debug("Failed to ConvertToEthBlock", "height", blockNum, "err", err)
 		return err
@@ -466,7 +515,7 @@ func (ib *indexBackend) StoreBlockData(ctx context.Context, oasisBlock *block.Bl
 	return nil
 }
 
-// db2EthReceipt converts model.Receipt to the GetTransactipReceipt format.
+// db2EthReceipt converts model.Receipt to the GetTransactionReceipt format.
 func db2EthReceipt(dbReceipt *model.Receipt) map[string]interface{} {
 	ethLogs := make([]*ethtypes.Log, 0, len(dbReceipt.Logs))
 	for _, dbLog := range dbReceipt.Logs {
@@ -492,6 +541,7 @@ func db2EthReceipt(dbReceipt *model.Receipt) map[string]interface{} {
 		ethLogs = append(ethLogs, log)
 	}
 
+	effectiveGasPrice, _ := new(big.Int).SetString(dbReceipt.EffectiveGasPrice, 10)
 	receipt := map[string]interface{}{
 		"status":            hexutil.Uint(dbReceipt.Status),
 		"cumulativeGasUsed": hexutil.Uint64(dbReceipt.CumulativeGasUsed),
@@ -506,6 +556,7 @@ func db2EthReceipt(dbReceipt *model.Receipt) map[string]interface{} {
 		"from":              nil,
 		"to":                nil,
 		"contractAddress":   nil,
+		"effectiveGasPrice": (*hexutil.Big)(effectiveGasPrice),
 	}
 	if dbReceipt.FromAddr != "" {
 		receipt["from"] = dbReceipt.FromAddr

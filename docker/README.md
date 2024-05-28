@@ -25,7 +25,7 @@ docker run -it -p8545:8545 -p8546:8546 ghcr.io/oasisprotocol/sapphire-localnet #
 
 ### Mac M Chips
 
-There is currently no arm64 build available for M Macs, so make sure to force the docker image to use _linux/x86_64_, 
+There is currently no arm64 build available for M Macs, so make sure to force the docker image to use _linux/x86_64_,
 like this:
 
 ```sh
@@ -77,18 +77,3 @@ By default, the Oasis Web3 gateway and the Oasis node are configured with the
 *warn* verbosity level. To increase verbosity to *debug*, you can run the
 Docker container with `-e LOG__LEVEL=debug` for the Web3 gateway and
 `-e OASIS_NODE_LOG_LEVEL=debug` for the Oasis node.
-
-## Running Tests
-
-As an alternatively to running Postgres & using `spinup-oasis-stack.sh` the
-Docker containers can be used to test changes to the gateway or run tests by
-bind-mounting the runtime state directory (`/serverdir/node`) into your local
-filesystem.
-
-```bash
-docker run --rm -ti -p5432:5432 -p8545:8545 -p8546:8546 -v /tmp/eth-runtime-test:/serverdir/node ghcr.io/oasisprotocol/sapphire-localnet:local -test-mnemonic -n 4
-```
-
-The `oasis-web3-gateway` or `sapphire-paratime` executables could also be
-bind-mounted into the container, allowing for quick tunraround time when testing
-the full gateway & paratime stack together.

@@ -155,6 +155,7 @@ type Receipt struct {
 	FromAddr          string
 	ToAddr            string
 	ContractAddress   string
+	EffectiveGasPrice string
 }
 
 // Size returns the approximate size of a Receipt in bytes.
@@ -174,5 +175,6 @@ func (r *Receipt) Size() int {
 	sz += len(r.FromAddr)
 	sz += len(r.ToAddr)
 	sz += len(r.ContractAddress)
+	sz += len(r.EffectiveGasPrice)
 	return sz
 }

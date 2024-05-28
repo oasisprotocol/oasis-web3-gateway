@@ -240,7 +240,8 @@ func testContractCreation(t *testing.T, value *big.Int, txEIP int) uint64 {
 			Nonce:     nonce,
 			Value:     value,
 			Gas:       gasLimit,
-			GasFeeCap: gasPrice,
+			GasFeeCap: new(big.Int).Add(gasPrice, big.NewInt(100_000_000_000_000_000)),
+			GasTipCap: big.NewInt(500_000_000),
 			Data:      code,
 		})
 	case 2930:
@@ -276,19 +277,20 @@ func testContractCreation(t *testing.T, value *big.Int, txEIP int) uint64 {
 
 	t.Logf("Contract address: %s", receipt.ContractAddress)
 
-	/*
-		// Ensure the effective gas price is what was returned from `eth_gasPrice`
-		t.Logf("effective: %d, %d", receipt.EffectiveGasPrice, gasPrice)
-		require.Equal(t, receipt.EffectiveGasPrice, gasPrice)
-	*/
+	// Ensure the effective gas price is what was returned from `eth_gasPrice`.
+	t.Logf("Effective gas price: %d, gas used: %d", receipt.EffectiveGasPrice, receipt.GasUsed)
 
 	balanceAfter, err := ec.BalanceAt(context.Background(), tests.TestKey1.EthAddress, nil)
 	require.NoError(t, err)
 
-	t.Logf("Spent for gas: %s", new(big.Int).Sub(balanceBefore, balanceAfter))
+	actualSpent := new(big.Int).Sub(balanceBefore, balanceAfter)
+	t.Logf("Spent for gas: %s", actualSpent)
 
 	// Always require that some gas was spent.
 	require.Positive(t, balanceBefore.Cmp(balanceAfter))
+
+	// Ensure that the spent was exactly the effective gas price * gas used.
+	require.EqualValues(t, actualSpent, new(big.Int).Mul(big.NewInt(int64(receipt.GasUsed)), receipt.EffectiveGasPrice), "`effective gas price * gas used` should match actual spent")
 
 	// If the contract deployed successfully, check that unspent gas was returned.
 	if receipt.Status == 1 {
