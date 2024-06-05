@@ -23,11 +23,11 @@ jobs:
           go-version: "1.22.x"
 
       - name: Install GoReleaser
-        uses: goreleaser/goreleaser-action@v5
+        uses: goreleaser/goreleaser-action@v6
         with:
           install-only: true
           distribution: goreleaser
-          version: 1.21.2
+          version: "~> v2"
 
       - name: Build and publish the next release
         run: |
