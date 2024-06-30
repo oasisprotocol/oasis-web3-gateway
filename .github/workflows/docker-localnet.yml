@@ -37,7 +37,7 @@ jobs:
           echo "VERSION=$(date +%Y-%m-%d-git$(git rev-parse --short HEAD))" >> $GITHUB_ENV
 
       - name: Build
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           build-args: |
             VERSION=${{ env.VERSION }}
@@ -54,7 +54,7 @@ jobs:
 
       - name: Push
         if: ${{ github.event_name == 'push' }}
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           build-args: |
             VERSION=${{ env.VERSION }}
