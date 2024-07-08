@@ -9,8 +9,8 @@ FROM ghcr.io/oasisprotocol/oasis-core-dev:stable-24.0.x AS oasis-core-dev
 
 ENV OASIS_UNSAFE_SKIP_KM_POLICY=1
 ENV OASIS_UNSAFE_ALLOW_DEBUG_ENCLAVES=1
-ENV OASIS_CORE_VERSION=stable/24.0.x
-ENV OASIS_CLI_VERSION=0.8.1
+ENV OASIS_CORE_VERSION=stable/24.1.x
+ENV OASIS_CLI_VERSION=0.9.0
 
 RUN git clone https://github.com/oasisprotocol/oasis-core.git --branch ${OASIS_CORE_VERSION} --depth 1 \
 	&& cd oasis-core/go/ \
@@ -29,7 +29,7 @@ RUN apk add --no-cache bash gcompat libseccomp jq binutils curl \
 	&& su -c "POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres /usr/local/bin/docker-entrypoint.sh postgres &" postgres
 
 # Docker-specific variables
-ENV PARATIME_VERSION=0.7.3-testnet
+ENV PARATIME_VERSION=0.8.0-testnet
 ENV PARATIME_NAME=sapphire
 ENV GATEWAY__CHAIN_ID=0x5afd
 
