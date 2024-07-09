@@ -11,8 +11,6 @@
 # - BEACON_BACKEND: beacon epoch transition mode 'mock' (default) or 'default'
 # - OASIS_SINGLE_COMPUTE_NODE: (default: true) if non-empty only run a single compute node
 
-set -euo pipefail
-
 export OASIS_DOCKER_NO_GATEWAY=${OASIS_DOCKER_NO_GATEWAY:-no}
 
 export OASIS_NODE_LOG_LEVEL=${OASIS_NODE_LOG_LEVEL:-warn}
@@ -21,10 +19,12 @@ export OASIS_DOCKER_USE_TIMESTAMPS_IN_NOTICES=${OASIS_DOCKER_USE_TIMESTAMPS_IN_N
 
 export OASIS_DOCKER_DEBUG_DISK_AND_CPU_USAGE=${OASIS_DOCKER_DEBUG_DISK_AND_CPU_USAGE:-no}
 
-export OASIS_SINGLE_COMPUTE_NODE=${OASIS_SINGLE_COMPUTE_NODE-1}
+export OASIS_SINGLE_COMPUTE_NODE=${OASIS_SINGLE_COMPUTE_NODE:-1}
+
 OASIS_WEB3_GATEWAY_VERSION=$(${OASIS_WEB3_GATEWAY} -v | head -n1 | cut -d " " -f 3 | sed -r 's/^v//')
 OASIS_CORE_VERSION=$(${OASIS_NODE} -v | head -n1 | cut -d " " -f 3 | sed -r 's/^v//')
 VERSION=$(cat /VERSION)
+
 echo "${PARATIME_NAME}-localnet ${VERSION} (oasis-core: ${OASIS_CORE_VERSION}, ${PARATIME_NAME}-paratime: ${PARATIME_VERSION}, oasis-web3-gateway: ${OASIS_WEB3_GATEWAY_VERSION})"
 echo
 
@@ -35,6 +35,8 @@ OASIS_KM_SOCKET=${OASIS_NODE_DATADIR}/net-runner/network/keymanager-0/internal.s
 
 OASIS_WEB3_GATEWAY_PID=""
 OASIS_NODE_PID=""
+
+set -euo pipefail
 
 function cleanup {
     if [[ -n "${OASIS_WEB3_GATEWAY_PID}" ]]; then
