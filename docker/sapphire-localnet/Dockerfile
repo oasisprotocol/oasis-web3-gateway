@@ -29,7 +29,7 @@ RUN apk add --no-cache bash gcompat libseccomp jq binutils curl \
 	&& su -c "POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres /usr/local/bin/docker-entrypoint.sh postgres &" postgres
 
 # Docker-specific variables
-ENV PARATIME_VERSION=0.8.0-testnet
+ENV PARATIME_VERSION=0.8.1-testnet
 ENV PARATIME_NAME=sapphire
 ENV GATEWAY__CHAIN_ID=0x5afd
 
@@ -41,7 +41,7 @@ ENV OASIS_NODE_DATADIR=/serverdir/node
 ENV OASIS_WEB3_GATEWAY=/oasis-web3-gateway
 ENV OASIS_DEPOSIT=/oasis-deposit
 ENV OASIS_WEB3_GATEWAY_CONFIG_FILE=/localnet.yml
-ENV PARATIME=/runtime.elf
+ENV PARATIME=/ronl.elf
 ENV KEYMANAGER_BINARY=/simple-keymanager
 ENV CLI_BINARY=/oasis
 ENV OASIS_UNSAFE_SKIP_AVR_VERIFY=1
@@ -72,7 +72,7 @@ RUN echo "Configure the ParaTime." \
 	&& mkdir -p "$(dirname ${PARATIME})" \
     && wget --quiet "https://github.com/oasisprotocol/${PARATIME_NAME}-paratime/releases/download/v${PARATIME_VERSION}/localnet-${PARATIME_NAME}-paratime.orc" -O "/paratime.orc" \
     && unzip "paratime.orc" \
-    && chmod a+x "runtime.elf" \
+    && chmod a+x "ronl.elf" \
 	&& rm "paratime.orc" \
 	&& echo "" \
 	&& echo "Write VERSION information." \
