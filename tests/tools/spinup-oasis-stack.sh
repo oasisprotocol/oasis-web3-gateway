@@ -26,8 +26,14 @@ rm -rf "$OASIS_NODE_DATADIR/fixture.json"
 rm -rf "$OASIS_NODE_DATADIR" || true
 mkdir -p "$OASIS_NODE_DATADIR" || true
 
+TEE_HARDWARE=""
+if [ ! -z "${KEYMANAGER_BINARY:-}" ]; then
+  TEE_HARDWARE="intel-sgx"
+fi
+
 # Prepare configuration for oasis-node (fixture).
 ${OASIS_NET_RUNNER} dump-fixture \
+  --fixture.default.tee_hardware "${TEE_HARDWARE}" \
   --fixture.default.node.binary "${OASIS_NODE}" \
   --fixture.default.deterministic_entities \
   --fixture.default.fund_entities \
@@ -45,7 +51,16 @@ if [ ! -z "${KEYMANAGER_BINARY:-}" ]; then
   RT_IDX=1
 fi
 
-# Use only one compute node
+# Mock SGX requires both ELF ("0") and SGX ("1") binaries defined.
+if [ ! -z "${KEYMANAGER_BINARY:-}" ]; then
+  jq "
+    .runtimes[0].deployments[0].components[0].binaries.\"0\" = \"${KEYMANAGER_BINARY}\" |
+    .runtimes[${RT_IDX}].deployments[0].components[0].binaries.\"0\" = \"${PARATIME}\"
+  " "$FIXTURE_FILE" >"$FIXTURE_FILE.tmp"
+  mv "$FIXTURE_FILE.tmp" "$FIXTURE_FILE"
+fi
+
+# Use only one compute node.
 if [[ ! -z "${OASIS_SINGLE_COMPUTE_NODE:-}" ]]; then
   jq "
     .compute_workers = [.compute_workers[0]] |

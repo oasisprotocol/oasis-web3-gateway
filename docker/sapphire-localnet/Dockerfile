@@ -1,24 +1,27 @@
 # Build oasis-web3-gateway
-FROM golang:1.22 AS oasis-web3-gateway
+FROM golang:1.22.3 AS oasis-web3-gateway
 
 COPY . /go/oasis-web3-gateway
 RUN cd oasis-web3-gateway && make && strip -S -x oasis-web3-gateway docker/common/oasis-deposit/oasis-deposit
 
 # Build simple-keymanager
-FROM ghcr.io/oasisprotocol/oasis-core-dev:stable-24.0.x AS oasis-core-dev
+FROM ghcr.io/oasisprotocol/oasis-core-dev:stable-24.2.x AS oasis-core-dev
 
-ENV OASIS_UNSAFE_SKIP_KM_POLICY=1
+ENV OASIS_UNSAFE_MOCK_SGX=1
 ENV OASIS_UNSAFE_ALLOW_DEBUG_ENCLAVES=1
-ENV OASIS_CORE_VERSION=stable/24.1.x
-ENV OASIS_CLI_VERSION=0.9.0
+ENV OASIS_CORE_VERSION=stable/24.2.x
+ENV OASIS_CLI_VERSION=0.10.0
 
 RUN git clone https://github.com/oasisprotocol/oasis-core.git --branch ${OASIS_CORE_VERSION} --depth 1 \
 	&& cd oasis-core/go/ \
 	&& make oasis-node oasis-net-runner \
 	&& cd ../../ \
 	&& cd oasis-core/tests/runtimes/simple-keymanager \
-	&& CARGO_PROFILE_RELEASE_LTO=true CARGO_PROFILE_RELEASE_OPT_LEVEL=s CARGO_PROFILE_RELEASE_CODEGEN_UNITS=1 cargo build --release \
+	&& CARGO_PROFILE_RELEASE_LTO=true CARGO_PROFILE_RELEASE_OPT_LEVEL=s CARGO_PROFILE_RELEASE_CODEGEN_UNITS=1 OASIS_UNSAFE_SKIP_AVR_VERIFY=1 cargo build --release --features debug-mock-sgx \
 	&& cd ../../../../ \
+    && cd oasis-core \
+    && cargo build -p oasis-core-runtime-loader --release \
+    && cd .. \
 	&& git clone https://github.com/oasisprotocol/cli.git --branch v${OASIS_CLI_VERSION} --depth 1 \
 	&& cd cli \
 	&& make CGO_ENABLED=0
@@ -45,8 +48,8 @@ ENV PARATIME=/ronl.elf
 ENV KEYMANAGER_BINARY=/simple-keymanager
 ENV CLI_BINARY=/oasis
 ENV OASIS_UNSAFE_SKIP_AVR_VERIFY=1
-ENV OASIS_UNSAFE_SKIP_KM_POLICY=1
 ENV OASIS_UNSAFE_ALLOW_DEBUG_ENCLAVES=1
+ENV OASIS_UNSAFE_MOCK_SGX=1
 
 ARG VERSION
 
@@ -56,6 +59,9 @@ COPY --from=oasis-core-dev /oasis-core/go/oasis-net-runner/oasis-net-runner ${OA
 
 # simple-keymanager
 COPY --from=oasis-core-dev /oasis-core/target/release/simple-keymanager ${KEYMANAGER_BINARY}
+
+# oasis-core-runtime-loader
+COPY --from=oasis-core-dev /oasis-core/target/release/oasis-core-runtime-loader ${OASIS_CORE_RUNTIME_LOADER}
 
 # cli
 COPY --from=oasis-core-dev /cli/oasis ${CLI_BINARY}
@@ -68,13 +74,15 @@ COPY docker/common/start.sh /
 COPY tests/tools/* /
 
 # Configure paratime.
+# XXX: Build locally.
+COPY docker/sapphire-localnet/sapphire-paratime ${PARATIME}
 RUN echo "Configure the ParaTime." \
-	&& mkdir -p "$(dirname ${PARATIME})" \
-    && wget --quiet "https://github.com/oasisprotocol/${PARATIME_NAME}-paratime/releases/download/v${PARATIME_VERSION}/localnet-${PARATIME_NAME}-paratime.orc" -O "/paratime.orc" \
-    && unzip "paratime.orc" \
-    && chmod a+x "ronl.elf" \
-	&& rm "paratime.orc" \
-	&& echo "" \
+#	&& mkdir -p "$(dirname ${PARATIME})" \
+#   && wget --quiet "https://github.com/oasisprotocol/${PARATIME_NAME}-paratime/releases/download/v${PARATIME_VERSION}/localnet-${PARATIME_NAME}-paratime.orc" -O "/paratime.orc" \
+#   && unzip "paratime.orc" \
+#   && chmod a+x "runtime.elf" \
+#	&& rm "paratime.orc" \
+#	&& echo "" \
 	&& echo "Write VERSION information." \
 	&& echo "${VERSION}" > /VERSION \
 	&& strip -S -x ${OASIS_NET_RUNNER} ${OASIS_NODE} ${KEYMANAGER_BINARY} ${CLI_BINARY} \

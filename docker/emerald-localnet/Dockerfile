@@ -1,5 +1,5 @@
 # Build oasis-web3-gateway
-FROM golang:1.22 AS oasis-web3-gateway
+FROM golang:1.22.3 AS oasis-web3-gateway
 
 COPY . /go/oasis-web3-gateway
 RUN cd oasis-web3-gateway && make && strip -S -x oasis-web3-gateway docker/common/oasis-deposit/oasis-deposit
@@ -10,8 +10,8 @@ RUN apk add --no-cache bash gcompat libseccomp jq binutils \
 	&& su -c "POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres /usr/local/bin/docker-entrypoint.sh postgres &" postgres
 
 # Docker-specific variables
-ENV OASIS_CORE_VERSION=24.0
-ENV OASIS_CLI_VERSION=0.8.1
+ENV OASIS_CORE_VERSION=24.2
+ENV OASIS_CLI_VERSION=0.10.0
 ENV PARATIME_VERSION=11.0.0-testnet
 ENV PARATIME_NAME=emerald
 ENV GATEWAY__CHAIN_ID=0xa514
