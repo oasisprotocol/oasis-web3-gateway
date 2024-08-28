@@ -35,9 +35,9 @@ jobs:
         ports:
           - 5432:5432
     env:
-      OASIS_CORE_VERSION: "24.1"
-      OASIS_NODE: ${{ github.workspace }}/oasis_core/oasis-node
-      OASIS_NET_RUNNER: ${{ github.workspace }}/oasis_core/oasis-net-runner
+      OASIS_CORE_VERSION: "24.2"
+      OASIS_NODE_BINARY: ${{ github.workspace }}/oasis_core/oasis-node
+      OASIS_NET_RUNNER_BINARY: ${{ github.workspace }}/oasis_core/oasis-net-runner
       EMERALD_PARATIME_VERSION: 11.0.0-testnet
       GATEWAY__CHAIN_ID: 42260
       EMERALD_PARATIME: ${{ github.workspace }}/oasis_core/emerald-paratime
@@ -56,10 +56,10 @@ jobs:
           sudo apt update && sudo apt install bubblewrap unzip -y
           wget "https://github.com/oasisprotocol/oasis-core/releases/download/v${OASIS_CORE_VERSION}/oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz"
           tar xfvz "oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz"
-          mkdir -p "$(dirname ${OASIS_NODE})"
-          mv "oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-node" "${OASIS_NODE}"
-          mkdir -p "$(dirname ${OASIS_NET_RUNNER})"
-          mv "oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-net-runner" "${OASIS_NET_RUNNER}"
+          mkdir -p "$(dirname ${OASIS_NODE_BINARY})"
+          mv "oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-node" "${OASIS_NODE_BINARY}"
+          mkdir -p "$(dirname ${OASIS_NET_RUNNER_BINARY})"
+          mv "oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-net-runner" "${OASIS_NET_RUNNER_BINARY}"
           mkdir -p "$(dirname ${EMERALD_PARATIME})"
           wget "https://github.com/oasisprotocol/emerald-paratime/releases/download/v${EMERALD_PARATIME_VERSION}/localnet-emerald-paratime.orc" -O "${EMERALD_PARATIME}.orc"
           unzip "${EMERALD_PARATIME}.orc"
@@ -68,7 +68,7 @@ jobs:
 
       - name: Spinup oasis-node
         run:
-          PARATIME="${EMERALD_PARATIME}" PARATIME_VERSION="${EMERALD_PARATIME_VERSION}" tests/tools/spinup-oasis-stack.sh > /dev/null &
+          PARATIME_BINARY="${EMERALD_PARATIME}" PARATIME_VERSION="${EMERALD_PARATIME_VERSION}" tests/tools/spinup-oasis-stack.sh > /dev/null &
           sleep 60
 
       - name: Unit tests with coverage
@@ -106,10 +106,10 @@ jobs:
         ports:
           - 5432:5432
     env:
-      OASIS_CORE_VERSION: "24.1"
-      OASIS_NODE: ${{ github.workspace }}/oasis_core/oasis-node
-      OASIS_NET_RUNNER: ${{ github.workspace }}/oasis_core/oasis-net-runner
-      SAPPHIRE_PARATIME_VERSION: 0.8.1-testnet
+      OASIS_CORE_VERSION: "24.2"
+      OASIS_NODE_BINARY: ${{ github.workspace }}/oasis_core/oasis-node
+      OASIS_NET_RUNNER_BINARY: ${{ github.workspace }}/oasis_core/oasis-net-runner
+      SAPPHIRE_PARATIME_VERSION: 0.8.2-testnet
       GATEWAY__CHAIN_ID: 23293
       GATEWAY__OASIS_RPCS: true
       SAPPHIRE_PARATIME: ${{ github.workspace }}/oasis_core/sapphire-paratime
@@ -131,10 +131,10 @@ jobs:
           # oasis-core
           wget "https://github.com/oasisprotocol/oasis-core/releases/download/v${OASIS_CORE_VERSION}/oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz"
           tar xfvz "oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz"
-          mkdir -p "$(dirname ${OASIS_NODE})"
-          mv "oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-node" "${OASIS_NODE}"
-          mkdir -p "$(dirname ${OASIS_NET_RUNNER})"
-          mv "oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-net-runner" "${OASIS_NET_RUNNER}"
+          mkdir -p "$(dirname ${OASIS_NODE_BINARY})"
+          mv "oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-node" "${OASIS_NODE_BINARY}"
+          mkdir -p "$(dirname ${OASIS_NET_RUNNER_BINARY})"
+          mv "oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-net-runner" "${OASIS_NET_RUNNER_BINARY}"
           mkdir -p "$(dirname ${SAPPHIRE_PARATIME})"
           # sapphire-paratime
           wget "https://github.com/oasisprotocol/sapphire-paratime/releases/download/v${SAPPHIRE_PARATIME_VERSION}/localnet-sapphire-paratime.orc" -O "${SAPPHIRE_PARATIME}.orc"
@@ -146,7 +146,7 @@ jobs:
 
       - name: Spinup oasis-node
         run:
-          PARATIME="${SAPPHIRE_PARATIME}" PARATIME_VERSION="${SAPPHIRE_PARATIME_VERSION}" tests/tools/spinup-oasis-stack.sh > /dev/null &
+          PARATIME_BINARY="${SAPPHIRE_PARATIME}" PARATIME_VERSION="${SAPPHIRE_PARATIME_VERSION}" OASIS_UNSAFE_SKIP_AVR_VERIFY=1 OASIS_UNSAFE_ALLOW_DEBUG_ENCLAVES=1 OASIS_UNSAFE_MOCK_SGX=1 tests/tools/spinup-oasis-stack.sh > /dev/null &
           sleep 60
 
       - name: Unit tests with coverage

@@ -4,10 +4,10 @@ set -euo pipefail
 
 # This script spins up local oasis node configured with the provided EVM ParaTime.
 # Supported ENV Variables:
-# - OASIS_NODE: path to oasis-node binary
-# - OASIS_NET_RUNNER: path to oasis-net-runner binary
+# - OASIS_NODE_BINARY: path to oasis-node binary
+# - OASIS_NET_RUNNER_BINARY: path to oasis-net-runner binary
 # - BEACON_BACKEND: choose 'mock' backend (default), or use other behavior
-# - PARATIME: path to ParaTime binary (inside .orc bundle)
+# - PARATIME_BINARY: path to ParaTime binary (inside .orc bundle)
 # - PARATIME_VERSION: version of the binary. e.g. 3.0.0
 # - OASIS_NODE_DATADIR: path to temporary oasis-node data dir e.g. /tmp/oasis-localnet
 # - KEYMANAGER_BINARY: path to key manager binary e.g. simple-keymanager
@@ -32,14 +32,14 @@ if [ ! -z "${KEYMANAGER_BINARY:-}" ]; then
 fi
 
 # Prepare configuration for oasis-node (fixture).
-${OASIS_NET_RUNNER} dump-fixture \
+${OASIS_NET_RUNNER_BINARY} dump-fixture \
   --fixture.default.tee_hardware "${TEE_HARDWARE}" \
-  --fixture.default.node.binary "${OASIS_NODE}" \
+  --fixture.default.node.binary "${OASIS_NODE_BINARY}" \
   --fixture.default.deterministic_entities \
   --fixture.default.fund_entities \
   --fixture.default.num_entities 2 \
   --fixture.default.keymanager.binary "${KEYMANAGER_BINARY:-}" \
-  --fixture.default.runtime.binary "${PARATIME}" \
+  --fixture.default.runtime.binary "${PARATIME_BINARY}" \
   --fixture.default.runtime.provisioner "unconfined" \
   --fixture.default.runtime.version "$(paratime_ver 1).$(paratime_ver 2).$(paratime_ver 3)" \
   --fixture.default.halt_epoch 100000 \
@@ -55,7 +55,7 @@ fi
 if [ ! -z "${KEYMANAGER_BINARY:-}" ]; then
   jq "
     .runtimes[0].deployments[0].components[0].binaries.\"0\" = \"${KEYMANAGER_BINARY}\" |
-    .runtimes[${RT_IDX}].deployments[0].components[0].binaries.\"0\" = \"${PARATIME}\"
+    .runtimes[${RT_IDX}].deployments[0].components[0].binaries.\"0\" = \"${PARATIME_BINARY}\"
   " "$FIXTURE_FILE" >"$FIXTURE_FILE.tmp"
   mv "$FIXTURE_FILE.tmp" "$FIXTURE_FILE"
 fi
@@ -106,4 +106,4 @@ jq ".runtimes[${RT_IDX}].txn_scheduler.batch_flush_timeout=1000000000" "$FIXTURE
 mv "$FIXTURE_FILE.tmp" "$FIXTURE_FILE"
 
 # Run oasis-node.
-${OASIS_NET_RUNNER} --fixture.file "$FIXTURE_FILE" --basedir "${OASIS_NODE_DATADIR}" --basedir.no_temp_dir $@
+${OASIS_NET_RUNNER_BINARY} --fixture.file "$FIXTURE_FILE" --basedir "${OASIS_NODE_DATADIR}" --basedir.no_temp_dir $@

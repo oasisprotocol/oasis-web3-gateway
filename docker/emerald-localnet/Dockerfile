@@ -17,20 +17,21 @@ ENV PARATIME_NAME=emerald
 ENV GATEWAY__CHAIN_ID=0xa514
 
 # start.sh and spinup-oasis-stack.sh ENV variables.
-ENV OASIS_NODE=/oasis-node
-ENV OASIS_NET_RUNNER=/oasis-net-runner
+ENV OASIS_NODE_BINARY=/oasis-node
+ENV OASIS_NET_RUNNER_BINARY=/oasis-net-runner
 ENV OASIS_NODE_DATADIR=/serverdir/node
-ENV OASIS_WEB3_GATEWAY=/oasis-web3-gateway
-ENV OASIS_DEPOSIT=/oasis-deposit
+ENV OASIS_WEB3_GATEWAY_BINARY=/oasis-web3-gateway
+ENV OASIS_DEPOSIT_BINARY=/oasis-deposit
 ENV OASIS_WEB3_GATEWAY_CONFIG_FILE=/localnet.yml
-ENV PARATIME=/runtime.elf
+ENV PARATIME_BINARY=/runtime.elf
 ENV KEYMANAGER_BINARY=""
+ENV OASIS_CLI_BINARY=/oasis
 
 ARG VERSION
 
 # oasis-web3-gateway binary, config, spinup-* scripts and staking_genesis.json.
-COPY --from=oasis-web3-gateway /go/oasis-web3-gateway/oasis-web3-gateway ${OASIS_WEB3_GATEWAY}
-COPY --from=oasis-web3-gateway /go/oasis-web3-gateway/docker/common/oasis-deposit/oasis-deposit ${OASIS_DEPOSIT}
+COPY --from=oasis-web3-gateway /go/oasis-web3-gateway/oasis-web3-gateway ${OASIS_WEB3_GATEWAY_BINARY}
+COPY --from=oasis-web3-gateway /go/oasis-web3-gateway/docker/common/oasis-deposit/oasis-deposit ${OASIS_DEPOSIT_BINARY}
 COPY docker/common/localnet.yml ${OASIS_WEB3_GATEWAY_CONFIG_FILE}
 COPY docker/common/start.sh /
 COPY tests/tools/* /
@@ -38,14 +39,14 @@ COPY tests/tools/* /
 # Configure oasis-node and oasis-net-runner.
 RUN wget --quiet "https://github.com/oasisprotocol/oasis-core/releases/download/v${OASIS_CORE_VERSION}/oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz"  \
 	&& tar xfvz "oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz" \
-	&& mkdir -p "$(dirname ${OASIS_NODE})" "$(dirname ${OASIS_NET_RUNNER})" \
-	&& mv "oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-node" "${OASIS_NODE}" \
-	&& mv "oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-net-runner" "${OASIS_NET_RUNNER}" \
+	&& mkdir -p "$(dirname ${OASIS_NODE_BINARY})" "$(dirname ${OASIS_NET_RUNNER_BINARY})" \
+	&& mv "oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-node" "${OASIS_NODE_BINARY}" \
+	&& mv "oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-net-runner" "${OASIS_NET_RUNNER_BINARY}" \
 	&& rm "oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz" \
 	&& rm -rf "oasis_core_${OASIS_CORE_VERSION}_linux_amd64" \
 	&& echo "" \
 	&& echo "Configure the ParaTime." \
-	&& mkdir -p "$(dirname ${PARATIME})" \
+	&& mkdir -p "$(dirname ${PARATIME_BINARY})" \
 	&& wget --quiet "https://github.com/oasisprotocol/${PARATIME_NAME}-paratime/releases/download/v${PARATIME_VERSION}/localnet-${PARATIME_NAME}-paratime.orc" -O "/paratime.orc" \
 	&& unzip "paratime.orc" \
 	&& chmod a+x "runtime.elf" \
@@ -60,7 +61,7 @@ RUN wget --quiet "https://github.com/oasisprotocol/oasis-core/releases/download/
 	&& echo "" \
 	&& echo "Write VERSION information." \
 	&& echo "${VERSION}" > /VERSION \
-	&& strip -S -x /oasis-net-runner /oasis-node /oasis
+	&& strip -S -x ${OASIS_NET_RUNNER_BINARY} ${OASIS_NODE_BINARY} ${OASIS_CLI_BINARY}
 
 # Web3 gateway http and ws ports.
 EXPOSE 8545/tcp

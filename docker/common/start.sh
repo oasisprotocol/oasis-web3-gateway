@@ -5,9 +5,9 @@
 # ParaTime.
 # Mandatory ENV Variables:
 # - all ENV variables required by spinup-oasis-stack.sh
-# - OASIS_WEB3_GATEWAY: path to oasis-web3-gateway binary
+# - OASIS_WEB3_GATEWAY_BINARY: path to oasis-web3-gateway binary
 # - OASIS_WEB3_GATEWAY_CONFIG_FILE: path to oasis-web3-gateway config file
-# - OASIS_DEPOSIT: path to oasis-deposit binary
+# - OASIS_DEPOSIT_BINARY: path to oasis-deposit binary
 # - BEACON_BACKEND: beacon epoch transition mode 'mock' (default) or 'default'
 # - OASIS_SINGLE_COMPUTE_NODE: (default: true) if non-empty only run a single compute node
 
@@ -21,8 +21,8 @@ export OASIS_DOCKER_DEBUG_DISK_AND_CPU_USAGE=${OASIS_DOCKER_DEBUG_DISK_AND_CPU_U
 
 export OASIS_SINGLE_COMPUTE_NODE=${OASIS_SINGLE_COMPUTE_NODE:-1}
 
-OASIS_WEB3_GATEWAY_VERSION=$(${OASIS_WEB3_GATEWAY} -v | head -n1 | cut -d " " -f 3 | sed -r 's/^v//')
-OASIS_CORE_VERSION=$(${OASIS_NODE} -v | head -n1 | cut -d " " -f 3 | sed -r 's/^v//')
+OASIS_WEB3_GATEWAY_VERSION=$(${OASIS_WEB3_GATEWAY_BINARY} -v | head -n1 | cut -d " " -f 3 | sed -r 's/^v//')
+OASIS_CORE_VERSION=$(${OASIS_NODE_BINARY} -v | head -n1 | cut -d " " -f 3 | sed -r 's/^v//')
 VERSION=$(cat /VERSION)
 
 echo "${PARATIME_NAME}-localnet ${VERSION} (oasis-core: ${OASIS_CORE_VERSION}, ${PARATIME_NAME}-paratime: ${PARATIME_VERSION}, oasis-web3-gateway: ${OASIS_WEB3_GATEWAY_VERSION})"
@@ -126,7 +126,7 @@ if [[ $OASIS_DOCKER_NO_GATEWAY == 'yes' ]]; then
     notice "Skipping oasis-web3-gateway start-up...\n"
 else
     notice "Starting oasis-web3-gateway...\n"
-    ${OASIS_WEB3_GATEWAY} --config ${OASIS_WEB3_GATEWAY_CONFIG_FILE} 2>1 &>/var/log/oasis-web3-gateway.log &
+    ${OASIS_WEB3_GATEWAY_BINARY} --config ${OASIS_WEB3_GATEWAY_CONFIG_FILE} 2>1 &>/var/log/oasis-web3-gateway.log &
     OASIS_WEB3_GATEWAY_PID=$!
 fi
 
@@ -135,27 +135,27 @@ notice "Bootstrapping network (this might take a minute)"
 if [[ ${BEACON_BACKEND} == 'mock' ]]; then
     echo -n .
     notice_debug -l "Waiting for nodes to be ready..."
-    ${OASIS_NODE} debug control wait-nodes -n 2 -a unix:${OASIS_NODE_SOCKET}
+    ${OASIS_NODE_BINARY} debug control wait-nodes -n 2 -a unix:${OASIS_NODE_SOCKET}
 
     echo -n .
     notice_debug -l "Setting epoch to 1..."
-    ${OASIS_NODE} debug control set-epoch --epoch 1 -a unix:${OASIS_NODE_SOCKET}
+    ${OASIS_NODE_BINARY} debug control set-epoch --epoch 1 -a unix:${OASIS_NODE_SOCKET}
 
     # Transition to the final epoch when the KM generates ephemeral secret.
     if [[ ${PARATIME_NAME} == 'sapphire' ]]; then
         notice_debug -l "Waiting for key manager to generate ephemeral secret..."
-        while (${OASIS_NODE} control status -a unix:${OASIS_KM_SOCKET} | jq -e ".keymanager.secrets.worker.ephemeral_secrets.last_generated_epoch!=2" >/dev/null); do
+        while (${OASIS_NODE_BINARY} control status -a unix:${OASIS_KM_SOCKET} | jq -e ".keymanager.secrets.worker.ephemeral_secrets.last_generated_epoch!=2" >/dev/null); do
             sleep 0.5
         done
     fi
 
     echo -n .
     notice_debug -l "Setting epoch to 2..."
-    ${OASIS_NODE} debug control set-epoch --epoch 2 -a unix:${OASIS_NODE_SOCKET}
+    ${OASIS_NODE_BINARY} debug control set-epoch --epoch 2 -a unix:${OASIS_NODE_SOCKET}
 else
     echo -n ...
     notice_debug -l "Waiting for nodes to be ready..."
-    ${OASIS_NODE} debug control wait-ready -a unix:${OASIS_NODE_SOCKET}
+    ${OASIS_NODE_BINARY} debug control wait-ready -a unix:${OASIS_NODE_SOCKET}
 fi
 echo
 
@@ -169,9 +169,9 @@ if [[ $OASIS_DOCKER_NO_GATEWAY != 'yes' && $PARATIME_NAME == 'sapphire' ]]; then
     }
     until is_km_ready; do
         if [[ ${BEACON_BACKEND} == 'mock' ]]; then
-            epoch=`${OASIS_NODE} control status -a unix:${OASIS_NODE_SOCKET} | jq '.consensus.latest_epoch'`
+            epoch=`${OASIS_NODE_BINARY} control status -a unix:${OASIS_NODE_SOCKET} | jq '.consensus.latest_epoch'`
             epoch=$((epoch + 1))
-            ${OASIS_NODE} debug control set-epoch --epoch $epoch -a unix:${OASIS_NODE_SOCKET}
+            ${OASIS_NODE_BINARY} debug control set-epoch --epoch $epoch -a unix:${OASIS_NODE_SOCKET}
         fi
 
         echo -n .
@@ -184,7 +184,7 @@ else
 fi
 
 notice "Populating accounts...\n\n"
-${OASIS_DEPOSIT} -sock unix:${OASIS_NODE_SOCKET} "$@"
+${OASIS_DEPOSIT_BINARY} -sock unix:${OASIS_NODE_SOCKET} "$@"
 
 T_END="$(date +%s)"
 
@@ -223,9 +223,9 @@ if [[ ${BEACON_BACKEND} == 'mock' ]]; then
 
         sleep $((60*10))
 
-        epoch=`${OASIS_NODE} control status -a unix:${OASIS_NODE_SOCKET} | jq '.consensus.latest_epoch'`
+        epoch=`${OASIS_NODE_BINARY} control status -a unix:${OASIS_NODE_SOCKET} | jq '.consensus.latest_epoch'`
         epoch=$((epoch + 1))
-        ${OASIS_NODE} debug control set-epoch --epoch $epoch -a unix:${OASIS_NODE_SOCKET}
+        ${OASIS_NODE_BINARY} debug control set-epoch --epoch $epoch -a unix:${OASIS_NODE_SOCKET}
     done
 else
     wait
