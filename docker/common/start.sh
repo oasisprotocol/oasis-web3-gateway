@@ -11,6 +11,8 @@
 # - BEACON_BACKEND: beacon epoch transition mode 'mock' (default) or 'default'
 # - OASIS_SINGLE_COMPUTE_NODE: (default: true) if non-empty only run a single compute node
 
+rm -f /CONTAINER_READY
+
 export OASIS_DOCKER_NO_GATEWAY=${OASIS_DOCKER_NO_GATEWAY:-no}
 
 export OASIS_NODE_LOG_LEVEL=${OASIS_NODE_LOG_LEVEL:-warn}
@@ -122,7 +124,7 @@ chmod 755 /serverdir/node/net-runner/network/
 chmod 755 /serverdir/node/net-runner/network/client-0/
 chmod a+rw /serverdir/node/net-runner/network/client-0/internal.sock
 
-if [[ $OASIS_DOCKER_NO_GATEWAY == 'yes' ]]; then
+if [[ "x${OASIS_DOCKER_NO_GATEWAY}" == "xyes" ]]; then
     notice "Skipping oasis-web3-gateway start-up...\n"
 else
     notice "Starting oasis-web3-gateway...\n"
@@ -132,7 +134,7 @@ fi
 
 # Wait for compute nodes before initiating deposit.
 notice "Bootstrapping network (this might take a minute)"
-if [[ ${BEACON_BACKEND} == 'mock' ]]; then
+if [[ "${BEACON_BACKEND}" == "mock" ]]; then
     echo -n .
     notice_debug -l "Waiting for nodes to be ready..."
     ${OASIS_NODE_BINARY} debug control wait-nodes -n 2 -a unix:${OASIS_NODE_SOCKET}
@@ -142,7 +144,7 @@ if [[ ${BEACON_BACKEND} == 'mock' ]]; then
     ${OASIS_NODE_BINARY} debug control set-epoch --epoch 1 -a unix:${OASIS_NODE_SOCKET}
 
     # Transition to the final epoch when the KM generates ephemeral secret.
-    if [[ ${PARATIME_NAME} == 'sapphire' ]]; then
+    if [[ "${PARATIME_NAME}" == "sapphire" ]]; then
         notice_debug -l "Waiting for key manager to generate ephemeral secret..."
         while (${OASIS_NODE_BINARY} control status -a unix:${OASIS_KM_SOCKET} | jq -e ".keymanager.secrets.worker.ephemeral_secrets.last_generated_epoch!=2" >/dev/null); do
             sleep 0.5
@@ -159,7 +161,7 @@ else
 fi
 echo
 
-if [[ $OASIS_DOCKER_NO_GATEWAY != 'yes' && $PARATIME_NAME == 'sapphire' ]]; then
+if [[ "x${OASIS_DOCKER_NO_GATEWAY}" != "xyes" && "${PARATIME_NAME}" == "sapphire" ]]; then
     notice "Waiting for key manager..."
     function is_km_ready() {
         curl -X POST -s \
@@ -168,7 +170,7 @@ if [[ $OASIS_DOCKER_NO_GATEWAY != 'yes' && $PARATIME_NAME == 'sapphire' ]]; then
           http://127.0.0.1:8545 2>1 | jq -e '.result | has("key")' 2>1 &>/dev/null
     }
     until is_km_ready; do
-        if [[ ${BEACON_BACKEND} == 'mock' ]]; then
+        if [[ "${BEACON_BACKEND}" == "mock" ]]; then
             epoch=`${OASIS_NODE_BINARY} control status -a unix:${OASIS_NODE_SOCKET} | jq '.consensus.latest_epoch'`
             epoch=$((epoch + 1))
             ${OASIS_NODE_BINARY} debug control set-epoch --epoch $epoch -a unix:${OASIS_NODE_SOCKET}
@@ -193,6 +195,8 @@ printf "${YELLOW}WARNING: The chain is running in ephemeral mode. State will be 
 notice "Listening on ${CYAN}http://localhost:8545${OFF} and ${CYAN}ws://localhost:8546${OFF}. Chain ID: ${GATEWAY__CHAIN_ID}\n"
 notice "Container start-up took ${CYAN}$((T_END-T_START))${OFF} seconds, node log level is set to ${CYAN}${OASIS_NODE_LOG_LEVEL}${OFF}.\n"
 
+touch /CONTAINER_READY
+
 if [[ "x${OASIS_DOCKER_DEBUG_DISK_AND_CPU_USAGE}" == "xyes" ]]; then
     # When debugging disk and CPU usage, we terminate the container
     # after 60 minutes.
@@ -204,7 +208,7 @@ if [[ "x${OASIS_DOCKER_DEBUG_DISK_AND_CPU_USAGE}" == "xyes" ]]; then
     echo "Uptime [minutes],Total node dir size [kB],Size of node logs [kB],Percent usage by logs [%],Load average (1 min),Load average (5 min),Load average (15 min)"
 fi
 
-if [[ ${BEACON_BACKEND} == 'mock' ]]; then
+if [[ "${BEACON_BACKEND}" == "mock" ]]; then
     # Run background task to switch epochs every 10 minutes.
     while true; do
         if [[ "x${OASIS_DOCKER_DEBUG_DISK_AND_CPU_USAGE}" == "xyes" ]]; then
