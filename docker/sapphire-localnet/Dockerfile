@@ -118,6 +118,7 @@ COPY --from=oasis-core-dev /sapphire-paratime ${PARATIME_BINARY}
 
 COPY docker/common/localnet.yml ${OASIS_WEB3_GATEWAY_CONFIG_FILE}
 COPY docker/common/start.sh /
+COPY docker/common/wait-container-ready.sh /
 COPY tests/tools/* /
 
 # Configure paratime.

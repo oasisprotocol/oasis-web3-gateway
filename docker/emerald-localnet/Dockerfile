@@ -34,6 +34,7 @@ COPY --from=oasis-web3-gateway /go/oasis-web3-gateway/oasis-web3-gateway ${OASIS
 COPY --from=oasis-web3-gateway /go/oasis-web3-gateway/docker/common/oasis-deposit/oasis-deposit ${OASIS_DEPOSIT_BINARY}
 COPY docker/common/localnet.yml ${OASIS_WEB3_GATEWAY_CONFIG_FILE}
 COPY docker/common/start.sh /
+COPY docker/common/wait-container-ready.sh /
 COPY tests/tools/* /
 
 # Configure oasis-node and oasis-net-runner.
