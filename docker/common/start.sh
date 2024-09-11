@@ -3,13 +3,14 @@
 # This script spins up local oasis stack by running the spinup-oasis-stack.sh,
 # starts the web3 gateway on top of it, and deposits to a test account on the
 # ParaTime.
-# Mandatory ENV Variables:
+# Supported ENV Variables:
 # - all ENV variables required by spinup-oasis-stack.sh
 # - OASIS_WEB3_GATEWAY_BINARY: path to oasis-web3-gateway binary
 # - OASIS_WEB3_GATEWAY_CONFIG_FILE: path to oasis-web3-gateway config file
 # - OASIS_DEPOSIT_BINARY: path to oasis-deposit binary
 # - BEACON_BACKEND: beacon epoch transition mode 'mock' (default) or 'default'
-# - OASIS_SINGLE_COMPUTE_NODE: (default: true) if non-empty only run a single compute node
+# - OASIS_SINGLE_COMPUTE_NODE (default: true): if non-empty only run a single compute node
+# - OASIS_CLI_BINARY (optional): path to oasis binary. If provided, Oasis CLI will be configured for Localnet
 
 rm -f /CONTAINER_READY
 
@@ -100,6 +101,21 @@ fi
 
 T_START="$(date +%s)"
 
+if [[ "${PARATIME_NAME}" == "sapphire" ]]; then
+  ROFLS=($(ls /rofls/*.orc 2>/dev/null || exit 0))
+  if [[ ${#ROFLS[@]} -eq 0 ]]; then
+    notice "No ROFLs detected.\n"
+  else
+    unzip -q "${ROFLS[0]}" "app.elf"
+    mv "app.elf" "rofl.elf"
+    # Create a dummy, non-empty SGXS for mock sgx.
+    echo "dummy" > "rofl.sgxs"
+    export ROFL_BINARY="/rofl.elf"
+    export ROFL_BINARY_SGXS="/rofl.sgxs"
+    notice "Detected ROFL bundle: ${ROFLS[0]}\n"
+  fi
+fi
+
 notice "Starting oasis-net-runner with ${CYAN}${PARATIME_NAME}${OFF}...\n"
 /spinup-oasis-stack.sh --log.level ${OASIS_NODE_LOG_LEVEL} 2>1 &>/var/log/spinup-oasis-stack.log &
 OASIS_NODE_PID=$!
@@ -189,6 +205,55 @@ notice "Populating accounts...\n\n"
 ${OASIS_DEPOSIT_BINARY} -sock unix:${OASIS_NODE_SOCKET} "$@"
 
 T_END="$(date +%s)"
+
+# Add Localnet to Oasis CLI and make it default.
+if [ ! -z "${OASIS_CLI_BINARY:-}" ]; then
+  ${OASIS_CLI_BINARY} network add-local localnet unix:/serverdir/node/net-runner/network/client-0/internal.sock -y
+  ${OASIS_CLI_BINARY} paratime add localnet ${PARATIME_NAME} 8000000000000000000000000000000000000000000000000000000000000000 --num-decimals 18 -y
+  ${OASIS_CLI_BINARY} network set-default localnet
+fi
+
+# Register ROFL and fund accounts.
+if [ ! -z "${ROFL_BINARY:-}" ]; then
+    # Since rofl.sgxs and MR_SIGNER never change, we can hardcode enclave identity.
+    # !/usr/bin/python
+    # import codecs
+    # mr_enclave = b'01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b' # sha256sum /rofl.sgxs
+    # mr_signer = b'9affcfae47b848ec2caf1c49b4b283531e1cc425f93582b36806e52a43d78d1a'  # hardcoded test MR_SIGNER
+    # codecs.encode(codecs.decode(mr_enclave + mr_signer, 'hex'), 'base64').decode().replace('\n', '')
+    ROFL_ENCLAVE_ID="0+tTmlVjUvP0eIHXH7Dld3svPppCUdKDwYxnzplndLea/8+uR7hI7CyvHEm0soNTHhzEJfk1grNoBuUqQ9eNGg=="
+    ROFL_ADMIN="test:bob"
+    ROFL_ADMIN_FUND=10001
+    COMPUTE_NODE_ADDRESS="oasis1qp6tl30ljsrrqnw2awxxu2mtxk0qxyy2nymtsy90"
+    COMPUTE_NODE_FUND=1000
+    POLICY_PATH=/policy-localnet.yml
+
+    echo
+    notice "Configuring ROFL ${ROFLS[0]}:\n"
+    printf "   Enclave ID ${CYAN}${ROFL_ENCLAVE_ID}${OFF}\n"
+
+    ${OASIS_CLI_BINARY} account deposit ${ROFL_ADMIN_FUND} ${ROFL_ADMIN} --account test:alice --gas-price 0 -y >/dev/null
+    printf "   ROFL admin ${CYAN}${ROFL_ADMIN}${OFF} funded ${ROFL_ADMIN_FUND} TEST\n"
+
+    ${OASIS_CLI_BINARY} account deposit ${COMPUTE_NODE_FUND} ${COMPUTE_NODE_ADDRESS} --account test:alice --gas-price 0 -y >/dev/null
+    printf "   Compute node ${CYAN}${COMPUTE_NODE_ADDRESS}${OFF} funded ${COMPUTE_NODE_FUND} TEST\n"
+
+    cat > ${POLICY_PATH} << EOF
+quotes:
+  pcs:
+    tcb_validity_period: 30
+    min_tcb_evaluation_data_number: 16
+enclaves:
+  - "${ROFL_ENCLAVE_ID}"
+endorsements:
+  - any: {}
+fees: endorsing_node
+max_expiration: 3
+EOF
+    # XXX: Report ROFL app ID in JSON and properly parse it.
+    ROFL_APP_ID=$(${OASIS_CLI_BINARY} rofl create ${POLICY_PATH} --account ${ROFL_ADMIN} --scheme cn -y | tail -n1 | rev | cut -d' ' -f1 | rev)
+    printf "   App ID ${CYAN}${ROFL_APP_ID}${OFF}\n"
+fi
 
 echo
 printf "${YELLOW}WARNING: The chain is running in ephemeral mode. State will be lost after restart!${OFF}\n\n"

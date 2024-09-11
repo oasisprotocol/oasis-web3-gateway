@@ -6,12 +6,14 @@ set -euo pipefail
 # Supported ENV Variables:
 # - OASIS_NODE_BINARY: path to oasis-node binary
 # - OASIS_NET_RUNNER_BINARY: path to oasis-net-runner binary
-# - BEACON_BACKEND: choose 'mock' backend (default), or use other behavior
+# - BEACON_BACKEND (optional): choose 'mock' backend (default), or use other behavior
 # - PARATIME_BINARY: path to ParaTime binary (inside .orc bundle)
 # - PARATIME_VERSION: version of the binary. e.g. 3.0.0
+# - ROFL_BINARY (optional): path to ROFL binary (inside .orc bundle)
+# - ROFL_BINARY_SGXS (optional): path to signed ROFL binary (inside .orc bundle)
 # - OASIS_NODE_DATADIR: path to temporary oasis-node data dir e.g. /tmp/oasis-localnet
-# - KEYMANAGER_BINARY: path to key manager binary e.g. simple-keymanager
-# - OASIS_SINGLE_COMPUTE_NODE: Only run a single compute node
+# - KEYMANAGER_BINARY (optional): path to key manager binary e.g. simple-keymanager
+# - OASIS_SINGLE_COMPUTE_NODE (optional): Only run a single compute node
 
 function paratime_ver {
   echo $PARATIME_VERSION | cut -d \- -f 1 | cut -d + -f 1 | cut -d . -f $1
@@ -57,6 +59,16 @@ if [ ! -z "${KEYMANAGER_BINARY:-}" ]; then
     .runtimes[0].deployments[0].components[0].binaries.\"0\" = \"${KEYMANAGER_BINARY}\" |
     .runtimes[${RT_IDX}].deployments[0].components[0].binaries.\"0\" = \"${PARATIME_BINARY}\"
   " "$FIXTURE_FILE" >"$FIXTURE_FILE.tmp"
+  mv "$FIXTURE_FILE.tmp" "$FIXTURE_FILE"
+fi
+
+# Register a ROFL binary, if it exists.
+if [ ! -z "${ROFL_BINARY:-}" ] && [ ! -z "${ROFL_BINARY_SGXS:-}" ]; then
+  jq "
+      .runtimes[${RT_IDX}].deployments[0].components[1].kind = \"rofl\" |
+      .runtimes[${RT_IDX}].deployments[0].components[1].binaries.\"0\" = \"${ROFL_BINARY}\" |
+      .runtimes[${RT_IDX}].deployments[0].components[1].binaries.\"1\" = \"${ROFL_BINARY_SGXS}\"
+    " "$FIXTURE_FILE" >"$FIXTURE_FILE.tmp"
   mv "$FIXTURE_FILE.tmp" "$FIXTURE_FILE"
 fi
 

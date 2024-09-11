@@ -35,7 +35,7 @@ RUN wget https://github.com/oasisprotocol/oasis-core/releases/download/v${OASIS_
 #    && mv /oasis-core/go/oasis-net-runner/oasis-net-runner /oasis-core/go/oasis-node/oasis-node / \
 #    && rm -rf /oasis-core
 
-ENV OASIS_CLI_VERSION=0.10.0
+ENV OASIS_CLI_VERSION=0.10.1
 RUN wget https://github.com/oasisprotocol/cli/releases/download/v${OASIS_CLI_VERSION}/oasis_cli_${OASIS_CLI_VERSION}_linux_amd64.tar.gz \
     && tar -zxvf oasis_cli_${OASIS_CLI_VERSION}_linux_amd64.tar.gz \
     && strip -S -x /oasis_cli_${OASIS_CLI_VERSION}_linux_amd64/oasis \
@@ -107,7 +107,7 @@ ENV OASIS_UNSAFE_MOCK_SGX=1
 
 ARG VERSION
 
-# Copy local builds.
+# Copy binaries.
 COPY --from=oasis-core-dev /simple-keymanager ${KEYMANAGER_BINARY}
 COPY --from=oasis-core-dev /oasis-deposit ${OASIS_DEPOSIT_BINARY}
 COPY --from=oasis-core-dev /oasis-web3-gateway ${OASIS_WEB3_GATEWAY_BINARY}
@@ -116,10 +116,15 @@ COPY --from=oasis-core-dev /oasis-net-runner ${OASIS_NET_RUNNER_BINARY}
 COPY --from=oasis-core-dev /oasis ${OASIS_CLI_BINARY}
 COPY --from=oasis-core-dev /sapphire-paratime ${PARATIME_BINARY}
 
+# Create symbolic links for convenience.
+RUN ln -s ${OASIS_NODE_BINARY} ${OASIS_CLI_BINARY} /usr/local/bin
+
 COPY docker/common/localnet.yml ${OASIS_WEB3_GATEWAY_CONFIG_FILE}
 COPY docker/common/start.sh /
 COPY docker/common/wait-container-ready.sh /
 COPY tests/tools/* /
+
+RUN mkdir /rofls
 
 # Configure paratime.
 RUN echo "Write VERSION information." \
