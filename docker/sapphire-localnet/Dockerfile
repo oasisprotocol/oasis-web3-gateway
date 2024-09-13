@@ -1,4 +1,4 @@
-ARG PARATIME_VERSION=0.8.2-testnet
+ARG PARATIME_VERSION=0.8.2
 ARG PARATIME_NAME=sapphire
 
 # Build simple-keymanager, oasis-deposit and, fetch (or optionally build) other components.
