@@ -109,7 +109,7 @@ jobs:
       OASIS_CORE_VERSION: "24.2"
       OASIS_NODE_BINARY: ${{ github.workspace }}/oasis_core/oasis-node
       OASIS_NET_RUNNER_BINARY: ${{ github.workspace }}/oasis_core/oasis-net-runner
-      SAPPHIRE_PARATIME_VERSION: 0.8.2-testnet
+      SAPPHIRE_PARATIME_VERSION: 0.8.2
       GATEWAY__CHAIN_ID: 23293
       GATEWAY__OASIS_RPCS: true
       SAPPHIRE_PARATIME: ${{ github.workspace }}/oasis_core/sapphire-paratime
