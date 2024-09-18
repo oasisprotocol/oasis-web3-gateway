@@ -1,16 +1,16 @@
-# Web3 gateway docker images for local development with bundled Emerald/Sapphire ParaTimes
+# Web3 gateway docker images for local development with bundled Sapphire/Emerald ParaTimes
 
 Subfolders contain Dockerfiles for bundling the following components required to
-set up localnet for developing dApps running on Emerald or Sapphire:
+set up localnet for developing dApps running on Sapphire or Emerald:
 
 - oasis-node and oasis-net-runner
-- Emerald or Sapphire ParaTime .orc bundles
+- Sapphire or Emerald ParaTime .orc bundles
 - oasis-web3-gateway
 - oasis-deposit helper to fund local development accounts
 
 ## Prebuilt images
 
-Oasis provides prebuilt `emerald-localnet` and `sapphire-localnet` docker
+Oasis provides prebuilt `sapphire-localnet` and `emerald-localnet` docker
 images. `latest` versions are based on:
 - `stable` branch of `oasis-core`,
 - `master` branch of `oasis-sdk`,
@@ -19,8 +19,8 @@ images. `latest` versions are based on:
 To use the precompiled images, run:
 
 ```sh
-docker run -it -p8545:8545 -p8546:8546 ghcr.io/oasisprotocol/emerald-localnet # Emerald
 docker run -it -p8545:8545 -p8546:8546 ghcr.io/oasisprotocol/sapphire-localnet # Sapphire
+docker run -it -p8545:8545 -p8546:8546 ghcr.io/oasisprotocol/emerald-localnet # Emerald
 ```
 
 ### Mac M Chips
@@ -29,8 +29,8 @@ There is currently no arm64 build available for M Macs, so make sure to force th
 like this:
 
 ```sh
-docker run -it -p8545:8545 -p8546:8546 --platform linux/x86_64 ghcr.io/oasisprotocol/emerald-localnet # Emerald
 docker run -it -p8545:8545 -p8546:8546 --platform linux/x86_64 ghcr.io/oasisprotocol/sapphire-localnet # Sapphire
+docker run -it -p8545:8545 -p8546:8546 --platform linux/x86_64 ghcr.io/oasisprotocol/emerald-localnet # Emerald
 ```
 ## Build image locally
 
@@ -44,8 +44,8 @@ make docker
 To run the compiled image type:
 
 ```sh
-docker run -it -p8545:8545 -p8546:8546 ghcr.io/oasisprotocol/emerald-localnet:local
 docker run -it -p8545:8545 -p8546:8546 ghcr.io/oasisprotocol/sapphire-localnet:local
+docker run -it -p8545:8545 -p8546:8546 ghcr.io/oasisprotocol/emerald-localnet:local
 ```
 
 ## Usage
@@ -55,8 +55,8 @@ truffle or metamask to the *Localnet* running at `http://localhost:8545` and
 `ws://localhost:8546`.
 
 Chain IDs:
-- Emerald Localnet: `0xa514` (`42260`)
 - Sapphire Localnet: `0x5afd` (`23293`)
+- Emerald Localnet: `0xa514` (`42260`)
 
 By default, a random mnemonic will be generated and the first 5 accounts will
 be funded 10,000 TEST. Flags `-amount`, `-to`, `-n` can be added to specify an
