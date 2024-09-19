@@ -11,7 +11,7 @@ RUN apk add --no-cache bash gcompat libseccomp jq binutils \
 
 # Docker-specific variables
 ENV OASIS_CORE_VERSION=24.2
-ENV OASIS_CLI_VERSION=0.10.0
+ENV OASIS_CLI_VERSION=0.10.1
 ENV PARATIME_VERSION=11.0.0-testnet
 ENV PARATIME_NAME=emerald
 ENV GATEWAY__CHAIN_ID=0xa514
@@ -36,6 +36,9 @@ COPY docker/common/localnet.yml ${OASIS_WEB3_GATEWAY_CONFIG_FILE}
 COPY docker/common/start.sh /
 COPY docker/common/wait-container-ready.sh /
 COPY tests/tools/* /
+
+# Create symbolic links for convenience.
+RUN ln -s ${OASIS_NODE_BINARY} ${OASIS_CLI_BINARY} /usr/local/bin
 
 # Configure oasis-node and oasis-net-runner.
 RUN wget --quiet "https://github.com/oasisprotocol/oasis-core/releases/download/v${OASIS_CORE_VERSION}/oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz"  \

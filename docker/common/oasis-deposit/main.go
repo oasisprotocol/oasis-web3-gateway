@@ -177,7 +177,7 @@ func main() {
 	sock := flag.String("sock", "", "oasis-node internal UNIX socket address")
 	rtid := flag.String("rtid", "8000000000000000000000000000000000000000000000000000000000000000", "Runtime ID")
 	to := flag.String("to", "", "comma-separated deposit addresses in 0x or oasis1 format or mnemonic phrase. If none provided, new mnemonic will be generated")
-	useTestMnemonic := flag.Bool("test-mnemonic", false, "Use the standard test mnemonic (test test test test test test test test test test test junk)")
+	useTestMnemonic := flag.Bool("test-mnemonic", true, "Use the standard test mnemonic (test test test test test test test test test test test junk)")
 	flag.IntVar(&numMnemonicDerivations, "n", numMnemonicDerivations, "number of addresses to derive from mnemonic")
 	flag.Parse()
 
