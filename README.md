@@ -46,7 +46,7 @@ the full gateway & paratime stack together.
 For running tests, start the docker network without the gateway, by setting the `OASIS_DOCKER_NO_GATEWAY=yes` environment variable:
 
 ```bash
-docker run --rm -ti -e OASIS_DOCKER_NO_GATEWAY=yes -p5432:5432 -p8545:8545 -p8546:8546 -v /tmp/eth-runtime-test:/serverdir/node ghcr.io/oasisprotocol/sapphire-localnet:local -test-mnemonic -n 4
+docker run --rm -ti -e OASIS_DOCKER_NO_GATEWAY=yes -p5432:5432 -p8544-8546:8544-8546 -v /tmp/eth-runtime-test:/serverdir/node ghcr.io/oasisprotocol/sapphire-localnet:local -test-mnemonic -n 4
 ```
 
 Once bootstrapped, run the tests:

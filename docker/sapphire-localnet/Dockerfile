@@ -79,13 +79,19 @@ RUN wget https://github.com/oasisprotocol/${PARATIME_NAME}-paratime/releases/dow
 #    && rm -rf sapphire-paratime-git
 
 # Build sapphire-localnet
-#FROM postgres:16-alpine
-#RUN apk add --no-cache bash gcompat libseccomp jq binutils curl \
-#    && su -c "POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres /usr/local/bin/docker-entrypoint.sh postgres &" postgres
-# Fallback to Debian-based image. See https://github.com/oasisprotocol/oasis-web3-gateway/issues/622
-FROM postgres:16
+FROM postgres:16-bookworm
 RUN apt update && apt install -y bash libseccomp2 unzip jq binutils curl && apt clean \
-    && su -c "POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres /usr/local/bin/docker-entrypoint.sh postgres &" postgres
+    && su -c "POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres /usr/local/bin/docker-entrypoint.sh postgres &" postgres \
+    # Install Envoy.
+    && curl -fsSL https://apt.envoyproxy.io/signing.key | gpg --dearmor -o /etc/apt/keyrings/envoy-keyring.gpg \
+    && echo "deb [signed-by=/etc/apt/keyrings/envoy-keyring.gpg] https://apt.envoyproxy.io bookworm main" | tee /etc/apt/sources.list.d/envoy.list \
+    && apt update \
+    && apt install -y envoy \
+    # Clean up.
+    && apt clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
+    && rm -rf /etc/apt/sources.list.d/envoy.list \
+    && rm -f /etc/apt/keyrings/envoy-keyring.gpg
 
 # Docker-specific variables
 ARG PARATIME_VERSION
@@ -100,6 +106,8 @@ ENV OASIS_NODE_BINARY=/oasis-node
 ENV OASIS_NET_RUNNER_BINARY=/oasis-net-runner
 ENV OASIS_NODE_DATADIR=/serverdir/node
 ENV OASIS_WEB3_GATEWAY_BINARY=/oasis-web3-gateway
+ENV ENVOY_BINARY=/usr/bin/envoy
+ENV ENVOY_CONFIG_FILE=/envoy.yml
 ENV OASIS_DEPOSIT_BINARY=/oasis-deposit
 ENV OASIS_WEB3_GATEWAY_CONFIG_FILE=/localnet.yml
 ENV PARATIME_BINARY=/ronl.elf
@@ -124,6 +132,7 @@ COPY --from=oasis-core-dev /sapphire-paratime ${PARATIME_BINARY}
 RUN ln -s ${OASIS_NODE_BINARY} ${OASIS_CLI_BINARY} /usr/local/bin
 
 COPY docker/common/localnet.yml ${OASIS_WEB3_GATEWAY_CONFIG_FILE}
+COPY docker/common/envoy.yml ${ENVOY_CONFIG_FILE}
 COPY docker/common/start.sh /
 COPY docker/common/wait-container-ready.sh /
 COPY tests/tools/* /
@@ -143,6 +152,8 @@ RUN echo "Write VERSION information." \
     && ${OASIS_CLI_BINARY} --version \
     && echo
 
+# Envoy proxy port.
+EXPOSE 8544/tcp
 # Web3 gateway http and ws ports.
 EXPOSE 8545/tcp
 EXPOSE 8546/tcp

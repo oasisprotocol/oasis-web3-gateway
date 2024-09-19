@@ -5,9 +5,19 @@ COPY . /go/oasis-web3-gateway
 RUN cd oasis-web3-gateway && make && strip -S -x oasis-web3-gateway docker/common/oasis-deposit/oasis-deposit
 
 # Build emerald-localnet
-FROM postgres:16-alpine
-RUN apk add --no-cache bash gcompat libseccomp jq binutils \
-	&& su -c "POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres /usr/local/bin/docker-entrypoint.sh postgres &" postgres
+FROM postgres:16-bookworm
+RUN apt update && apt install -y bash libseccomp2 unzip jq binutils curl wget && apt clean \
+    && su -c "POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres /usr/local/bin/docker-entrypoint.sh postgres &" postgres \
+    # Install Envoy.
+    && curl -fsSL https://apt.envoyproxy.io/signing.key | gpg --dearmor -o /etc/apt/keyrings/envoy-keyring.gpg \
+    && echo "deb [signed-by=/etc/apt/keyrings/envoy-keyring.gpg] https://apt.envoyproxy.io bookworm main" | tee /etc/apt/sources.list.d/envoy.list \
+    && apt update \
+    && apt install -y envoy \
+    # Clean up.
+    && apt clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
+    && rm -rf /etc/apt/sources.list.d/envoy.list \
+    && rm -f /etc/apt/keyrings/envoy-keyring.gpg
 
 # Docker-specific variables
 ENV OASIS_CORE_VERSION=24.2
@@ -23,6 +33,8 @@ ENV OASIS_NODE_DATADIR=/serverdir/node
 ENV OASIS_WEB3_GATEWAY_BINARY=/oasis-web3-gateway
 ENV OASIS_DEPOSIT_BINARY=/oasis-deposit
 ENV OASIS_WEB3_GATEWAY_CONFIG_FILE=/localnet.yml
+ENV ENVOY_BINARY=/usr/bin/envoy
+ENV ENVOY_CONFIG_FILE=/envoy.yml
 ENV PARATIME_BINARY=/runtime.elf
 ENV KEYMANAGER_BINARY=""
 ENV OASIS_CLI_BINARY=/oasis
@@ -33,6 +45,7 @@ ARG VERSION
 COPY --from=oasis-web3-gateway /go/oasis-web3-gateway/oasis-web3-gateway ${OASIS_WEB3_GATEWAY_BINARY}
 COPY --from=oasis-web3-gateway /go/oasis-web3-gateway/docker/common/oasis-deposit/oasis-deposit ${OASIS_DEPOSIT_BINARY}
 COPY docker/common/localnet.yml ${OASIS_WEB3_GATEWAY_CONFIG_FILE}
+COPY docker/common/envoy.yml ${ENVOY_CONFIG_FILE}
 COPY docker/common/start.sh /
 COPY docker/common/wait-container-ready.sh /
 COPY tests/tools/* /
@@ -67,6 +80,8 @@ RUN wget --quiet "https://github.com/oasisprotocol/oasis-core/releases/download/
 	&& echo "${VERSION}" > /VERSION \
 	&& strip -S -x ${OASIS_NET_RUNNER_BINARY} ${OASIS_NODE_BINARY} ${OASIS_CLI_BINARY}
 
+# Envoy proxy port.
+EXPOSE 8544/tcp
 # Web3 gateway http and ws ports.
 EXPOSE 8545/tcp
 EXPOSE 8546/tcp
