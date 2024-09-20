@@ -79,8 +79,12 @@ RUN wget https://github.com/oasisprotocol/${PARATIME_NAME}-paratime/releases/dow
 #    && rm -rf sapphire-paratime-git
 
 # Build sapphire-localnet
-FROM postgres:16-alpine
-RUN apk add --no-cache bash gcompat libseccomp jq binutils curl \
+#FROM postgres:16-alpine
+#RUN apk add --no-cache bash gcompat libseccomp jq binutils curl \
+#    && su -c "POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres /usr/local/bin/docker-entrypoint.sh postgres &" postgres
+# Fallback to Debian-based image. See https://github.com/oasisprotocol/oasis-web3-gateway/issues/622
+FROM postgres:16
+RUN apt update && apt install -y bash libseccomp2 unzip jq binutils curl && apt clean \
     && su -c "POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres /usr/local/bin/docker-entrypoint.sh postgres &" postgres
 
 # Docker-specific variables
