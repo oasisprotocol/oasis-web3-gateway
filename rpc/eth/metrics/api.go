@@ -12,7 +12,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
+	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/evm"
 
 	"github.com/oasisprotocol/oasis-web3-gateway/indexer"
 	"github.com/oasisprotocol/oasis-web3-gateway/rpc/eth"
@@ -35,6 +37,13 @@ type metricsWrapper struct {
 	logger  *logging.Logger
 	backend indexer.Backend
 }
+
+var signedQueryCount = promauto.NewCounter(
+	prometheus.CounterOpts{
+		Name: "oasis_web3_gateway_signed_queries",
+		Help: "Number of eth_call signed queries",
+	},
+)
 
 func (m *metricsWrapper) latestAndRequestHeights(ctx context.Context, blockNum ethrpc.BlockNumber) (uint64, uint64, error) {
 	var height uint64
@@ -108,10 +117,35 @@ func (m *metricsWrapper) BlockNumber(ctx context.Context) (res hexutil.Uint64, e
 	return
 }
 
+// Check if the transaction (presumably via `eth_call` RPC) is a signed query.
+func isSignedQuery(args utils.TransactionArgs) bool {
+	var data *hexutil.Bytes
+	switch {
+	case args.Data != nil:
+		data = args.Data
+	case args.Input != nil:
+		data = args.Input
+	default:
+		return false
+	}
+	if len(*data) > 1 && (*data)[0] == 0xa3 {
+		var packed evm.SignedCallDataPack
+		err := cbor.Unmarshal(*data, packed)
+		if err == nil {
+			return true
+		}
+	}
+	return false
+}
+
 // Call implements eth.API.
 func (m *metricsWrapper) Call(ctx context.Context, args utils.TransactionArgs, blockNrOrHash ethrpc.BlockNumberOrHash, so *utils.StateOverride) (res hexutil.Bytes, err error) {
 	r, s, f, i, d := metrics.GetAPIMethodMetrics("eth_call")
 	defer metrics.InstrumentCaller(r, s, f, i, d, &err)()
+
+	if isSignedQuery(args) {
+		signedQueryCount.Inc()
+	}
 
 	res, err = m.api.Call(ctx, args, blockNrOrHash, so)
 	return
