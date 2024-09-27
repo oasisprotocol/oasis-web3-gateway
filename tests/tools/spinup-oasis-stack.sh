@@ -88,6 +88,11 @@ jq "
   .clients[0].runtime_config.\"${RT_IDX}\".allowed_queries = [{all_expensive: true}]
 " "$FIXTURE_FILE" >"$FIXTURE_FILE.tmp"
 mv "$FIXTURE_FILE.tmp" "$FIXTURE_FILE"
+jq "
+  .compute_workers[0].runtime_config.\"${RT_IDX}\".estimate_gas_by_simulating_contracts = true |
+  .compute_workers[0].runtime_config.\"${RT_IDX}\".allowed_queries = [{all_expensive: true}]
+" "$FIXTURE_FILE" >"$FIXTURE_FILE.tmp"
+mv "$FIXTURE_FILE.tmp" "$FIXTURE_FILE"
 
 if [[ ${BEACON_BACKEND-} == 'mock' ]]; then
   # Set beacon backend to 'debug mock'
