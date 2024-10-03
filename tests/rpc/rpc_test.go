@@ -146,6 +146,26 @@ func TestEth_GasPrice(t *testing.T) {
 	t.Logf("gas price: %v", price)
 }
 
+func TestEth_FeeHistory(t *testing.T) {
+	ec := localClient(t, false)
+
+	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
+	defer cancel()
+
+	// Submit some test transactions.
+	for i := 0; i < 5; i++ {
+		receipt := submitTestTransaction(ctx, t)
+		require.EqualValues(t, 1, receipt.Status)
+		require.NotNil(t, receipt)
+	}
+
+	// Query fee history.
+	feeHistory, err := ec.FeeHistory(context.Background(), 10, nil, []float64{0.25, 0.5, 0.75, 1})
+	require.NoError(t, err, "get fee history")
+
+	t.Logf("fee history: %v", feeHistory)
+}
+
 // TestEth_SendRawTransaction post eth raw transaction with ethclient from go-ethereum.
 func TestEth_SendRawTransaction(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
@@ -21,7 +22,7 @@ import (
 )
 
 var (
-	metricNodeMinPrice  = promauto.NewGauge(prometheus.GaugeOpts{Name: "oasis_web3_gateway_gas_orcale_node_min_price", Help: "Min gas price periodically queried from the node."})
+	metricNodeMinPrice  = promauto.NewGauge(prometheus.GaugeOpts{Name: "oasis_web3_gateway_gas_oracle_node_min_price", Help: "Min gas price queried from the node."})
 	metricComputedPrice = promauto.NewGauge(prometheus.GaugeOpts{Name: "oasis_web3_gateway_gas_oracle_computed_price", Help: "Computed recommended gas price based on recent full blocks. -1 if none (no recent full blocks)."})
 )
 
@@ -31,6 +32,9 @@ type Backend interface {
 
 	// GasPrice returns the currently recommended minimum gas price.
 	GasPrice() *hexutil.Big
+
+	// FeeHistory returns the fee history of the last blocks and percentiles.
+	FeeHistory(blockCount uint64, lastBlock rpc.BlockNumber, percentiles []float64) *FeeHistoryResult
 }
 
 const (
@@ -94,6 +98,11 @@ type gasPriceOracle struct {
 	// tracks the current index of the blockPrices rolling array.:w
 	blockPricesCurrentIdx int
 
+	// protects feeHistoryData.
+	feeHistoryLock sync.RWMutex
+	// feeHistoryData contains the per block data needed to compute the fee history.
+	feeHistoryData []*feeHistoryBlockData
+
 	// Configuration parameters.
 	windowSize          uint64
 	fullBlockThreshold  float64
@@ -130,13 +139,18 @@ func New(ctx context.Context, cfg *conf.GasConfig, blockWatcher indexer.BlockWat
 		BaseBackgroundService: *service.NewBaseBackgroundService("gas-price-oracle"),
 		ctx:                   ctxB,
 		cancelCtx:             cancelCtx,
-		blockPrices:           make([]*quantity.Quantity, 0, windowSize),
+		feeHistoryData:        make([]*feeHistoryBlockData, 0, feeHistoryWindowSize),
 		windowSize:            windowSize,
 		fullBlockThreshold:    blockFullThreshold,
 		defaultGasPrice:       minGasPrice,
 		computedPriceMargin:   computedPriceMargin,
 		blockWatcher:          blockWatcher,
 		coreClient:            coreClient,
+	}
+
+	g.blockPrices = make([]*quantity.Quantity, windowSize)
+	for i := range windowSize {
+		g.blockPrices[i] = quantity.NewQuantity()
 	}
 
 	return g
@@ -154,6 +168,7 @@ func (g *gasPriceOracle) Stop() {
 	g.cancelCtx()
 }
 
+// Implements Backend.
 func (g *gasPriceOracle) GasPrice() *hexutil.Big {
 	g.priceLock.RLock()
 	defer g.priceLock.RUnlock()
@@ -231,6 +246,8 @@ func (g *gasPriceOracle) indexedBlockWatcher() {
 
 			// Track price for the block.
 			g.onBlock(blk.Block, blk.MedianTransactionGasPrice)
+			// Track fee history.
+			g.trackFeeHistory(blk.Block, blk.UniqueTxes, blk.Receipts)
 		}
 	}
 }
@@ -240,58 +257,42 @@ func (g *gasPriceOracle) onBlock(b *model.Block, medTxPrice *quantity.Quantity) 
 	blockFull := (float64(b.Header.GasLimit) * g.fullBlockThreshold) <= float64(b.Header.GasUsed)
 	if !blockFull {
 		// Track 0 for non-full blocks.
-		g.trackPrice(quantity.NewFromUint64(0))
+		g.trackPrice(quantity.NewQuantity())
 		return
 	}
+
 	if medTxPrice == nil {
 		g.Logger.Error("no med tx gas price for block", "block", b)
 		return
 	}
-
 	trackPrice := medTxPrice.Clone()
 	if err := trackPrice.Add(&g.computedPriceMargin); err != nil {
 		g.Logger.Error("failed to add minPriceEps to medTxPrice", "err", err)
 	}
-
 	g.trackPrice(trackPrice)
 }
 
 func (g *gasPriceOracle) trackPrice(price *quantity.Quantity) {
-	// One item always gets added added to the prices array.
-	// Bump the current index for next iteration.
-	defer func() {
-		g.blockPricesCurrentIdx = (g.blockPricesCurrentIdx + 1) % int(g.windowSize)
-	}()
-
-	// Recalculate the maximum median-price over the block window.
-	defer func() {
-		// Find maximum gas price.
-		maxPrice := quantity.NewFromUint64(0)
-		for _, price := range g.blockPrices {
-			if price.Cmp(maxPrice) > 0 {
-				maxPrice = price
-			}
-		}
-
-		// No full blocks among last `windowSize` blocks.
-		if maxPrice.IsZero() {
-			g.priceLock.Lock()
-			g.computedGasPrice = nil
-			g.priceLock.Unlock()
-			metricComputedPrice.Set(float64(-1))
-
-			return
-		}
-
-		g.priceLock.Lock()
-		g.computedGasPrice = maxPrice
-		g.priceLock.Unlock()
-		metricComputedPrice.Set(float64(maxPrice.ToBigInt().Int64()))
-	}()
-
-	if len(g.blockPrices) < int(g.windowSize) {
-		g.blockPrices = append(g.blockPrices, price)
-		return
-	}
 	g.blockPrices[g.blockPricesCurrentIdx] = price
+	g.blockPricesCurrentIdx = (g.blockPricesCurrentIdx + 1) % int(g.windowSize)
+
+	// Find maximum gas price.
+	maxPrice := quantity.NewQuantity()
+	for _, price := range g.blockPrices {
+		if price.Cmp(maxPrice) > 0 {
+			maxPrice = price
+		}
+	}
+
+	reportedPrice := float64(maxPrice.ToBigInt().Int64())
+	// No full blocks among last `windowSize` blocks.
+	if maxPrice.IsZero() {
+		maxPrice = nil
+		reportedPrice = float64(-1)
+	}
+
+	g.priceLock.Lock()
+	g.computedGasPrice = maxPrice
+	g.priceLock.Unlock()
+	metricComputedPrice.Set(reportedPrice)
 }
