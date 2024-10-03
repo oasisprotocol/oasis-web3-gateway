@@ -11,6 +11,8 @@
 # - BEACON_BACKEND: beacon epoch transition mode 'mock' (default) or 'default'
 # - OASIS_SINGLE_COMPUTE_NODE (default: true): if non-empty only run a single compute node
 # - OASIS_CLI_BINARY (optional): path to oasis binary. If provided, Oasis CLI will be configured for Localnet
+# - ENVOY_BINARY (optional): path to Envoy binary. If provided, Envoy proxy to Oasis Client node will be started
+# - ENVOY_CONFIG_FILE: path to Envoy config file. Required if ENVOY_BINARY is provided
 
 rm -f /CONTAINER_READY
 
@@ -38,6 +40,7 @@ OASIS_KM_SOCKET=${OASIS_NODE_DATADIR}/net-runner/network/keymanager-0/internal.s
 
 OASIS_WEB3_GATEWAY_PID=""
 OASIS_NODE_PID=""
+ENVOY_PID=""
 
 set -euo pipefail
 
@@ -47,6 +50,9 @@ function cleanup {
   fi
   if [[ -n "${OASIS_NODE_PID}" ]]; then
     kill -9 ${OASIS_NODE_PID}
+  fi
+  if [[ -n "${ENVOY_PID}" ]]; then
+    kill -9 ${ENVOY_PID}
   fi
 }
 
@@ -132,6 +138,17 @@ notice "Waiting for Oasis node to start..."
 # Wait for oasis-node socket before starting web3 gateway.
 while [[ ! -S ${OASIS_NODE_SOCKET} ]]; do echo -n .; sleep 1; done
 echo
+
+if [ ! -z "${ENVOY_BINARY:-}" ]; then
+  notice "Waiting for Envoy proxy to start"
+
+  ${ENVOY_BINARY} -c /envoy.yml 2>1 &>/var/log/envoy.log &
+  ENVOY_PID=$!
+
+  # Wait for Envoy to start.
+  while ! curl -s http://localhost:8544/ 2>1 &>/dev/null; do echo -n .; sleep 1; done
+  echo
+fi
 
 # Fixes permissions so oasis-web3-gateway tests can be run
 # While /serverdir/node is bind-mounted to /tmp/eth-runtime-test
@@ -257,7 +274,8 @@ fi
 
 echo
 printf "${YELLOW}WARNING: The chain is running in ephemeral mode. State will be lost after restart!${OFF}\n\n"
-notice "Listening on ${CYAN}http://localhost:8545${OFF} and ${CYAN}ws://localhost:8546${OFF}. Chain ID: ${GATEWAY__CHAIN_ID}\n"
+notice "GRPC listening on ${CYAN}http://localhost:8544${OFF}.\n"
+notice "Web3 RPC listening on ${CYAN}http://localhost:8545${OFF} and ${CYAN}ws://localhost:8546${OFF}. Chain ID: ${GATEWAY__CHAIN_ID}.\n"
 notice "Container start-up took ${CYAN}$((T_END-T_START))${OFF} seconds, node log level is set to ${CYAN}${OASIS_NODE_LOG_LEVEL}${OFF}.\n"
 
 touch /CONTAINER_READY
