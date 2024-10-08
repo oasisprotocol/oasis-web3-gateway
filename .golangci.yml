@@ -68,7 +68,6 @@ linters-settings:
       main:
         files:
           - $all
-          - "!**/oasis-deposit/*.go"
         allow:
           - $gostd
           - github.com/oasisprotocol

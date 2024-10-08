@@ -1,7 +1,7 @@
 ARG PARATIME_VERSION=0.9.0-testnet
 ARG PARATIME_NAME=sapphire
 
-# Build simple-keymanager, oasis-deposit and, fetch (or optionally build) other components.
+# Build simple-keymanager and fetch (or optionally build) other components.
 FROM ghcr.io/oasisprotocol/oasis-core-dev:stable-24.3.x AS oasis-core-dev
 
 ENV OASIS_CORE_SIMPLE_KM_BRANCH=stable/24.3.x
@@ -12,13 +12,6 @@ RUN git clone https://github.com/oasisprotocol/oasis-core.git oasis-core-km --br
     && strip -S -x /oasis-core-km/target/release/simple-keymanager \
     && mv /oasis-core-km/target/release/simple-keymanager / \
     && rm -rf /oasis-core-km
-
-COPY docker/common/oasis-deposit /oasis-deposit-git
-RUN cd oasis-deposit-git \
-    && go build \
-    && strip -S -x /oasis-deposit-git/oasis-deposit \
-    && mv /oasis-deposit-git/oasis-deposit / \
-    && rm -rf /oasis-deposit-git
 
 # Fetch latest released components. Replace with commented snippet below to build manually.
 ENV OASIS_CORE_VERSION=24.3
@@ -35,7 +28,7 @@ RUN wget https://github.com/oasisprotocol/oasis-core/releases/download/v${OASIS_
 #    && mv /oasis-core/go/oasis-net-runner/oasis-net-runner /oasis-core/go/oasis-node/oasis-node / \
 #    && rm -rf /oasis-core
 
-ENV OASIS_CLI_VERSION=0.10.1
+ENV OASIS_CLI_VERSION=0.10.2
 RUN wget https://github.com/oasisprotocol/cli/releases/download/v${OASIS_CLI_VERSION}/oasis_cli_${OASIS_CLI_VERSION}_linux_amd64.tar.gz \
     && tar -zxvf oasis_cli_${OASIS_CLI_VERSION}_linux_amd64.tar.gz \
     && strip -S -x /oasis_cli_${OASIS_CLI_VERSION}_linux_amd64/oasis \
@@ -44,7 +37,7 @@ RUN wget https://github.com/oasisprotocol/cli/releases/download/v${OASIS_CLI_VER
 #ENV OASIS_CLI_BRANCH=master
 #RUN git clone https://github.com/oasisprotocol/cli.git --branch ${OASIS_CLI_BRANCH} --depth 1 \
 #    && make -C cli CGO_ENABLED=0 \
-#    && strip -S -x /cli/oasis
+#    && strip -S -x /cli/oasis \
 #    && mv /cli/oasis / \
 #    && rm -rf cli
 
@@ -153,7 +146,6 @@ ENV OASIS_NODE_DATADIR=/serverdir/node
 ENV OASIS_WEB3_GATEWAY_BINARY=/oasis-web3-gateway
 ENV ENVOY_BINARY=/usr/bin/envoy
 ENV ENVOY_CONFIG_FILE=/envoy.yml
-ENV OASIS_DEPOSIT_BINARY=/oasis-deposit
 ENV OASIS_WEB3_GATEWAY_CONFIG_FILE=/localnet.yml
 ENV PARATIME_BINARY=/ronl.elf
 ENV KEYMANAGER_BINARY=/simple-keymanager
@@ -170,7 +162,6 @@ ARG VERSION
 
 # Copy binaries.
 COPY --from=oasis-core-dev /simple-keymanager ${KEYMANAGER_BINARY}
-COPY --from=oasis-core-dev /oasis-deposit ${OASIS_DEPOSIT_BINARY}
 COPY --from=oasis-core-dev /oasis-web3-gateway ${OASIS_WEB3_GATEWAY_BINARY}
 COPY --from=oasis-core-dev /oasis-node ${OASIS_NODE_BINARY}
 COPY --from=oasis-core-dev /oasis-net-runner ${OASIS_NET_RUNNER_BINARY}
