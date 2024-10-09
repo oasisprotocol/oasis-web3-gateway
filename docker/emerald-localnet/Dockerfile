@@ -2,7 +2,7 @@
 FROM golang:1.22.3 AS oasis-web3-gateway
 
 COPY . /go/oasis-web3-gateway
-RUN cd oasis-web3-gateway && make && strip -S -x oasis-web3-gateway docker/common/oasis-deposit/oasis-deposit
+RUN cd oasis-web3-gateway && make && strip -S -x oasis-web3-gateway
 
 # Build emerald-localnet
 FROM postgres:16-bookworm
@@ -31,7 +31,6 @@ ENV OASIS_NODE_BINARY=/oasis-node
 ENV OASIS_NET_RUNNER_BINARY=/oasis-net-runner
 ENV OASIS_NODE_DATADIR=/serverdir/node
 ENV OASIS_WEB3_GATEWAY_BINARY=/oasis-web3-gateway
-ENV OASIS_DEPOSIT_BINARY=/oasis-deposit
 ENV OASIS_WEB3_GATEWAY_CONFIG_FILE=/localnet.yml
 ENV ENVOY_BINARY=/usr/bin/envoy
 ENV ENVOY_CONFIG_FILE=/envoy.yml
@@ -43,7 +42,6 @@ ARG VERSION
 
 # oasis-web3-gateway binary, config, spinup-* scripts and staking_genesis.json.
 COPY --from=oasis-web3-gateway /go/oasis-web3-gateway/oasis-web3-gateway ${OASIS_WEB3_GATEWAY_BINARY}
-COPY --from=oasis-web3-gateway /go/oasis-web3-gateway/docker/common/oasis-deposit/oasis-deposit ${OASIS_DEPOSIT_BINARY}
 COPY docker/common/localnet.yml ${OASIS_WEB3_GATEWAY_CONFIG_FILE}
 COPY docker/common/envoy.yml ${ENVOY_CONFIG_FILE}
 COPY docker/common/start.sh /
