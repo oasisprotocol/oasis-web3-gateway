@@ -13,6 +13,9 @@
 # - OASIS_CLI_BINARY (optional): path to oasis binary. If provided, Oasis CLI will be configured for Localnet
 # - ENVOY_BINARY (optional): path to Envoy binary. If provided, Envoy proxy to Oasis Client node will be started
 # - ENVOY_CONFIG_FILE: path to Envoy config file. Required if ENVOY_BINARY is provided
+# - OASIS_NEXUS_BINARY: path to oasis-nexus binary
+# - OASIS_NEXUS_CONFIG_FILE: path to oasis-nexus config file. Required if OASIS_NEXUS_BINARY is provided
+# - OASIS_EXPLORER_DIR: path to explorer (nexus frontend) directory
 
 rm -f /CONTAINER_READY
 
@@ -25,6 +28,8 @@ export OASIS_DOCKER_USE_TIMESTAMPS_IN_NOTICES=${OASIS_DOCKER_USE_TIMESTAMPS_IN_N
 export OASIS_DOCKER_DEBUG_DISK_AND_CPU_USAGE=${OASIS_DOCKER_DEBUG_DISK_AND_CPU_USAGE:-no}
 
 export OASIS_SINGLE_COMPUTE_NODE=${OASIS_SINGLE_COMPUTE_NODE:-1}
+
+export EXPLORER_PORT=${EXPLORER_PORT:-80}
 
 OASIS_WEB3_GATEWAY_VERSION=$(${OASIS_WEB3_GATEWAY_BINARY} -v | head -n1 | cut -d " " -f 3 | sed -r 's/^v//')
 OASIS_CORE_VERSION=$(${OASIS_NODE_BINARY} -v | head -n1 | cut -d " " -f 3 | sed -r 's/^v//')
@@ -41,6 +46,8 @@ OASIS_KM_SOCKET=${OASIS_NODE_DATADIR}/net-runner/network/keymanager-0/internal.s
 OASIS_WEB3_GATEWAY_PID=""
 OASIS_NODE_PID=""
 ENVOY_PID=""
+NEXUS_PID=""
+EXPLORER_PID=""
 
 set -euo pipefail
 
@@ -53,6 +60,12 @@ function cleanup {
   fi
   if [[ -n "${ENVOY_PID}" ]]; then
     kill -9 ${ENVOY_PID}
+  fi
+  if [[ -n "${NEXUS_PID}" ]]; then
+    kill -9 ${NEXUS_PID}
+  fi
+  if [[ -n "${EXPLORER_PID}" ]]; then
+    kill -9 ${EXPLORER_PID}
   fi
 }
 
@@ -226,6 +239,37 @@ else
   sleep 10
 fi
 
+# Once everything is initialized and setup, start Nexus and Explorer.
+if [ ! -z "${OASIS_NEXUS_BINARY:-}" ]; then
+  notice "Creating database 'nexus'\n"
+  su -c "createdb -h 127.0.0.1 -p 5432 -U postgres nexus" postgres
+
+  notice "Waiting for Nexus to start"
+  # Configure Nexus config file.
+  chain_context=$(${OASIS_NODE_BINARY} control status -a unix:${OASIS_NODE_SOCKET} | jq -r .consensus.chain_context)
+  sed -i 's/{{CHAIN_CONTEXT}}/'"${chain_context}"'/g' ${OASIS_NEXUS_CONFIG_FILE}
+  sed -i 's/{{LOG_LEVEL}}/'"${OASIS_NODE_LOG_LEVEL}"'/g' ${OASIS_NEXUS_CONFIG_FILE}
+  sed -i 's/{{PARATIME_NAME}}/'"${PARATIME_NAME}"'/g' ${OASIS_NEXUS_CONFIG_FILE}
+
+  ${OASIS_NEXUS_BINARY} --config ${OASIS_NEXUS_CONFIG_FILE} 2>1 &>/var/log/nexus.log &
+  NEXUS_PID=$!
+
+  # Wait for Oasis Nexus to start.
+  while ! curl -s http://localhost:8547/ 2>1 &>/dev/null; do echo -n .; sleep 1; done
+  echo
+fi
+
+if [ ! -z "${OASIS_EXPLORER_DIR:-}" ]; then
+  notice "Waiting for Explorer to start"
+  cd ${OASIS_EXPLORER_DIR}
+  serve -s ${OASIS_EXPLORER_DIR} -l ${EXPLORER_PORT} > /var/log/explorer.log 2>&1 &
+  EXPLORER_PID=$!
+
+  # Wait for Explorer to start.
+  while ! curl -s http://localhost:${EXPLORER_PORT}/ 2>1 &>/dev/null; do echo -n .; sleep 1; done
+  echo
+fi
+
 notice "Populating accounts...\n\n"
 ${OASIS_DEPOSIT_BINARY} -sock unix:${OASIS_NODE_SOCKET} "$@"
 
@@ -284,6 +328,8 @@ echo
 printf "${YELLOW}WARNING: The chain is running in ephemeral mode. State will be lost after restart!${OFF}\n\n"
 notice "GRPC listening on ${CYAN}http://localhost:8544${OFF}.\n"
 notice "Web3 RPC listening on ${CYAN}http://localhost:8545${OFF} and ${CYAN}ws://localhost:8546${OFF}. Chain ID: ${GATEWAY__CHAIN_ID}.\n"
+notice "Nexus API listening on ${CYAN}http://localhost:8547${OFF}.\n"
+notice "Localnet Explorer available at ${CYAN}http://localhost:${EXPLORER_PORT}${OFF}.\n"
 notice "Container start-up took ${CYAN}$((T_END-T_START))${OFF} seconds, node log level is set to ${CYAN}${OASIS_NODE_LOG_LEVEL}${OFF}.\n"
 
 touch /CONTAINER_READY

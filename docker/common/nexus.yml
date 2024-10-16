@@ -1,0 +1,72 @@
+analysis:
+  source: &source_config
+    custom_chain:
+      history:
+        records:
+          - archive_name: eden
+            genesis_height: 1
+            chain_context: {{CHAIN_CONTEXT}}
+            runtime_start_rounds:
+              {{PARATIME_NAME}}: 0
+      sdk_network:
+        chain_context: {{CHAIN_CONTEXT}}
+        rpc: unix:/serverdir/node/net-runner/network/client-0/internal.sock
+        domination:
+          symbol: TEST
+          decimals: 9
+        paratimes:
+          default: {{PARATIME_NAME}}
+          all:
+            {{PARATIME_NAME}}:
+              id: 8000000000000000000000000000000000000000000000000000000000000000
+              denominations:
+                "_":
+                  symbol: TEST
+                  decimals: 18
+              consensus_denomination: "_"
+    nodes:
+      eden:
+        default:
+          rpc: unix:/serverdir/node/net-runner/network/client-0/internal.sock
+    ipfs:
+      gateway: https://ipfs.io
+  analyzers:
+    consensus:
+      from: 1 # Localnet genesis.
+    {{PARATIME_NAME}}:
+      from: 1 # Localnet genesis.
+    consensus_accounts_list:
+      interval: 30s
+    evm_tokens_{{PARATIME_NAME}}:
+      interval: 30s
+    evm_nfts_{{PARATIME_NAME}}:
+      interval: 30s
+    evm_token_balances_{{PARATIME_NAME}}:
+      interval: 30s
+    evm_contract_code_{{PARATIME_NAME}}:
+      interval: 30s
+    evm_abi_{{PARATIME_NAME}}:
+      interval: 30s
+    validator_staking_history:
+      from: 1
+    node_stats:
+      interval: 1s
+      layers:
+        - consensus
+        - {{PARATIME_NAME}}
+    aggregate_stats: {}
+  storage:
+    backend: postgres
+    endpoint: postgresql://postgres:postgres@localhost:5432/nexus?sslmode=disable
+    migrations: file:///nexus-migrations
+
+server:
+  source: *source_config
+  endpoint: 0.0.0.0:8547
+  storage:
+    endpoint: postgresql://postgres:postgres@localhost:5432/nexus?sslmode=disable
+    backend: postgres
+
+log:
+  level: {{LOG_LEVEL}}
+  format: json
