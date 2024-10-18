@@ -172,6 +172,9 @@ if [[ "${BEACON_BACKEND}" == "mock" ]]; then
   notice_debug -l "Waiting for nodes to be ready..."
   ${OASIS_NODE_BINARY} debug control wait-nodes -n 2 -a unix:${OASIS_NODE_SOCKET}
 
+  # Wait a bit more, otherwise the KM will not be in the KM committee after the epoch transition.
+  sleep 2
+
   echo -n .
   notice_debug -l "Setting epoch to 1..."
   ${OASIS_NODE_BINARY} debug control set-epoch --epoch 1 -a unix:${OASIS_NODE_SOCKET}
