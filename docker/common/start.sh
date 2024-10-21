@@ -177,9 +177,7 @@ if [[ "${BEACON_BACKEND}" == "mock" ]]; then
     # The key manager registers before it is fully ready, so the previous 'wait-nodes' check is not sufficient.
     # Ensure the key manager is fully ready before moving to the first epoch.
     notice_debug -l "Waiting for key manager to start up..."
-    while (${OASIS_NODE_BINARY} control status -a unix:${OASIS_KM_SOCKET} | jq -e '.keymanager.status!="ready"' >/dev/null); do
-      sleep 0.5
-    done
+    ${OASIS_NODE_BINARY} debug control wait-ready -a unix:${OASIS_KM_SOCKET}
   fi
 
   echo -n .
