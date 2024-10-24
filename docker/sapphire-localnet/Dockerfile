@@ -1,10 +1,10 @@
-ARG PARATIME_VERSION=0.8.2
+ARG PARATIME_VERSION=0.9.0
 ARG PARATIME_NAME=sapphire
 
 # Build simple-keymanager, oasis-deposit and, fetch (or optionally build) other components.
-FROM ghcr.io/oasisprotocol/oasis-core-dev:stable-24.2.x AS oasis-core-dev
+FROM ghcr.io/oasisprotocol/oasis-core-dev:stable-24.3.x AS oasis-core-dev
 
-ENV OASIS_CORE_SIMPLE_KM_BRANCH=stable/24.2.x
+ENV OASIS_CORE_SIMPLE_KM_BRANCH=stable/24.3.x
 RUN git clone https://github.com/oasisprotocol/oasis-core.git oasis-core-km --branch ${OASIS_CORE_SIMPLE_KM_BRANCH} --depth 1 \
     && cd /oasis-core-km/tests/runtimes/simple-keymanager \
     && OASIS_UNSAFE_ALLOW_DEBUG_ENCLAVES=1 CARGO_PROFILE_RELEASE_LTO=true CARGO_PROFILE_RELEASE_OPT_LEVEL=s CARGO_PROFILE_RELEASE_CODEGEN_UNITS=1 OASIS_UNSAFE_SKIP_AVR_VERIFY=1 \
@@ -21,13 +21,13 @@ RUN cd oasis-deposit-git \
     && rm -rf /oasis-deposit-git
 
 # Fetch latest released components. Replace with commented snippet below to build manually.
-ENV OASIS_CORE_VERSION=24.2
+ENV OASIS_CORE_VERSION=24.3
 RUN wget https://github.com/oasisprotocol/oasis-core/releases/download/v${OASIS_CORE_VERSION}/oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz \
     && tar -zxvf oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz \
     && strip -S -x oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-node oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-net-runner \
     && mv oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-node oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-net-runner / \
     && rm -rf /oasis_core_${OASIS_CORE_VERSION}_linux_amd64*
-#ENV OASIS_CORE_BRANCH=stable/24.2.x
+#ENV OASIS_CORE_BRANCH=stable/24.3.x
 #RUN git clone https://github.com/oasisprotocol/oasis-core.git --branch ${OASIS_CORE_BRANCH} --depth 1 \
 #    && cd /oasis-core \
 #    && make -C go oasis-node oasis-net-runner \
@@ -63,20 +63,20 @@ RUN wget https://github.com/oasisprotocol/oasis-web3-gateway/releases/download/v
 
 ARG PARATIME_VERSION
 ARG PARATIME_NAME
-RUN wget https://github.com/oasisprotocol/${PARATIME_NAME}-paratime/releases/download/v${PARATIME_VERSION}/localnet-${PARATIME_NAME}-paratime.orc \
-    && unzip "localnet-${PARATIME_NAME}-paratime.orc" "ronl.elf" \
-    && chmod a+x "ronl.elf" \
-    && mv "ronl.elf" "sapphire-paratime" \
-    && strip -S -x "sapphire-paratime" \
-    && rm "localnet-${PARATIME_NAME}-paratime.orc"
-#ENV OASIS_SAPPHIRE_PARATIME_BRANCH=main
-#RUN git clone https://github.com/oasisprotocol/sapphire-paratime.git sapphire-paratime-git --branch ${OASIS_SAPPHIRE_PARATIME_BRANCH} --depth 1 \
-#    && cd sapphire-paratime-git/runtime \
-#    && OASIS_UNSAFE_SKIP_AVR_VERIFY=1 OASIS_UNSAFE_ALLOW_DEBUG_ENCLAVES=1 OASIS_UNSAFE_USE_LOCALNET_CHAINID=1 \
-#    cargo build --release --locked --features debug-mock-sgx \
-#    && strip -S -x /sapphire-paratime-git/runtime/target/release/sapphire-paratime \
-#    && mv /sapphire-paratime-git/runtime/target/release/sapphire-paratime / \
-#    && rm -rf sapphire-paratime-git
+#RUN wget https://github.com/oasisprotocol/${PARATIME_NAME}-paratime/releases/download/v${PARATIME_VERSION}/localnet-${PARATIME_NAME}-paratime.orc \
+#    && unzip "localnet-${PARATIME_NAME}-paratime.orc" "ronl.elf" \
+#    && chmod a+x "ronl.elf" \
+#    && mv "ronl.elf" "sapphire-paratime" \
+#    && strip -S -x "sapphire-paratime" \
+#    && rm "localnet-${PARATIME_NAME}-paratime.orc"
+ENV OASIS_SAPPHIRE_PARATIME_BRANCH=CedarMist/cdpk-verification-munacl
+RUN echo ${OASIS_SAPPHIRE_PARATIME_BRANCH} && git clone https://github.com/oasisprotocol/sapphire-paratime.git sapphire-paratime-git --branch ${OASIS_SAPPHIRE_PARATIME_BRANCH} --depth 1 \
+    && cd sapphire-paratime-git/runtime \
+    && OASIS_UNSAFE_SKIP_AVR_VERIFY=1 OASIS_UNSAFE_ALLOW_DEBUG_ENCLAVES=1 OASIS_UNSAFE_USE_LOCALNET_CHAINID=1 \
+    cargo build --release --locked --features debug-mock-sgx \
+    && strip -S -x /sapphire-paratime-git/runtime/target/release/sapphire-paratime \
+    && mv /sapphire-paratime-git/runtime/target/release/sapphire-paratime / \
+    && rm -rf sapphire-paratime-git
 
 # Build sapphire-localnet
 FROM postgres:16-bookworm
