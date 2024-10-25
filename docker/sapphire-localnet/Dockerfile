@@ -1,10 +1,10 @@
-ARG PARATIME_VERSION=0.8.2
+ARG PARATIME_VERSION=0.9.0-testnet
 ARG PARATIME_NAME=sapphire
 
 # Build simple-keymanager, oasis-deposit and, fetch (or optionally build) other components.
-FROM ghcr.io/oasisprotocol/oasis-core-dev:stable-24.2.x AS oasis-core-dev
+FROM ghcr.io/oasisprotocol/oasis-core-dev:stable-24.3.x AS oasis-core-dev
 
-ENV OASIS_CORE_SIMPLE_KM_BRANCH=stable/24.2.x
+ENV OASIS_CORE_SIMPLE_KM_BRANCH=stable/24.3.x
 RUN git clone https://github.com/oasisprotocol/oasis-core.git oasis-core-km --branch ${OASIS_CORE_SIMPLE_KM_BRANCH} --depth 1 \
     && cd /oasis-core-km/tests/runtimes/simple-keymanager \
     && OASIS_UNSAFE_ALLOW_DEBUG_ENCLAVES=1 CARGO_PROFILE_RELEASE_LTO=true CARGO_PROFILE_RELEASE_OPT_LEVEL=s CARGO_PROFILE_RELEASE_CODEGEN_UNITS=1 OASIS_UNSAFE_SKIP_AVR_VERIFY=1 \
@@ -21,13 +21,13 @@ RUN cd oasis-deposit-git \
     && rm -rf /oasis-deposit-git
 
 # Fetch latest released components. Replace with commented snippet below to build manually.
-ENV OASIS_CORE_VERSION=24.2
+ENV OASIS_CORE_VERSION=24.3
 RUN wget https://github.com/oasisprotocol/oasis-core/releases/download/v${OASIS_CORE_VERSION}/oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz \
     && tar -zxvf oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz \
     && strip -S -x oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-node oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-net-runner \
     && mv oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-node oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-net-runner / \
     && rm -rf /oasis_core_${OASIS_CORE_VERSION}_linux_amd64*
-#ENV OASIS_CORE_BRANCH=stable/24.2.x
+#ENV OASIS_CORE_BRANCH=stable/24.3.x
 #RUN git clone https://github.com/oasisprotocol/oasis-core.git --branch ${OASIS_CORE_BRANCH} --depth 1 \
 #    && cd /oasis-core \
 #    && make -C go oasis-node oasis-net-runner \
