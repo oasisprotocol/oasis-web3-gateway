@@ -4,10 +4,57 @@ FROM golang:1.22.3 AS oasis-web3-gateway
 COPY . /go/oasis-web3-gateway
 RUN cd oasis-web3-gateway && make && strip -S -x oasis-web3-gateway docker/common/oasis-deposit/oasis-deposit
 
+FROM ghcr.io/oasisprotocol/oasis-core-dev:stable-24.2.x AS oasis-core-dev
+
+# ARG NEXUS_VERSION=0.4.0
+# RUN wget https://github.com/oasisprotocol/nexus/releases/download/v${NEXUS_VERSION}/oasis_nexus_${NEXUS_VERSION}_linux_amd64.tar.gz \
+#     && tar -zxvf oasis_nexus_${NEXUS_VERSION}_linux_amd64.tar.gz \
+#     && strip -S -x /oasis_nexus_${NEXUS_VERSION}_linux_amd64/nexus \
+#     && mv /oasis_nexus_${NEXUS_VERSION}_linux_amd64/nexus / \
+#     && rm -rf /oasis_nexus_${NEXUS_VERSION}_linux_amd64* && \
+#     # We also need to fetch the storage migrations.
+#     git clone https://github.com/oasisprotocol/nexus.git nexus-git --branch v${NEXUS_VERSION} --depth 1 \
+#     && mv /nexus-git/storage/migrations /nexus-migrations \
+#     && rm -rf nexus-git
+ARG NEXUS_VERSION=main
+RUN git clone https://github.com/oasisprotocol/nexus.git nexus-git --depth 1 \
+    && cd nexus-git \
+    && git fetch --depth 1 origin ${NEXUS_VERSION} \
+    && git checkout ${NEXUS_VERSION} \
+    && go install github.com/deepmap/oapi-codegen/cmd/oapi-codegen@v1.12 \
+    && make codegen-go \
+    && go build \
+    && strip -S -x /nexus-git/nexus \
+    && mv /nexus-git/nexus / \
+    && mv /nexus-git/storage/migrations /nexus-migrations \
+    && rm -rf /nexus-git
+
+# ARG EXPLORER_REPO=https://github.com/oasisprotocol/explorer.git
+# ARG EXPLORER_VERSION=v1.13.0
+# TODO: update once some support for localnet is added: https://github.com/oasisprotocol/explorer/issues/1597
+ARG EXPLORER_REPO=https://github.com/ptrus/explorer.git
+ARG EXPLORER_VERSION=1a78782e10fa266707a428c5fd8ba91966d588a1
+COPY docker/common/explorer.env /nexus.env.production
+RUN git clone ${EXPLORER_REPO} explorer --depth 1 \
+    && cd explorer \
+    && git fetch origin ${EXPLORER_VERSION} --depth 1 \
+    && git checkout FETCH_HEAD \
+    && mv /nexus.env.production .env.production \
+    && echo "REACT_APP_LOCALNET_EMERALD=true\nREACT_APP_LOCALNET_SAPPHIRE=false" >> .env.production \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt install -y nodejs \
+    && npm install -g yarn \
+    && yarn install \
+    && NODE_ENV=production yarn build
+
+
 # Build emerald-localnet
 FROM postgres:16-bookworm
 RUN apt update && apt install -y bash libseccomp2 unzip jq binutils curl wget && apt clean \
     && su -c "POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres /usr/local/bin/docker-entrypoint.sh postgres &" postgres \
+	# Explorer frontend deps.
+	&& curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+	&& apt install -y nodejs && npm install -g serve \
     # Install Envoy.
     && curl -fsSL https://apt.envoyproxy.io/signing.key | gpg --dearmor -o /etc/apt/keyrings/envoy-keyring.gpg \
     && echo "deb [signed-by=/etc/apt/keyrings/envoy-keyring.gpg] https://apt.envoyproxy.io bookworm main" | tee /etc/apt/sources.list.d/envoy.list \
@@ -38,6 +85,10 @@ ENV ENVOY_CONFIG_FILE=/envoy.yml
 ENV PARATIME_BINARY=/runtime.elf
 ENV KEYMANAGER_BINARY=""
 ENV OASIS_CLI_BINARY=/oasis
+ENV OASIS_NEXUS_BINARY=/nexus
+ENV OASIS_NEXUS_CONFIG_FILE=/nexus.yml
+ENV OASIS_NEXUS_MIGRATIONS=/nexus-migrations
+ENV OASIS_EXPLORER_DIR=/explorer
 
 ARG VERSION
 
@@ -45,10 +96,14 @@ ARG VERSION
 COPY --from=oasis-web3-gateway /go/oasis-web3-gateway/oasis-web3-gateway ${OASIS_WEB3_GATEWAY_BINARY}
 COPY --from=oasis-web3-gateway /go/oasis-web3-gateway/docker/common/oasis-deposit/oasis-deposit ${OASIS_DEPOSIT_BINARY}
 COPY docker/common/localnet.yml ${OASIS_WEB3_GATEWAY_CONFIG_FILE}
+COPY docker/common/nexus.yml ${OASIS_NEXUS_CONFIG_FILE}
 COPY docker/common/envoy.yml ${ENVOY_CONFIG_FILE}
 COPY docker/common/start.sh /
 COPY docker/common/wait-container-ready.sh /
 COPY tests/tools/* /
+COPY --from=oasis-core-dev /nexus ${OASIS_NEXUS_BINARY}
+COPY --from=oasis-core-dev /nexus-migrations ${OASIS_NEXUS_MIGRATIONS}
+COPY --from=oasis-core-dev /explorer/build ${OASIS_EXPLORER_DIR}
 
 # Create symbolic links for convenience.
 RUN ln -s ${OASIS_NODE_BINARY} ${OASIS_CLI_BINARY} /usr/local/bin
@@ -80,11 +135,15 @@ RUN wget --quiet "https://github.com/oasisprotocol/oasis-core/releases/download/
 	&& echo "${VERSION}" > /VERSION \
 	&& strip -S -x ${OASIS_NET_RUNNER_BINARY} ${OASIS_NODE_BINARY} ${OASIS_CLI_BINARY}
 
+# Explorer port.
+EXPOSE 80/tcp
 # Envoy proxy port.
 EXPOSE 8544/tcp
 # Web3 gateway http and ws ports.
 EXPOSE 8545/tcp
 EXPOSE 8546/tcp
+# Nexus port.
+EXPOSE 8547/tcp
 
 USER root
 ENTRYPOINT ["/start.sh"]
