@@ -7,7 +7,6 @@
 # - all ENV variables required by spinup-oasis-stack.sh
 # - OASIS_WEB3_GATEWAY_BINARY: path to oasis-web3-gateway binary
 # - OASIS_WEB3_GATEWAY_CONFIG_FILE: path to oasis-web3-gateway config file
-# - OASIS_DEPOSIT_BINARY: path to oasis-deposit binary
 # - BEACON_BACKEND: beacon epoch transition mode 'mock' (default) or 'default'
 # - OASIS_SINGLE_COMPUTE_NODE (default: true): if non-empty only run a single compute node
 # - OASIS_CLI_BINARY (optional): path to oasis binary. If provided, Oasis CLI will be configured for Localnet
@@ -117,6 +116,119 @@ else
     :
   }
 fi
+
+# Parse command-line arguments for test account population at the beginning,
+# so that we exit early if there are any errors.
+AMOUNT="10_000"
+TO=""
+N="5"
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -amount)
+      # Amount to deposit in ParaTime base units.
+      AMOUNT="$2"
+      shift
+      shift
+      ;;
+    -to)
+      # Comma-separated deposit addresses (0x or oasis1 format) or mnemonic.
+      # If empty, a new mnemonic will be generated.
+      TO="$2"
+      shift
+      shift
+      ;;
+    -test-mnemonic)
+      # Use the standard test mnemonic.
+      TO="test test test test test test test test test test test junk"
+      shift
+      ;;
+    -n)
+      # Number of addresses to derive from mnemonic.
+      N="$2"
+      shift
+      shift
+      ;;
+    *)
+      echo "Unknown argument: $1"
+      exit 1;
+      ;;
+  esac
+done
+
+function populate_accounts() {
+  # Remove underscores from amount, as those are only there to make it easier
+  # for humans to parse the amount.
+  AMOUNT=$(echo "${AMOUNT}" | tr -d '_')
+
+  # If no mnemonic specified, use the test mnemonic.
+  if [[ -z ${TO} ]]; then
+    TO="test test test test test test test test test test test junk"
+ fi
+
+  if [[ ${TO} == *,* ]]; then
+    # List of addresses provided, fund these.
+    IFS=","
+    for addr in ${TO};
+    do
+      ${OASIS_CLI_BINARY} account deposit ${AMOUNT} ${addr} --account test:alice --gas-price 0 -y > /dev/null
+    done
+    IFS=" "
+  elif [[ ${TO} =~ [[:space:]] ]]; then
+    # Mnemonic provided, generate N derivative accounts and fund them.
+    for n in $(seq 0 $((N-1)))
+    do
+      acct="account$n"
+      ${OASIS_CLI_BINARY} wallet import ${acct} --algorithm secp256k1-bip44 --number ${n} --secret "${TO}" -y > /dev/null
+      ${OASIS_CLI_BINARY} account deposit ${AMOUNT} ${acct} --account test:alice --gas-price 0 -y > /dev/null
+    done
+
+    ACCT_OUT=""
+    PK_OUT=""
+    for n in $(seq 0 $((N-1)))
+    do
+      acct="account$n"
+
+      # Parse Ethereum address and private key from output.
+      IFS="#"
+      out=$(${OASIS_CLI_BINARY} wallet export ${acct} -y)
+      eth_addr=$(echo "${out}" | grep -e '^Ethereum address:' | cut -d':' -f2 | awk '{$1=$1};1')
+      pk=$(echo "${out}" | tail -1)
+      IFS=" "
+
+      if [[ $n != 0 ]]; then
+        ACCT_OUT="${ACCT_OUT} "
+        PK_OUT="${PK_OUT} "
+      fi
+      ACCT_OUT="${ACCT_OUT}${eth_addr}"
+      PK_OUT="${PK_OUT}${pk}"
+    done
+
+    echo "Available Accounts"
+    echo "=================="
+    i=0
+    for a in ${ACCT_OUT};
+    do
+      echo "($i) $a (${AMOUNT} TEST)"
+      i=$((i+1))
+    done
+
+    echo
+    echo "Private Keys"
+    echo "=================="
+    i=0
+    for pk in ${PK_OUT};
+    do
+      echo "($i) 0x$pk"
+      i=$((i+1))
+    done
+
+    echo
+    echo "HD Wallet"
+    echo "=================="
+    echo "Mnemonic:     ${TO}"
+    echo "Base HD Path: m/44'/60'/0'/0/%d"
+  fi
+}
 
 T_START="$(date +%s)"
 
@@ -270,17 +382,17 @@ if [ ! -z "${OASIS_EXPLORER_DIR:-}" ]; then
   echo
 fi
 
-notice "Populating accounts...\n\n"
-${OASIS_DEPOSIT_BINARY} -sock unix:${OASIS_NODE_SOCKET} "$@"
-
-T_END="$(date +%s)"
-
 # Add Localnet to Oasis CLI and make it default.
 if [ ! -z "${OASIS_CLI_BINARY:-}" ]; then
   ${OASIS_CLI_BINARY} network add-local localnet unix:/serverdir/node/net-runner/network/client-0/internal.sock -y
   ${OASIS_CLI_BINARY} paratime add localnet ${PARATIME_NAME} 8000000000000000000000000000000000000000000000000000000000000000 --num-decimals 18 -y
   ${OASIS_CLI_BINARY} network set-default localnet
 fi
+
+
+notice "Populating accounts...\n\n"
+populate_accounts
+
 
 # Register ROFL and fund accounts.
 if [ ! -z "${ROFL_BINARY:-}" ]; then
@@ -323,6 +435,8 @@ EOF
   ROFL_APP_ID=$(${OASIS_CLI_BINARY} rofl create ${POLICY_PATH} --account ${ROFL_ADMIN} --scheme cn -y | tail -n1 | rev | cut -d' ' -f1 | rev)
   printf "   App ID: ${CYAN}${ROFL_APP_ID}${OFF}\n"
 fi
+
+T_END="$(date +%s)"
 
 echo
 printf "${YELLOW}WARNING: The chain is running in ephemeral mode. State will be lost after restart!${OFF}\n\n"

@@ -6,7 +6,8 @@ set up localnet for developing dApps running on Sapphire or Emerald:
 - oasis-node and oasis-net-runner
 - Sapphire or Emerald ParaTime .orc bundles
 - oasis-web3-gateway
-- oasis-deposit helper to fund local development accounts
+- Oasis CLI for funding initial accounts
+- Oasis Nexus indexer and Explorer frontend
 
 ## Prebuilt images
 
