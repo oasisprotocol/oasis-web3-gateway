@@ -6,34 +6,34 @@ RUN cd oasis-web3-gateway && make && strip -S -x oasis-web3-gateway
 
 FROM ghcr.io/oasisprotocol/oasis-core-dev:stable-24.2.x AS oasis-core-dev
 
-# ARG NEXUS_VERSION=0.4.0
-# RUN wget https://github.com/oasisprotocol/nexus/releases/download/v${NEXUS_VERSION}/oasis_nexus_${NEXUS_VERSION}_linux_amd64.tar.gz \
-#     && tar -zxvf oasis_nexus_${NEXUS_VERSION}_linux_amd64.tar.gz \
-#     && strip -S -x /oasis_nexus_${NEXUS_VERSION}_linux_amd64/nexus \
-#     && mv /oasis_nexus_${NEXUS_VERSION}_linux_amd64/nexus / \
-#     && rm -rf /oasis_nexus_${NEXUS_VERSION}_linux_amd64* && \
-#     # We also need to fetch the storage migrations.
-#     git clone https://github.com/oasisprotocol/nexus.git nexus-git --branch v${NEXUS_VERSION} --depth 1 \
-#     && mv /nexus-git/storage/migrations /nexus-migrations \
-#     && rm -rf nexus-git
-ARG NEXUS_VERSION=main
-RUN git clone https://github.com/oasisprotocol/nexus.git nexus-git --depth 1 \
-    && cd nexus-git \
-    && git fetch --depth 1 origin ${NEXUS_VERSION} \
-    && git checkout ${NEXUS_VERSION} \
-    && go install github.com/deepmap/oapi-codegen/cmd/oapi-codegen@v1.12 \
-    && make codegen-go \
-    && go build \
-    && strip -S -x /nexus-git/nexus \
-    && mv /nexus-git/nexus / \
+ARG NEXUS_VERSION=0.4.1
+RUN wget https://github.com/oasisprotocol/nexus/releases/download/v${NEXUS_VERSION}/oasis_nexus_${NEXUS_VERSION}_linux_amd64.tar.gz \
+    && tar -zxvf oasis_nexus_${NEXUS_VERSION}_linux_amd64.tar.gz \
+    && strip -S -x /oasis_nexus_${NEXUS_VERSION}_linux_amd64/nexus \
+    && mv /oasis_nexus_${NEXUS_VERSION}_linux_amd64/nexus / \
+    && rm -rf /oasis_nexus_${NEXUS_VERSION}_linux_amd64* && \
+    # We also need to fetch the storage migrations.
+    git clone https://github.com/oasisprotocol/nexus.git nexus-git --branch v${NEXUS_VERSION} --depth 1 \
     && mv /nexus-git/storage/migrations /nexus-migrations \
-    && rm -rf /nexus-git
+    && rm -rf nexus-git
+# ARG NEXUS_VERSION=main
+# RUN git clone https://github.com/oasisprotocol/nexus.git nexus-git --depth 1 \
+#     && cd nexus-git \
+#     && git fetch --depth 1 origin ${NEXUS_VERSION} \
+#     && git checkout ${NEXUS_VERSION} \
+#     && go install github.com/deepmap/oapi-codegen/cmd/oapi-codegen@v1.12 \
+#     && make codegen-go \
+#     && go build \
+#     && strip -S -x /nexus-git/nexus \
+#     && mv /nexus-git/nexus / \
+#     && mv /nexus-git/storage/migrations /nexus-migrations \
+#     && rm -rf /nexus-git
 
 # ARG EXPLORER_REPO=https://github.com/oasisprotocol/explorer.git
 # ARG EXPLORER_VERSION=v1.13.0
 # TODO: update once some support for localnet is added: https://github.com/oasisprotocol/explorer/issues/1597
-ARG EXPLORER_REPO=https://github.com/ptrus/explorer.git
-ARG EXPLORER_VERSION=1a78782e10fa266707a428c5fd8ba91966d588a1
+ARG EXPLORER_REPO=https://github.com/oasisprotocol/explorer.git
+ARG EXPLORER_VERSION=bcb125108db2f6439fcdd536f690b0edfd38aad7
 COPY docker/common/explorer.env /nexus.env.production
 RUN git clone ${EXPLORER_REPO} explorer --depth 1 \
     && cd explorer \
@@ -133,8 +133,7 @@ RUN wget --quiet "https://github.com/oasisprotocol/oasis-core/releases/download/
 	&& echo "${VERSION}" > /VERSION \
 	&& strip -S -x ${OASIS_NET_RUNNER_BINARY} ${OASIS_NODE_BINARY} ${OASIS_CLI_BINARY}
 
-# Explorer port.
-EXPOSE 80/tcp
+
 # Envoy proxy port.
 EXPOSE 8544/tcp
 # Web3 gateway http and ws ports.
@@ -142,6 +141,8 @@ EXPOSE 8545/tcp
 EXPOSE 8546/tcp
 # Nexus port.
 EXPOSE 8547/tcp
+# Explorer port.
+EXPOSE 8548/tcp
 
 USER root
 ENTRYPOINT ["/start.sh"]
