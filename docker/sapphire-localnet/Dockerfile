@@ -196,8 +196,6 @@ RUN echo "Write VERSION information." \
     && ${OASIS_CLI_BINARY} --version \
     && echo
 
-# Explorer port.
-EXPOSE 80/tcp
 # Envoy proxy port.
 EXPOSE 8544/tcp
 # Web3 gateway http and ws ports.
@@ -205,6 +203,8 @@ EXPOSE 8545/tcp
 EXPOSE 8546/tcp
 # Nexus port.
 EXPOSE 8547/tcp
+# Explorer port.
+EXPOSE 8548/tcp
 
 USER root
 ENTRYPOINT ["/start.sh"]
