@@ -34,7 +34,7 @@ RUN wget https://github.com/oasisprotocol/nexus/releases/download/v${NEXUS_VERSI
 # TODO: update once some support for localnet is added: https://github.com/oasisprotocol/explorer/issues/1597
 ARG EXPLORER_REPO=https://github.com/oasisprotocol/explorer.git
 ARG EXPLORER_VERSION=bcb125108db2f6439fcdd536f690b0edfd38aad7
-COPY docker/common/explorer.env /nexus.env.production
+COPY docker/common/nexus.env.production /nexus.env.production
 RUN git clone ${EXPLORER_REPO} explorer --depth 1 \
     && cd explorer \
     && git fetch origin ${EXPLORER_VERSION} --depth 1 \

@@ -44,6 +44,7 @@ jobs:
       SAPPHIRE_PARATIME: ${{ github.workspace }}/oasis_core/sapphire-paratime
       OASIS_NODE_DATADIR: /tmp/oasis-sapphire-benchmarks
       OASIS_WEB3_GATEWAY: ${{ github.workspace }}/oasis-web3-gateway
+      OASIS_DOCKER_START_EXPLORER: no
     timeout-minutes: 30
     steps:
       - name: Checkout code
