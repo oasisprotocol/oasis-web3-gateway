@@ -146,6 +146,15 @@ func TestEth_GasPrice(t *testing.T) {
 	t.Logf("gas price: %v", price)
 }
 
+func TestEth_MaxPriorityFeePerGas(t *testing.T) {
+	ec := localClient(t, false)
+
+	price, err := ec.SuggestGasTipCap(context.Background())
+	require.Nil(t, err, "get maxPriorityFeePerGas")
+
+	t.Logf("max priority fee per gas: %v", price)
+}
+
 func TestEth_FeeHistory(t *testing.T) {
 	ec := localClient(t, false)
 

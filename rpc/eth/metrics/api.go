@@ -148,6 +148,15 @@ func (m *metricsWrapper) GasPrice(ctx context.Context) (res *hexutil.Big, err er
 	return
 }
 
+// MaxPriorityFeePerGas implements eth.API.
+func (m *metricsWrapper) MaxPriorityFeePerGas(ctx context.Context) (res *hexutil.Big, err error) {
+	r, s, f, i, d := metrics.GetAPIMethodMetrics("eth_maxPriorityFeePerGas")
+	defer metrics.InstrumentCaller(r, s, f, i, d, &err)()
+
+	res, err = m.api.MaxPriorityFeePerGas(ctx)
+	return
+}
+
 // FeeHistory implements eth.API.
 func (m *metricsWrapper) FeeHistory(ctx context.Context, blockCount math.HexOrDecimal64, lastBlock ethrpc.BlockNumber, rewardPercentiles []float64) (res *gas.FeeHistoryResult, err error) {
 	r, s, f, i, d := metrics.GetAPIMethodMetrics("eth_feeHistory")

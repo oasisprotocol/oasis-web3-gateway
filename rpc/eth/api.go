@@ -64,6 +64,8 @@ type API interface {
 	ChainId() (*hexutil.Big, error)
 	// GasPrice returns a suggestion for a gas price for legacy transactions.
 	GasPrice(ctx context.Context) (*hexutil.Big, error)
+	// MaxPriorityFeePerGas returns a suggestion for a gas tip cap for dynamic fee transactions
+	MaxPriorityFeePerGas(ctx context.Context) (*hexutil.Big, error)
 	// FeeHistory returns the transaction base fee per gas and effective priority fee per gas for the requested/supported block range.
 	FeeHistory(ctx context.Context, blockCount math.HexOrDecimal64, lastBlock ethrpc.BlockNumber, rewardPercentiles []float64) (*gas.FeeHistoryResult, error)
 	// GetBlockTransactionCountByHash returns the number of transactions in the block identified by hash.
@@ -289,6 +291,13 @@ func (api *publicAPI) ChainId() (*hexutil.Big, error) {
 
 func (api *publicAPI) GasPrice(_ context.Context) (*hexutil.Big, error) {
 	logger := api.Logger.With("method", "eth_gasPrice")
+	logger.Debug("request")
+
+	return api.gasPriceOracle.GasPrice(), nil
+}
+
+func (api *publicAPI) MaxPriorityFeePerGas(_ context.Context) (*hexutil.Big, error) {
+	logger := api.Logger.With("method", "eth_maxPriorityFeePerGas")
 	logger.Debug("request")
 
 	return api.gasPriceOracle.GasPrice(), nil
