@@ -6,7 +6,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	ethMath "github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/rpc"
 
 	"github.com/oasisprotocol/oasis-web3-gateway/db/model"
@@ -161,9 +160,13 @@ func (g *gasPriceOracle) trackFeeHistory(block *model.Block, txs []*model.Transa
 			return
 		}
 
+		reward := &tipGas
+		if reward.Cmp(&feeCap) > 0 {
+			reward = &feeCap
+		}
 		d.sortedTxs[i] = &txGasAndReward{
 			gasUsed: receipts[i].GasUsed,
-			reward:  (*hexutil.Big)(ethMath.BigMin(&tipGas, &feeCap)),
+			reward:  (*hexutil.Big)(reward),
 		}
 	}
 	slices.SortStableFunc(d.sortedTxs, func(a, b *txGasAndReward) int {
