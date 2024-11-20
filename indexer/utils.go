@@ -94,6 +94,7 @@ func blockToModels(
 	txsGas []txGas,
 	results []types.CallResult,
 	blockGasLimit uint64,
+	baseFee *big.Int,
 ) (*model.Block, []*model.Transaction, []*model.Receipt, []*model.Log, error) {
 	dbLogs, txLogs := ethToModelLogs(logs)
 
@@ -104,7 +105,6 @@ func blockToModels(
 	logsBloom := ethtypes.BytesToBloom(ethtypes.LogsBloom(logs))
 	bloomData, _ := logsBloom.MarshalText()
 	bloomHex := hex.EncodeToString(bloomData)
-	baseFee := big.NewInt(10)
 	var btxHash string
 	if len(transactions) == 0 {
 		btxHash = ethtypes.EmptyRootHash.Hex()
@@ -227,7 +227,7 @@ type txGas struct {
 }
 
 // StoreBlockData parses oasis block and stores in db.
-func (ib *indexBackend) StoreBlockData(ctx context.Context, oasisBlock *block.Block, txResults []*client.TransactionWithResults, blockGasLimit uint64) error { //nolint: gocyclo
+func (ib *indexBackend) StoreBlockData(ctx context.Context, oasisBlock *block.Block, txResults []*client.TransactionWithResults, coreParameters *core.Parameters) error { //nolint: gocyclo
 	encoded := oasisBlock.Header.EncodedHash()
 	bhash := common.HexToHash(encoded.Hex())
 	blockNum := oasisBlock.Header.Round
@@ -387,7 +387,14 @@ func (ib *indexBackend) StoreBlockData(ctx context.Context, oasisBlock *block.Bl
 	}
 
 	// Convert to DB models.
-	blk, txs, receipts, dbLogs, err := blockToModels(oasisBlock, ethTxs, logs, txsStatus, txsGas, results, blockGasLimit)
+	var minGasPrice big.Int
+	var blockGasLimit uint64
+	if coreParameters != nil {
+		mgp := coreParameters.MinGasPrice[types.NativeDenomination]
+		minGasPrice = *mgp.ToBigInt()
+		blockGasLimit = coreParameters.MaxBatchGas
+	}
+	blk, txs, receipts, dbLogs, err := blockToModels(oasisBlock, ethTxs, logs, txsStatus, txsGas, results, blockGasLimit, &minGasPrice)
 	if err != nil {
 		ib.logger.Debug("Failed to ConvertToEthBlock", "height", blockNum, "err", err)
 		return err

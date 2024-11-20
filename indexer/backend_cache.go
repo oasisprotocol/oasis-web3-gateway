@@ -169,10 +169,10 @@ func (cb *cachingBackend) Index(
 	ctx context.Context,
 	oasisBlock *block.Block,
 	txResults []*client.TransactionWithResults,
-	blockGasLimit uint64,
+	coreParameters *core.Parameters,
 	rtInfo *core.RuntimeInfoResponse,
 ) error {
-	return cb.inner.Index(ctx, oasisBlock, txResults, blockGasLimit, rtInfo)
+	return cb.inner.Index(ctx, oasisBlock, txResults, coreParameters, rtInfo)
 }
 
 func (cb *cachingBackend) Prune(

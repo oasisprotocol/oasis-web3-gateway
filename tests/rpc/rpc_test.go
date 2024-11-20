@@ -146,6 +146,64 @@ func TestEth_GasPrice(t *testing.T) {
 	t.Logf("gas price: %v", price)
 }
 
+func TestEth_MaxPriorityFeePerGas(t *testing.T) {
+	ec := localClient(t, false)
+
+	price, err := ec.SuggestGasTipCap(context.Background())
+	require.Nil(t, err, "get maxPriorityFeePerGas")
+
+	t.Logf("max priority fee per gas: %v", price)
+}
+
+func TestEth_FeeHistory(t *testing.T) {
+	ec := localClient(t, false)
+
+	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
+	defer cancel()
+
+	// Submit some test transactions.
+	for i := 0; i < 5; i++ {
+		receipt := submitTestTransaction(ctx, t)
+		require.EqualValues(t, 1, receipt.Status)
+		require.NotNil(t, receipt)
+	}
+
+	// Base fee history test.
+	feeHistory, err := ec.FeeHistory(context.Background(), 10, nil, []float64{25, 50, 75, 100})
+	require.NoError(t, err, "get fee history")
+
+	t.Logf("fee history: %v", feeHistory)
+	require.Len(t, feeHistory.BaseFee, 10, "fee history base fee should have 10 elements")
+	for _, fee := range feeHistory.BaseFee {
+		require.Greater(t, fee.Int64(), int64(0), "base fee should be greater than 0")
+	}
+	require.Len(t, feeHistory.Reward, 10, "fee history reward should have 10 elements")
+
+	// More cases.
+	for _, tc := range []struct {
+		name        string
+		blockCount  uint64
+		lastBlock   *big.Int
+		percentiles []float64
+		expectErr   bool
+	}{
+		{name: "Query with no reward percentiles", blockCount: 5, lastBlock: nil, percentiles: nil, expectErr: false},
+		{name: "Query specific block range", blockCount: 3, lastBlock: big.NewInt(5), percentiles: []float64{50}, expectErr: false},
+		{name: "Query specific block range (large)", blockCount: 3, lastBlock: big.NewInt(100000), percentiles: []float64{50}, expectErr: false},
+		{name: "Query with zero block count (empty response)", blockCount: 0, lastBlock: nil, percentiles: []float64{50}, expectErr: false},
+		{name: "Query large block count", blockCount: 10_000, lastBlock: big.NewInt(11_000), percentiles: []float64{50}, expectErr: false},
+		{name: "Invalid percentile", blockCount: 5, lastBlock: nil, percentiles: []float64{150}, expectErr: true}, // Invalid percentile > 100
+	} {
+		_, err := ec.FeeHistory(ctx, tc.blockCount, tc.lastBlock, tc.percentiles)
+		switch tc.expectErr {
+		case true:
+			require.Error(t, err, tc.name)
+		default:
+			require.NoError(t, err, tc.name)
+		}
+	}
+}
+
 // TestEth_SendRawTransaction post eth raw transaction with ethclient from go-ethereum.
 func TestEth_SendRawTransaction(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)

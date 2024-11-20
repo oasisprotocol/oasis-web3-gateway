@@ -84,7 +84,7 @@ type Backend interface {
 		ctx context.Context,
 		oasisBlock *block.Block,
 		txResults []*client.TransactionWithResults,
-		blockGasLimit uint64,
+		coreParameters *core.Parameters,
 		rtInfo *core.RuntimeInfoResponse,
 	) error
 
@@ -141,10 +141,10 @@ func (ib *indexBackend) SetObserver(ob BackendObserver) {
 }
 
 // Index indexes oasis block.
-func (ib *indexBackend) Index(ctx context.Context, oasisBlock *block.Block, txResults []*client.TransactionWithResults, blockGasLimit uint64, rtInfo *core.RuntimeInfoResponse) error {
+func (ib *indexBackend) Index(ctx context.Context, oasisBlock *block.Block, txResults []*client.TransactionWithResults, coreParameters *core.Parameters, rtInfo *core.RuntimeInfoResponse) error {
 	round := oasisBlock.Header.Round
 
-	err := ib.StoreBlockData(ctx, oasisBlock, txResults, blockGasLimit)
+	err := ib.StoreBlockData(ctx, oasisBlock, txResults, coreParameters)
 	if err != nil {
 		ib.logger.Error("generateEthBlock failed", "err", err)
 		return err
