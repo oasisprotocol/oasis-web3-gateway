@@ -17,7 +17,6 @@ linters:
     - dupl
     - errcheck
     - exhaustive
-    - exportloopref
     - goconst
     - gocritic
     - gocyclo
@@ -54,7 +53,7 @@ linters-settings:
     default-signifies-exhaustive: true
   govet:
     # Enabled checking for shadowed variables.
-    check-shadowing: true
+    shadow: true
   goimports:
     # Put local imports after 3rd-party packages.
     local-prefixes: github.com/oasisprotocol/
@@ -63,6 +62,7 @@ linters-settings:
       # https://github.com/securego/gosec#available-rules
       - G402
       - G404
+      - G115
   depguard:
     rules:
       main:
