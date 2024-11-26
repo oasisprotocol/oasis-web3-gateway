@@ -682,7 +682,7 @@ func (api *publicAPI) GetLogs(ctx context.Context, filter filters.FilterCriteria
 
 	// Early return if no further filtering.
 	if len(filter.Addresses) == 0 && len(filter.Topics) == 0 {
-		logger.Debug("response", "rsp", ethLogs)
+		logger.Debug("response", "num_logs", len(ethLogs))
 		return ethLogs, nil
 	}
 
@@ -709,7 +709,7 @@ func (api *publicAPI) GetLogs(ctx context.Context, filter filters.FilterCriteria
 		filtered = append(filtered, log)
 	}
 
-	logger.Debug("response", "rsp", filtered, "all_logs", ethLogs)
+	logger.Debug("response", "num_logs", len(filtered), "all_logs", ethLogs)
 	return filtered, nil
 }
 
