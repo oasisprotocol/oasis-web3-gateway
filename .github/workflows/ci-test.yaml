@@ -42,6 +42,7 @@ jobs:
       GATEWAY__CHAIN_ID: 42260
       EMERALD_PARATIME: ${{ github.workspace }}/oasis_core/emerald-paratime
       OASIS_NODE_DATADIR: /tmp/eth-runtime-test
+      OASIS_DOCKER_START_EXPLORER: no
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -116,6 +117,7 @@ jobs:
       KEYMANAGER_ARTIFACT_URL: https://buildkite.com/organizations/oasisprotocol/pipelines/oasis-core-ci/builds/14038/jobs/0191c151-b95b-402c-9854-4e58effc95ab/artifacts/0191c156-f366-45b2-819b-e1eb9fd9ba16 # Find this at https://buildkite.com/oasisprotocol/oasis-core-ci/builds?branch=stable%2F<...> under "Build runtimes": simple-keymanager.mocksgx.
       KEYMANAGER_BINARY: ${{ github.workspace }}/oasis_core/simple-keymanager
       OASIS_NODE_DATADIR: /tmp/eth-runtime-test
+      OASIS_DOCKER_START_EXPLORER: no
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

@@ -18,6 +18,8 @@
 
 rm -f /CONTAINER_READY
 
+export OASIS_DOCKER_START_EXPLORER=${OASIS_DOCKER_START_EXPLORER:-yes}
+
 export OASIS_DOCKER_NO_GATEWAY=${OASIS_DOCKER_NO_GATEWAY:-no}
 
 export OASIS_NODE_LOG_LEVEL=${OASIS_NODE_LOG_LEVEL:-warn}
@@ -146,6 +148,16 @@ while [[ $# -gt 0 ]]; do
       # Number of addresses to derive from mnemonic.
       N="$2"
       shift
+      shift
+      ;;
+    --no-explorer)
+      # Don't start explorer and indexer.
+      OASIS_DOCKER_START_EXPLORER="no"
+      shift
+      ;;
+    --no-gateway)
+      # Don't start web3 gateway.
+      OASIS_DOCKER_NO_GATEWAY="yes"
       shift
       ;;
     *)
@@ -351,8 +363,8 @@ else
   sleep 10
 fi
 
-# Once everything is initialized and setup, start Nexus and Explorer.
-if [ ! -z "${OASIS_NEXUS_BINARY:-}" ]; then
+# Once everything is initialized and setup, start Nexus and Explorer if enabled.
+if [[ "${OASIS_DOCKER_START_EXPLORER}" == "yes" ]]; then
   notice "Creating database 'nexus'\n"
   su -c "createdb -h 127.0.0.1 -p 5432 -U postgres nexus" postgres
 
@@ -369,9 +381,7 @@ if [ ! -z "${OASIS_NEXUS_BINARY:-}" ]; then
   # Wait for Oasis Nexus to start.
   while ! curl -s http://localhost:8547/ 2>1 &>/dev/null; do echo -n .; sleep 1; done
   echo
-fi
 
-if [ ! -z "${OASIS_EXPLORER_DIR:-}" ]; then
   notice "Waiting for Explorer to start"
   cd ${OASIS_EXPLORER_DIR}
   serve -s ${OASIS_EXPLORER_DIR} -l ${EXPLORER_PORT} > /var/log/explorer.log 2>&1 &
@@ -441,9 +451,15 @@ T_END="$(date +%s)"
 echo
 printf "${YELLOW}WARNING: The chain is running in ephemeral mode. State will be lost after restart!${OFF}\n\n"
 notice "GRPC listening on ${CYAN}http://localhost:8544${OFF}.\n"
-notice "Web3 RPC listening on ${CYAN}http://localhost:8545${OFF} and ${CYAN}ws://localhost:8546${OFF}. Chain ID: ${GATEWAY__CHAIN_ID}.\n"
-notice "Nexus API listening on ${CYAN}http://localhost:8547${OFF}.\n"
-notice "Localnet Explorer available at ${CYAN}http://localhost:${EXPLORER_PORT}${OFF}.\n"
+
+if [[ "${OASIS_DOCKER_NO_GATEWAY}" == "no" ]]; then
+  notice "Web3 RPC listening on ${CYAN}http://localhost:8545${OFF} and ${CYAN}ws://localhost:8546${OFF}. Chain ID: ${GATEWAY__CHAIN_ID}.\n"
+fi
+if [[ "${OASIS_DOCKER_START_EXPLORER}" == "yes" ]]; then
+  notice "Nexus API listening on ${CYAN}http://localhost:8547${OFF}.\n"
+  notice "Localnet Explorer available at ${CYAN}http://localhost:${EXPLORER_PORT}${OFF}.\n"
+fi
+
 notice "Container start-up took ${CYAN}$((T_END-T_START))${OFF} seconds, node log level is set to ${CYAN}${OASIS_NODE_LOG_LEVEL}${OFF}.\n"
 
 touch /CONTAINER_READY
