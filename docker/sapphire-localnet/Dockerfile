@@ -199,7 +199,7 @@ RUN apt update && apt install -y --no-install-recommends bash libseccomp2 jq cur
     # Strip all binaries to save space.
     && find / -xdev -type f -executable -print0 | xargs -0 file --mime-type | egrep 'application/(x-executable|x-sharedlib)' | cut -d':' -f1 | xargs strip -s \
     # Clean up.
-    && apt purge -y unzip binutils file \
+    && apt purge -y binutils file \
     && apt autoremove -y && apt clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
     && rm -rf /etc/apt/sources.list.d/envoy.list \
