@@ -321,7 +321,7 @@ if [[ "${BEACON_BACKEND}" == "mock" ]]; then
   notice_debug -l "Setting epoch to 1..."
   ${OASIS_NODE_BINARY} debug control set-epoch --epoch 1 -a unix:${OASIS_NODE_SOCKET}
 
-  # Transition to the final epoch when the KM generates ephemeral secret.
+  # Transition to the next epoch when the KM generates ephemeral secret.
   if [[ "${PARATIME_NAME}" == "sapphire" ]]; then
     notice_debug -l "Waiting for key manager to generate ephemeral secret..."
     while (${OASIS_NODE_BINARY} control status -a unix:${OASIS_KM_SOCKET} | jq -e ".keymanager.secrets.worker.ephemeral_secrets.last_generated_epoch!=2" >/dev/null); do
@@ -332,6 +332,18 @@ if [[ "${BEACON_BACKEND}" == "mock" ]]; then
   echo -n .
   notice_debug -l "Setting epoch to 2..."
   ${OASIS_NODE_BINARY} debug control set-epoch --epoch 2 -a unix:${OASIS_NODE_SOCKET}
+
+  # Transition to the final epoch when the KM generates ephemeral secret.
+  if [[ "${PARATIME_NAME}" == "sapphire" ]]; then
+    notice_debug -l "Waiting for key manager to generate ephemeral secret..."
+    while (${OASIS_NODE_BINARY} control status -a unix:${OASIS_KM_SOCKET} | jq -e ".keymanager.secrets.worker.ephemeral_secrets.last_generated_epoch!=3" >/dev/null); do
+      sleep 0.5
+    done
+  fi
+
+  notice_debug -l "Setting epoch to 3..."
+  ${OASIS_NODE_BINARY} debug control set-epoch --epoch 3 -a unix:${OASIS_NODE_SOCKET}
+
 else
   echo -n ...
   notice_debug -l "Waiting for nodes to be ready..."
@@ -348,12 +360,6 @@ if [[ "x${OASIS_DOCKER_NO_GATEWAY}" != "xyes" && "${PARATIME_NAME}" == "sapphire
       http://127.0.0.1:8545 2>1 | jq -e '.result | has("key")' 2>1 &>/dev/null
   }
   until is_km_ready; do
-    if [[ "${BEACON_BACKEND}" == "mock" ]]; then
-      epoch=`${OASIS_NODE_BINARY} control status -a unix:${OASIS_NODE_SOCKET} | jq '.consensus.latest_epoch'`
-      epoch=$((epoch + 1))
-      ${OASIS_NODE_BINARY} debug control set-epoch --epoch $epoch -a unix:${OASIS_NODE_SOCKET}
-    fi
-
     echo -n .
     sleep 1
   done
