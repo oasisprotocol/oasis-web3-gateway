@@ -29,7 +29,7 @@ require (
 	github.com/uptrace/bun/dialect/pgdialect v1.2.6
 	github.com/uptrace/bun/driver/pgdriver v1.2.6
 	golang.org/x/crypto v0.31.0
-	google.golang.org/grpc v1.68.1
+	google.golang.org/grpc v1.69.0
 )
 
 require (
@@ -152,7 +152,7 @@ require (
 	golang.org/x/sync v0.10.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240903143218-8af14fe29dc1 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20241015192408-796eee8c2d53 // indirect
 	google.golang.org/grpc/security/advancedtls v0.0.0-20221004221323-12db695f1648 // indirect
 	google.golang.org/protobuf v1.35.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
