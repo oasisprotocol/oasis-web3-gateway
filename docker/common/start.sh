@@ -315,16 +315,26 @@ if [[ "${BEACON_BACKEND}" == "mock" ]]; then
     # Ensure the key manager is fully ready before moving to the first epoch.
     notice_debug -l "Waiting for key manager to start up..."
     ${OASIS_NODE_BINARY} debug control wait-ready -a unix:${OASIS_KM_SOCKET}
+
+    # Store the keymanager's runtime extra_info to monitor for changes during epoch 1.
+    km_extra_info=$(${OASIS_NODE_BINARY} control status -a unix:${OASIS_KM_SOCKET} | jq -r '.registration.descriptor.runtimes[0].extra_info')
   fi
 
   echo -n .
   notice_debug -l "Setting epoch to 1..."
   ${OASIS_NODE_BINARY} debug control set-epoch --epoch 1 -a unix:${OASIS_NODE_SOCKET}
 
-  # Transition to the next epoch when the KM generates ephemeral secret.
   if [[ "${PARATIME_NAME}" == "sapphire" ]]; then
+    # Ensure ephemeral secret has been generated.
     notice_debug -l "Waiting for key manager to generate ephemeral secret..."
     while (${OASIS_NODE_BINARY} control status -a unix:${OASIS_KM_SOCKET} | jq -e ".keymanager.secrets.worker.ephemeral_secrets.last_generated_epoch!=2" >/dev/null); do
+      sleep 0.5
+    done
+
+    # Ensure the keymanager has re-registered with updated extra_info.
+    # This ensures that we wait until the master secret has been proposed and confirmed.
+    notice_debug -l "Waiting for key manager to generate master secret and re-register..."
+    while [[ $(${OASIS_NODE_BINARY} control status -a unix:${OASIS_KM_SOCKET} | jq -r '.registration.descriptor.runtimes[0].extra_info') == "${km_extra_info}" ]]; do
       sleep 0.5
     done
   fi
@@ -332,17 +342,6 @@ if [[ "${BEACON_BACKEND}" == "mock" ]]; then
   echo -n .
   notice_debug -l "Setting epoch to 2..."
   ${OASIS_NODE_BINARY} debug control set-epoch --epoch 2 -a unix:${OASIS_NODE_SOCKET}
-
-  # Transition to the final epoch when the KM generates ephemeral secret.
-  if [[ "${PARATIME_NAME}" == "sapphire" ]]; then
-    notice_debug -l "Waiting for key manager to generate ephemeral secret..."
-    while (${OASIS_NODE_BINARY} control status -a unix:${OASIS_KM_SOCKET} | jq -e ".keymanager.secrets.worker.ephemeral_secrets.last_generated_epoch!=3" >/dev/null); do
-      sleep 0.5
-    done
-  fi
-
-  notice_debug -l "Setting epoch to 3..."
-  ${OASIS_NODE_BINARY} debug control set-epoch --epoch 3 -a unix:${OASIS_NODE_SOCKET}
 
 else
   echo -n ...
