@@ -6,7 +6,7 @@ RUN cd oasis-web3-gateway && make && strip -S -x oasis-web3-gateway
 
 FROM ghcr.io/oasisprotocol/oasis-core-dev:stable-24.2.x AS oasis-core-dev
 
-ARG NEXUS_VERSION=0.4.1
+ARG NEXUS_VERSION=0.5.1
 RUN wget https://github.com/oasisprotocol/nexus/releases/download/v${NEXUS_VERSION}/oasis_nexus_${NEXUS_VERSION}_linux_amd64.tar.gz \
     && tar -zxvf oasis_nexus_${NEXUS_VERSION}_linux_amd64.tar.gz \
     && strip -S -x /oasis_nexus_${NEXUS_VERSION}_linux_amd64/nexus \
@@ -29,11 +29,8 @@ RUN wget https://github.com/oasisprotocol/nexus/releases/download/v${NEXUS_VERSI
 #     && mv /nexus-git/storage/migrations /nexus-migrations \
 #     && rm -rf /nexus-git
 
-# ARG EXPLORER_REPO=https://github.com/oasisprotocol/explorer.git
-# ARG EXPLORER_VERSION=v1.13.0
-# TODO: update once some support for localnet is added: https://github.com/oasisprotocol/explorer/issues/1597
 ARG EXPLORER_REPO=https://github.com/oasisprotocol/explorer.git
-ARG EXPLORER_VERSION=bcb125108db2f6439fcdd536f690b0edfd38aad7
+ARG EXPLORER_VERSION=v1.15.1
 COPY docker/common/nexus.env.production /nexus.env.production
 RUN git clone ${EXPLORER_REPO} explorer --depth 1 \
     && cd explorer \
@@ -67,8 +64,8 @@ RUN apt update && apt install -y bash libseccomp2 unzip jq binutils curl wget &&
     && rm -f /etc/apt/keyrings/envoy-keyring.gpg
 
 # Docker-specific variables
-ENV OASIS_CORE_VERSION=24.2
-ENV OASIS_CLI_VERSION=0.10.2
+ENV OASIS_CORE_VERSION=24.3.1
+ENV OASIS_CLI_VERSION=0.10.3
 ENV PARATIME_VERSION=11.0.0-testnet
 ENV PARATIME_NAME=emerald
 ENV GATEWAY__CHAIN_ID=0xa514
