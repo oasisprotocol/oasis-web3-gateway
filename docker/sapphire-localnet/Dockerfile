@@ -12,19 +12,18 @@ ARG PARATIME_NAME
 # Note that the simple keymanager is always freshly built because we need to
 # specify different build options from what is in the release version.
 ARG OASIS_CORE_SIMPLE_KM_BRANCH=stable/24.3.x
-ARG OASIS_CORE_VERSION=24.3
+ARG OASIS_CORE_VERSION=24.3.1
 #ARG OASIS_CORE_BRANCH=stable/24.3.x
 ARG OASIS_CLI_VERSION=0.10.3
 #ARG OASIS_CLI_BRANCH=master
-ARG OASIS_WEB3_GATEWAY_VERSION=5.1.0
-#ARG OASIS_WEB3_GATEWAY_BRANCH=main
+ARG OASIS_WEB3_GATEWAY_BRANCH=5.2.0-rc1
+#ARG OASIS_WEB3_GATEWAY_VERSION=main
 #ARG OASIS_SAPPHIRE_PARATIME_BRANCH=main
 
-ARG NEXUS_VERSION=0.4.2
+ARG NEXUS_VERSION=0.5.1
 #ARG NEXUS_BRANCH=main
 
-# TODO: Update to a released version once a version with localnet explorer support is available (https://github.com/oasisprotocol/explorer/issues/1597).
-ARG EXPLORER_BRANCH=3a32a5080a65ed7e5cfd48586a4cd892a7c881c2
+ARG EXPLORER_BRANCH=v1.15.1
 
 COPY docker/common /out
 COPY tests/tools/* /out/
