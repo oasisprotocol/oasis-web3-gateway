@@ -47,7 +47,7 @@ lint-git:
 lint: $(lint-targets)
 
 release-build:
-	@goreleaser release --rm-dist
+	@goreleaser release --clean
 
 docker: docker-emerald-localnet docker-sapphire-localnet
 
