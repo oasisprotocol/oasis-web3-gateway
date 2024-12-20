@@ -34,7 +34,7 @@ git:
   tag_sort: '-version:creatordate'
 
 snapshot:
-  name_template: "{{ incpatch .Version }}-next"
+  version_template: "{{ incpatch .Version }}-next"
 
 changelog:
   sort: asc
