@@ -180,6 +180,7 @@ ENV OASIS_NEXUS_BINARY=/nexus
 ENV OASIS_NEXUS_CONFIG_FILE=/nexus.yml
 ENV OASIS_NEXUS_MIGRATIONS=/nexus-migrations
 ENV OASIS_EXPLORER_DIR=/explorer
+ENV OASIS_EXPLORER_NGINX_CONFIG_FILE=/explorer.nginx.conf
 ENV OASIS_UNSAFE_SKIP_AVR_VERIFY=1
 ENV OASIS_UNSAFE_ALLOW_DEBUG_ENCLAVES=1
 ENV OASIS_UNSAFE_MOCK_SGX=1
@@ -189,8 +190,7 @@ ARG VERSION
 RUN apt update && apt install -y --no-install-recommends bash libseccomp2 jq curl ca-certificates unzip binutils file \
     && su -c "POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres /usr/local/bin/docker-entrypoint.sh postgres &" postgres \
     # Explorer frontend deps.
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt install -y nodejs && npm install -g serve \
+    && apt install -y --no-install-recommends nginx \
     # Install Envoy.
     && curl -fsSL https://apt.envoyproxy.io/signing.key | gpg --dearmor -o /etc/apt/keyrings/envoy-keyring.gpg \
     && echo "deb [signed-by=/etc/apt/keyrings/envoy-keyring.gpg] https://apt.envoyproxy.io bookworm main" | tee /etc/apt/sources.list.d/envoy.list \
@@ -203,7 +203,6 @@ RUN apt update && apt install -y --no-install-recommends bash libseccomp2 jq cur
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
     && rm -rf /etc/apt/sources.list.d/envoy.list \
     && rm -f /etc/apt/keyrings/envoy-keyring.gpg \
-    && rm -rf /root/.npm /root/.node-gyp \
     && rm -rf /usr/share/doc
 
 # Copy all results from build step.

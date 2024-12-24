@@ -47,11 +47,10 @@ RUN git clone ${EXPLORER_REPO} explorer --depth 1 \
 
 # Build emerald-localnet
 FROM postgres:16-bookworm
-RUN apt update && apt install -y bash libseccomp2 unzip jq binutils curl wget && apt clean \
+RUN apt update && apt install -y bash libseccomp2 unzip jq binutils curl wget nginx && apt clean \
     && su -c "POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres /usr/local/bin/docker-entrypoint.sh postgres &" postgres \
 	# Explorer frontend deps.
-	&& curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-	&& apt install -y nodejs && npm install -g serve \
+    && apt install -y --no-install-recommends nginx \
     # Install Envoy.
     && curl -fsSL https://apt.envoyproxy.io/signing.key | gpg --dearmor -o /etc/apt/keyrings/envoy-keyring.gpg \
     && echo "deb [signed-by=/etc/apt/keyrings/envoy-keyring.gpg] https://apt.envoyproxy.io bookworm main" | tee /etc/apt/sources.list.d/envoy.list \
@@ -85,6 +84,7 @@ ENV OASIS_NEXUS_BINARY=/nexus
 ENV OASIS_NEXUS_CONFIG_FILE=/nexus.yml
 ENV OASIS_NEXUS_MIGRATIONS=/nexus-migrations
 ENV OASIS_EXPLORER_DIR=/explorer
+ENV OASIS_EXPLORER_NGINX_CONFIG_FILE=/explorer.nginx.conf
 
 ARG VERSION
 
@@ -93,6 +93,7 @@ COPY --from=oasis-web3-gateway /go/oasis-web3-gateway/oasis-web3-gateway ${OASIS
 COPY docker/common/localnet.yml ${OASIS_WEB3_GATEWAY_CONFIG_FILE}
 COPY docker/common/nexus.yml ${OASIS_NEXUS_CONFIG_FILE}
 COPY docker/common/envoy.yml ${ENVOY_CONFIG_FILE}
+COPY docker/common/explorer.nginx.conf ${OASIS_EXPLORER_NGINX_CONFIG_FILE}
 COPY docker/common/start.sh /
 COPY docker/common/wait-container-ready.sh /
 COPY tests/tools/* /
