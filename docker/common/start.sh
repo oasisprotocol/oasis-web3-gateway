@@ -15,6 +15,7 @@
 # - OASIS_NEXUS_BINARY: path to oasis-nexus binary
 # - OASIS_NEXUS_CONFIG_FILE: path to oasis-nexus config file. Required if OASIS_NEXUS_BINARY is provided
 # - OASIS_EXPLORER_DIR: path to explorer (nexus frontend) directory
+# - OASIS_EXPLORER_NGINX_CONFIG_FILE: path to explorer nginx config file.
 
 rm -f /CONTAINER_READY
 
@@ -388,9 +389,12 @@ if [[ "${OASIS_DOCKER_START_EXPLORER}" == "yes" ]]; then
   echo
 
   notice "Waiting for Explorer to start"
-  cd ${OASIS_EXPLORER_DIR}
-  serve -s ${OASIS_EXPLORER_DIR} -l ${EXPLORER_PORT} > /var/log/explorer.log 2>&1 &
-  EXPLORER_PID=$!
+  # Configure the nginx config file.
+  sed -i 's|{{EXPLORER_PORT}}|'"${EXPLORER_PORT}"'|g' "${OASIS_EXPLORER_NGINX_CONFIG_FILE}"
+  sed -i 's|{{EXPLORER_DIR}}|'"${OASIS_EXPLORER_DIR}"'|g' "${OASIS_EXPLORER_NGINX_CONFIG_FILE}"
+  ln -s ${OASIS_EXPLORER_NGINX_CONFIG_FILE} /etc/nginx/sites-enabled/explorer
+  service nginx start
+  nginx -s reload
 
   # Wait for Explorer to start.
   while ! curl -s http://localhost:${EXPLORER_PORT}/ 2>1 &>/dev/null; do echo -n .; sleep 1; done
