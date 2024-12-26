@@ -299,7 +299,7 @@ if [[ "x${OASIS_DOCKER_NO_GATEWAY}" == "xyes" ]]; then
   notice "Skipping oasis-web3-gateway start-up...\n"
 else
   notice "Starting oasis-web3-gateway...\n"
-  ${OASIS_WEB3_GATEWAY_BINARY} --config ${OASIS_WEB3_GATEWAY_CONFIG_FILE} 2>1 &>/var/log/oasis-web3-gateway.log &
+  LOG__LEVEL=${OASIS_NODE_LOG_LEVEL} ${OASIS_WEB3_GATEWAY_BINARY} --config ${OASIS_WEB3_GATEWAY_CONFIG_FILE} 2>1 &>/var/log/oasis-web3-gateway.log &
   OASIS_WEB3_GATEWAY_PID=$!
 fi
 
