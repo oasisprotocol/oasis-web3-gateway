@@ -6,7 +6,7 @@ RUN cd oasis-web3-gateway && make && strip -S -x oasis-web3-gateway
 
 FROM ghcr.io/oasisprotocol/oasis-core-dev:stable-24.2.x AS oasis-core-dev
 
-ARG NEXUS_VERSION=0.5.1
+ARG NEXUS_VERSION=0.5.3
 RUN wget https://github.com/oasisprotocol/nexus/releases/download/v${NEXUS_VERSION}/oasis_nexus_${NEXUS_VERSION}_linux_amd64.tar.gz \
     && tar -zxvf oasis_nexus_${NEXUS_VERSION}_linux_amd64.tar.gz \
     && strip -S -x /oasis_nexus_${NEXUS_VERSION}_linux_amd64/nexus \
