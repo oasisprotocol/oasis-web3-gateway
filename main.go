@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net/http"
 	_ "net/http/pprof" // nolint:gosec
@@ -12,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/uptrace/bun"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/oasisprotocol/oasis-core/go/common"
@@ -194,7 +196,16 @@ func runRoot() error {
 
 	// Establish a gRPC connection with the client node.
 	logger.Info("connecting to local node", "addr", cfg.NodeAddress)
-	conn, err := cmnGrpc.Dial(cfg.NodeAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	var dialOpts []grpc.DialOption
+	switch cmnGrpc.IsLocalAddress(cfg.NodeAddress) {
+	case true:
+		// No TLS for local connections.
+		dialOpts = append(dialOpts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	case false:
+		creds := credentials.NewTLS(&tls.Config{MinVersion: tls.VersionTLS12})
+		dialOpts = append(dialOpts, grpc.WithTransportCredentials(creds))
+	}
+	conn, err := cmnGrpc.Dial(cfg.NodeAddress, dialOpts...)
 	if err != nil {
 		logger.Error("failed to establish connection", "err", err)
 		return err
