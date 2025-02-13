@@ -30,7 +30,7 @@ RUN wget https://github.com/oasisprotocol/nexus/releases/download/v${NEXUS_VERSI
 #     && rm -rf /nexus-git
 
 ARG EXPLORER_REPO=https://github.com/oasisprotocol/explorer.git
-ARG EXPLORER_VERSION=v1.15.1
+ARG EXPLORER_VERSION=v1.16.1
 COPY docker/common/nexus.env.production /nexus.env.production
 RUN git clone ${EXPLORER_REPO} explorer --depth 1 \
     && cd explorer \
