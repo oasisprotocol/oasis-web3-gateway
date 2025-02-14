@@ -21,7 +21,7 @@ var migrations embed.FS
 
 // DropTables deletes all database tables in the `public` schema of the configured database.
 //
-// Note: this method assumes that PostgresSQL is used as the underlying db.
+// Note: this method assumes that PostgreSQL is used as the underlying db.
 func DropTables(ctx context.Context, db *bun.DB) error {
 	logger := logging.GetLogger("migration")
 
