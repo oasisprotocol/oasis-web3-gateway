@@ -91,7 +91,7 @@ jobs:
             ${{ env.OASIS_NODE_DATADIR }}/fixture.json
 
       - name: Upload to codecov.io
-        uses: codecov/codecov-action@v5.3.1
+        uses: codecov/codecov-action@v5.4.0
 
   test-go-c10l:
     runs-on: ubuntu-latest
@@ -171,4 +171,4 @@ jobs:
             ${{ env.OASIS_NODE_DATADIR }}/fixture.json
 
       - name: Upload to codecov.io
-        uses: codecov/codecov-action@v5.3.1
+        uses: codecov/codecov-action@v5.4.0
