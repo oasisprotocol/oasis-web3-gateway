@@ -70,7 +70,7 @@ func (h *httpServer) setListenAddr(host string, port int) error {
 	return nil
 }
 
-// healthCheckHTTP is the HTTP health check endpoint handler.
+// healthCheckHandler is the HTTP health check endpoint handler.
 func healthCheckHandler(healthChecks []HealthCheck) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
