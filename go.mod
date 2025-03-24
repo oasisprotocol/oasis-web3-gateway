@@ -25,10 +25,10 @@ require (
 	github.com/rs/cors v1.11.1
 	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.10.0
-	github.com/uptrace/bun v1.2.10
-	github.com/uptrace/bun/dialect/pgdialect v1.2.10
-	github.com/uptrace/bun/driver/pgdriver v1.2.10
-	golang.org/x/crypto v0.33.0
+	github.com/uptrace/bun v1.2.11
+	github.com/uptrace/bun/dialect/pgdialect v1.2.11
+	github.com/uptrace/bun/driver/pgdriver v1.2.11
+	golang.org/x/crypto v0.35.0
 	google.golang.org/grpc v1.70.0
 )
 
