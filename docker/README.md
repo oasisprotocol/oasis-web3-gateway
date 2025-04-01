@@ -20,8 +20,8 @@ images. `latest` versions are based on:
 To use the precompiled images, run:
 
 ```sh
-docker run -it -p8545:8545 -p8546:8546 ghcr.io/oasisprotocol/sapphire-localnet # Sapphire
-docker run -it -p8545:8545 -p8546:8546 ghcr.io/oasisprotocol/emerald-localnet # Emerald
+docker run -it -p8544-8548:8544-8548 ghcr.io/oasisprotocol/sapphire-localnet # Sapphire
+docker run -it -p8544-8548:8544-8548 ghcr.io/oasisprotocol/emerald-localnet # Emerald
 ```
 
 ### Mac M Chips
@@ -30,8 +30,8 @@ There is currently no arm64 build available for M Macs, so make sure to force th
 like this:
 
 ```sh
-docker run -it -p8545:8545 -p8546:8546 --platform linux/x86_64 ghcr.io/oasisprotocol/sapphire-localnet # Sapphire
-docker run -it -p8545:8545 -p8546:8546 --platform linux/x86_64 ghcr.io/oasisprotocol/emerald-localnet # Emerald
+docker run -it -p8544-8548:8544-8548 --platform linux/x86_64 ghcr.io/oasisprotocol/sapphire-localnet # Sapphire
+docker run -it -p8544-8548:8544-8548 --platform linux/x86_64 ghcr.io/oasisprotocol/emerald-localnet # Emerald
 ```
 ## Build image locally
 
@@ -45,8 +45,8 @@ make docker
 To run the compiled image type:
 
 ```sh
-docker run -it -p8545:8545 -p8546:8546 ghcr.io/oasisprotocol/sapphire-localnet:local
-docker run -it -p8545:8545 -p8546:8546 ghcr.io/oasisprotocol/emerald-localnet:local
+docker run -it -p8544-8548:8544-8548 ghcr.io/oasisprotocol/sapphire-localnet:local
+docker run -it -p8544-8548:8544-8548 ghcr.io/oasisprotocol/emerald-localnet:local
 ```
 
 ## Usage
