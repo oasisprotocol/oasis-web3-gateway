@@ -47,6 +47,12 @@ analysis:
       interval: 30s
     evm_abi_{{PARATIME_NAME}}:
       interval: 30s
+    rofl_{{PARATIME_NAME}}:
+      interval: 5s
+    rofl_instance_transactions_{{PARATIME_NAME}}:
+      interval: 5s
+    roflmarket_{{PARATIME_NAME}}:
+      interval: 5s
     validator_staking_history:
       from: 1
     node_stats:

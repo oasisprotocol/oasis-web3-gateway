@@ -393,8 +393,8 @@ if [[ "${OASIS_DOCKER_START_EXPLORER}" == "yes" ]]; then
   sed -i 's|{{EXPLORER_PORT}}|'"${EXPLORER_PORT}"'|g' "${OASIS_EXPLORER_NGINX_CONFIG_FILE}"
   sed -i 's|{{EXPLORER_DIR}}|'"${OASIS_EXPLORER_DIR}"'|g' "${OASIS_EXPLORER_NGINX_CONFIG_FILE}"
   ln -s ${OASIS_EXPLORER_NGINX_CONFIG_FILE} /etc/nginx/sites-enabled/explorer
-  service nginx start
-  nginx -s reload
+  service nginx start 2>1 &>/dev/null
+  nginx -s reload 2>1 &>/dev/null
 
   # Wait for Explorer to start.
   while ! curl -s http://localhost:${EXPLORER_PORT}/ 2>1 &>/dev/null; do echo -n .; sleep 1; done
@@ -403,7 +403,8 @@ fi
 
 # Add Localnet to Oasis CLI and make it default.
 if [ ! -z "${OASIS_CLI_BINARY:-}" ]; then
-  ${OASIS_CLI_BINARY} network add-local localnet unix:/serverdir/node/net-runner/network/client-0/internal.sock -y
+  # XXX: Fix to absolute socket path once https://github.com/oasisprotocol/cli/issues/471 is fixed.
+  ${OASIS_CLI_BINARY} network add-local localnet unix:serverdir/node/net-runner/network/client-0/internal.sock -y
   ${OASIS_CLI_BINARY} paratime add localnet ${PARATIME_NAME} 8000000000000000000000000000000000000000000000000000000000000000 --num-decimals 18 -y
   ${OASIS_CLI_BINARY} network set-default localnet
 fi
