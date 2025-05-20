@@ -36,10 +36,10 @@ jobs:
         ports:
           - 5432:5432
     env:
-      OASIS_CORE_VERSION: "24.0"
+      OASIS_CORE_VERSION: "25.3"
       OASIS_NODE: ${{ github.workspace }}/oasis_core/oasis-node
       OASIS_NET_RUNNER: ${{ github.workspace }}/oasis_core/oasis-net-runner
-      SAPPHIRE_PARATIME_VERSION: 0.7.3
+      SAPPHIRE_PARATIME_VERSION: 0.10.3
       GATEWAY__CHAIN_ID: 23293
       SAPPHIRE_PARATIME: ${{ github.workspace }}/oasis_core/sapphire-paratime
       OASIS_NODE_DATADIR: /tmp/oasis-sapphire-benchmarks
@@ -53,7 +53,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.23.x"
+          go-version: "1.24.x"
 
       - name: Install prerequisites
         run: |
@@ -67,7 +67,7 @@ jobs:
           mkdir -p "$(dirname ${SAPPHIRE_PARATIME})"
           wget "https://github.com/oasisprotocol/sapphire-paratime/releases/download/v${SAPPHIRE_PARATIME_VERSION}/localnet-sapphire-paratime.orc" -O "${SAPPHIRE_PARATIME}.orc"
           unzip "${SAPPHIRE_PARATIME}.orc"
-          mv runtime.elf "${SAPPHIRE_PARATIME}"
+          mv ronl.elf "${SAPPHIRE_PARATIME}"
           chmod a+x "${SAPPHIRE_PARATIME}"
           go build
           cd benchmarks
