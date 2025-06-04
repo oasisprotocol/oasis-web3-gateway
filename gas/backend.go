@@ -13,6 +13,7 @@ import (
 
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 	"github.com/oasisprotocol/oasis-core/go/common/service"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 
@@ -203,7 +204,7 @@ func (g *gasPriceOracle) fetchMinGasPrice(ctx context.Context) {
 	ctx, cancel := context.WithTimeout(ctx, time.Second*10)
 	defer cancel()
 
-	mgp, err := g.coreClient.MinGasPrice(ctx)
+	mgp, err := g.coreClient.MinGasPrice(ctx, client.RoundLatest)
 	if err != nil {
 		g.Logger.Error("node min gas price query failed", "err", err)
 		return
