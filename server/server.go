@@ -254,8 +254,12 @@ func (srv *Web3Gateway) startRPC() error {
 }
 
 func (srv *Web3Gateway) stopRPC() {
-	srv.http.stop()
-	srv.ws.stop()
+	if srv.http != nil {
+		srv.http.stop()
+	}
+	if srv.ws != nil {
+		srv.ws.stop()
+	}
 }
 
 // Wait blocks until the server is closed.
