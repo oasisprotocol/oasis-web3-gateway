@@ -61,7 +61,7 @@ func (*mockCoreClient) ExecuteReadOnlyTx(_ context.Context, _ uint64, _ *types.U
 }
 
 // MinGasPrice implements core.V1.
-func (m *mockCoreClient) MinGasPrice(_ context.Context) (map[types.Denomination]quantity.Quantity, error) {
+func (m *mockCoreClient) MinGasPrice(_ context.Context, _ uint64) (map[types.Denomination]quantity.Quantity, error) {
 	if m.shouldFail {
 		return nil, fmt.Errorf("failed")
 	}
