@@ -3,6 +3,7 @@ package filters
 import (
 	"fmt"
 	"math/big"
+	"slices"
 	"sync"
 	"time"
 
@@ -194,16 +195,6 @@ func (es *EventSystem) SubscribeNewHeads(headers chan *types.Header) *Subscripti
 	return es.subscribe(sub)
 }
 
-func includes(addresses []common.Address, a common.Address) bool {
-	for _, addr := range addresses {
-		if addr == a {
-			return true
-		}
-	}
-
-	return false
-}
-
 // filterLogs creates a slice of logs matching the given criteria.
 func filterLogs(logs []*types.Log, fromBlock, toBlock *big.Int, addresses []common.Address, topics [][]common.Hash) []*types.Log {
 	var ret []*types.Log
@@ -216,7 +207,7 @@ Logs:
 			continue
 		}
 
-		if len(addresses) > 0 && !includes(addresses, log.Address) {
+		if len(addresses) > 0 && !slices.Contains(addresses, log.Address) {
 			continue
 		}
 		// If the to filtered topics is greater than the amount of topics in logs, skip.
@@ -224,14 +215,7 @@ Logs:
 			continue Logs
 		}
 		for i, sub := range topics {
-			match := len(sub) == 0 // empty rule set == wildcard
-			for _, topic := range sub {
-				if log.Topics[i] == topic {
-					match = true
-					break
-				}
-			}
-			if !match {
+			if len(sub) > 0 && !slices.Contains(sub, log.Topics[i]) {
 				continue Logs
 			}
 		}
