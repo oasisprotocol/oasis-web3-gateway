@@ -92,7 +92,7 @@ func (b *mockBlockEmitter) WatchBlocks(_ context.Context, buffer int64) (<-chan 
 }
 
 func emitBlock(emitter *mockBlockEmitter, fullBlock bool, txPrice *quantity.Quantity) {
-	// Wait a bit after emitting so that a the block is processed.
+	// Wait a bit after emitting so that the block is processed.
 	defer time.Sleep(100 * time.Millisecond)
 
 	if fullBlock {
