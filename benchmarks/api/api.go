@@ -143,7 +143,7 @@ func (cfg *Config) RunBenchmark(ctx context.Context, benchmark Benchmark) error 
 
 				iters, err := benchmark.Scenario(ctx, state)
 				if err != nil {
-					// The cancelation can also interrupt a scenario in
+					// The cancellation can also interrupt a scenario in
 					// progress.
 					if err == context.Canceled {
 						logger.Debug("canceled")

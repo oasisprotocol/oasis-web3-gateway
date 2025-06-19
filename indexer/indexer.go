@@ -313,7 +313,7 @@ func (s *Service) indexingWorker() {
 // Start starts service.
 func (s *Service) Start() {
 	// TODO/NotYawning: Non-archive nodes that have the indexer disabled
-	// likey want to use a different notion of healthy, and probably also
+	// likely want to use a different notion of healthy, and probably also
 	// want to start a worker that monitors the database for changes.
 	if s.indexingDisable {
 		s.updateHealth(true)

@@ -37,7 +37,7 @@ type Config struct {
 	// for servicing historical queries.
 	ArchiveURI string `koanf:"archive_uri"`
 	// ArchiveHeightMax is the maximum height (inclusive) to query the
-	// archvie node (ArchiveURI).  If the archive node is configured
+	// archive node (ArchiveURI).  If the archive node is configured
 	// with it's own SQL database instance, this parameter should not
 	// be needed.
 	ArchiveHeightMax uint64 `koanf:"archive_height_max"`
