@@ -144,7 +144,7 @@ func (s *Storage) Upsert(ctx context.Context, value interface{}) error {
 	return err
 }
 
-// LogsUp does performes the 20220109122505_logs up migration.
+// LogsUp does performs the 20220109122505_logs up migration.
 func LogsUp(ctx context.Context, tx *bun.Tx) error {
 	logger := logging.GetLogger("migration")
 
