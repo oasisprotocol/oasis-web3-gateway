@@ -165,10 +165,7 @@ func LogsUp(ctx context.Context, tx *bun.Tx) error {
 
 	for i := start; i <= end; i += batchSize {
 		bs := i
-		be := i + batchSize - 1
-		if be > end {
-			be = end
-		}
+		be := min(i+batchSize-1, end)
 
 		logger.Debug("migrating batch", "batch_start", bs, "batch_end", be)
 		// Fetch all logs for the batch rounds.
