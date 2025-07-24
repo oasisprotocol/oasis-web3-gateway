@@ -55,6 +55,19 @@ func Logs2EthLogs(logs []*Log, round uint64, blockHash, txHash common.Hash, star
 	return ethLogs
 }
 
+// Taken from https://github.com/ethereum/go-ethereum/blob/6b6261b51fa46f7ed36d0589db641c14569ce036/core/types/bloom9.go#L118-L129
+// Which was removed in: https://github.com/ethereum/go-ethereum/pull/31129 from go-ethereum.
+func logsBloom(logs []*ethtypes.Log) []byte {
+	var bin ethtypes.Bloom
+	for _, log := range logs {
+		bin.Add(log.Address.Bytes())
+		for _, b := range log.Topics {
+			bin.Add(b[:])
+		}
+	}
+	return bin[:]
+}
+
 // ethToModelLogs converts ethereum logs to DB model logs.
 func ethToModelLogs(ethLogs []*ethtypes.Log) ([]*model.Log, map[string][]*model.Log) {
 	res := make([]*model.Log, 0, len(ethLogs))
@@ -102,7 +115,7 @@ func blockToModels(
 	bhash := common.HexToHash(encoded.Hex()).String()
 	bprehash := block.Header.PreviousHash.Hex()
 	bshash := block.Header.StateRoot.Hex()
-	logsBloom := ethtypes.BytesToBloom(ethtypes.LogsBloom(logs))
+	logsBloom := ethtypes.BytesToBloom(logsBloom(logs))
 	bloomData, _ := logsBloom.MarshalText()
 	bloomHex := hex.EncodeToString(bloomData)
 	var btxHash string
@@ -552,7 +565,7 @@ func db2EthReceipt(dbReceipt *model.Receipt) map[string]interface{} {
 	receipt := map[string]interface{}{
 		"status":            hexutil.Uint(dbReceipt.Status),
 		"cumulativeGasUsed": hexutil.Uint64(dbReceipt.CumulativeGasUsed),
-		"logsBloom":         ethtypes.BytesToBloom(ethtypes.LogsBloom(ethLogs)),
+		"logsBloom":         ethtypes.BytesToBloom(logsBloom(ethLogs)),
 		"logs":              ethLogs,
 		"transactionHash":   dbReceipt.TransactionHash,
 		"gasUsed":           hexutil.Uint64(dbReceipt.GasUsed),
