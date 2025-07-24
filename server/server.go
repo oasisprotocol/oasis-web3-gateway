@@ -162,7 +162,7 @@ func (srv *Web3Gateway) Start() error {
 
 	// Check if RPC endpoint startup failed.
 	if err != nil {
-		srv.doClose(nil)
+		_ = srv.doClose(nil)
 		return err
 	}
 

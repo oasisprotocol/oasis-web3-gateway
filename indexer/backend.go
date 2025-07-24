@@ -1,3 +1,4 @@
+// Package indexer provides the indexer backend implementation.
 package indexer
 
 import (

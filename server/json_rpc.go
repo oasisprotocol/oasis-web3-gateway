@@ -1,3 +1,4 @@
+// Package server implements the JSON RPC server for the Oasis Web3 Gateway.
 package server
 
 import (

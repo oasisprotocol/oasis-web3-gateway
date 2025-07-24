@@ -1,3 +1,4 @@
+// Package utils provides the utility types and functions for RPC API.
 package utils
 
 import (

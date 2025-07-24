@@ -1,3 +1,4 @@
+// Package metrics provides instrumentation for the Web3 Gateway API.
 package metrics
 
 import (

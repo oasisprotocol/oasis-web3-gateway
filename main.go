@@ -1,3 +1,4 @@
+// Package main implements the main entry point for the Oasis Web3 Gateway.
 package main
 
 import (
@@ -210,7 +211,7 @@ func runRoot() error {
 		logger.Error("failed to establish connection", "err", err)
 		return err
 	}
-	defer conn.Close()
+	defer conn.Close() // nolint:errcheck
 
 	// Create the runtime client with account module query helpers.
 	rc := client.New(conn, runtimeID)
@@ -305,7 +306,7 @@ func runRoot() error {
 
 		<-sigc
 		logger.Info("Got interrupt, shutting down...")
-		go svr.Close()
+		go svr.Close() //nolint:errcheck
 		go indx.Stop()
 		go gasPriceOracle.Stop()
 	}()

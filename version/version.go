@@ -1,3 +1,4 @@
+// Package version provides the version information for the Oasis Web3 Gateway.
 package version
 
 import (

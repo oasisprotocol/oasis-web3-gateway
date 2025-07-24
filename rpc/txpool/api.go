@@ -1,3 +1,4 @@
+// Package txpool provides the Web3 JSON-RPC txpool API.
 package txpool
 
 // API is the txpool_ prefixed set of APIs in the Web3 JSON-RPC spec.

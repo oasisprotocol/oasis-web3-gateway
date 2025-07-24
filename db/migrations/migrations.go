@@ -1,3 +1,4 @@
+// Package migrations provides database migrations for the Oasis Web3 Gateway.
 package migrations
 
 import (

@@ -1,3 +1,4 @@
+// Package psql provides PostgreSQL storage with Prometheus metrics for the Oasis Web3 Gateway.
 package psql
 
 import (

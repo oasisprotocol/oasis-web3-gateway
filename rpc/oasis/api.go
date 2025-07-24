@@ -1,3 +1,4 @@
+// Package oasis provides the Oasis Web3 JSON-RPC API.
 package oasis
 
 import (

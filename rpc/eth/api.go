@@ -1,3 +1,4 @@
+// Package eth provides the Web3 JSON-RPC Ethereum API.
 package eth
 
 import (

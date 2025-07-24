@@ -1,3 +1,4 @@
+// Package storage defines the interface for the storage layer of the Oasis Web3 Gateway.
 package storage
 
 import (

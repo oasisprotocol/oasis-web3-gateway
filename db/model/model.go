@@ -1,3 +1,4 @@
+// Package model defines the database models used in the application.
 package model
 
 // AccessTuple is the element of an AccessList.
