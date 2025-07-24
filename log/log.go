@@ -1,3 +1,4 @@
+// Package log provides logging functionality for the Oasis Web3 Gateway.
 package log
 
 import (

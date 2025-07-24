@@ -185,7 +185,7 @@ func Setup() error {
 	w3.RegisterHealthChecks(checks)
 
 	if err = w3.Start(); err != nil {
-		w3.Close()
+		_ = w3.Close()
 		return fmt.Errorf("setup: failed to start server: %w", err)
 	}
 

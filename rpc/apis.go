@@ -1,3 +1,4 @@
+// Package rpc provides the Web3 JSON-RPC APIs for the Oasis Web3 Gateway.
 package rpc
 
 import (

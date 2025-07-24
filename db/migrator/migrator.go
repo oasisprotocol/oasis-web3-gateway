@@ -61,10 +61,7 @@ func (m *Migrator) Migrate(ctx context.Context) error {
 		return fmt.Errorf("no migrations")
 	}
 	var stop bool
-	for {
-		if stop {
-			break
-		}
+	for !stop {
 		// Apply next migration in a transaction.
 		if err := m.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
 			// Lock migrations table for the transaction duration.

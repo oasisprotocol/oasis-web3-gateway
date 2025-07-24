@@ -1,3 +1,4 @@
+// Package net provides the Web3 JSON-RPC Net API.
 package net
 
 import (

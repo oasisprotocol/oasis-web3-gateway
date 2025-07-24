@@ -1,3 +1,4 @@
+// Package filters implements the eth filtering Web3 JSON-RPC API.
 package filters
 
 import (

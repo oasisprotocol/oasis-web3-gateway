@@ -1,3 +1,4 @@
+// Package conf provides the configuration for the Oasis Web3 Gateway.
 package conf
 
 import (

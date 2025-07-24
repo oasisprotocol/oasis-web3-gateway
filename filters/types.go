@@ -1,3 +1,4 @@
+// Package filters defines the filtering event system.
 package filters
 
 import (

@@ -1,79 +1,105 @@
-# golangci-lint configuration.
-
-# For more information, see:
-# https://golangci-lint.run/usage/configuration/.
-
-run:
-  timeout: 5m
-
+version: "2"
 linters:
-  # Disable all linters except the ones explicitly listed below.
-  disable-all: true
+  default: none
   enable:
-    - asciicheck
     - bodyclose
+    - copyloopvar
     - depguard
-    - dogsled
-    - dupl
     - errcheck
-    - exhaustive
     - goconst
-    - gocritic
     - gocyclo
-    - godot
-    - gofumpt
-    - goheader
-    - goimports
-    - revive
-    - gomodguard
     - goprintffuncname
     - gosec
-    - gosimple
     - govet
     - ineffassign
     - misspell
-    - nakedret
-    - nestif
-    - noctx
-    - prealloc
+    - revive
     - rowserrcheck
     - staticcheck
-    - stylecheck
-    - sqlclosecheck
-    - typecheck
     - unconvert
-    - unparam
     - unused
-    - whitespace
 
-linters-settings:
-  exhaustive:
-    # Switch statements are to be considered exhaustive if a 'default' case is
-    # present, even if all enum members aren't listed in the switch.
-    default-signifies-exhaustive: true
-  goimports:
-    # Put local imports after 3rd-party packages.
-    local-prefixes: github.com/oasisprotocol/
-  gosec:
-    excludes:
-      # https://github.com/securego/gosec#available-rules
-      - G402
-      - G404
-      - G115
-  depguard:
+  settings:
+    depguard:
+      rules:
+        main:
+          files:
+            - $all
+          allow:
+            - $gostd
+            - github.com/oasisprotocol/oasis-web3-gateway
+            - github.com/oasisprotocol/oasis-core
+            - github.com/oasisprotocol/oasis-sdk
+            - github.com/ethereum/go-ethereum
+            - github.com/gorilla/mux
+            - github.com/gorilla/websocket
+            - github.com/knadh/koanf
+            - github.com/prometheus/client_golang/prometheus
+            - github.com/rs/cors
+            - github.com/spf13/cobra
+            - github.com/stretchr/testify
+            - github.com/uptrace/bun
+            - golang.org/x/crypto
+            - google.golang.org/grpc
+          deny:
+            - pkg: "github.com/pkg/errors"
+              desc: Should be replaced by standard lib errors package
+            - pkg: github.com/fxamacker/cbor/v2
+              desc: Use oasis-core/go/common/cbor instead
+
+  exclusions:
+    generated: lax
     rules:
-      main:
-        files:
-          - $all
-        allow:
-          - $gostd
-          - github.com/oasisprotocol
-          - google.golang.org/grpc
-          - github.com/ethereum/go-ethereum
-          - github.com/stretchr/testify
-          - github.com/uptrace/bun
-          - github.com/gorilla
-          - github.com/prometheus
-          - github.com/knadh/koanf
-          - github.com/rs/cors
-          - github.com/spf13/cobra
+      # Exclude some linters on test files.
+      - linters:
+          - govet
+          - revive
+          - gosec
+          - errcheck
+        path: (.+)_test\.go
+      - linters:
+          - govet
+          - revive
+          - gosec
+        path: tests/*
+      # Exclude var-naming.
+      - linters:
+          - revive
+        text: var-naming
+      # Exclude sttutering.
+      - linters:
+          - revive
+        text: and that stutters
+      # Exclude unused parameters.
+      - linters:
+          - revive
+        text: unused-parameter
+      # Exclude required comments on exported structs/fields.
+      - linters:
+          - revive
+        text: "exported:"
+      # Exclude could apply De Morgan's law.
+      - linters:
+          - staticcheck
+        text: QF1001
+      # Exclude could remove embedded fields.
+      - linters:
+          - staticcheck
+        text: QF1008
+      # Exclude intiger overflow conversion.
+      - linters:
+          - gosec
+        text: G115
+      # Exclude audited unsafe calls.
+      - linters:
+          - gosec
+        text: G103
+
+formatters:
+  enable:
+    - gofumpt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/oasisprotocol/
