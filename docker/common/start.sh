@@ -427,33 +427,25 @@ if [ ! -z "${ROFL_BINARY:-}" ]; then
   ROFL_ADMIN_FUND=10001
   COMPUTE_NODE_ADDRESS="oasis1qp6tl30ljsrrqnw2awxxu2mtxk0qxyy2nymtsy90"
   COMPUTE_NODE_FUND=1000
-  POLICY_PATH=/policy-localnet.yml
+  ROFL_MANIFEST_PATH=rofl.yaml
 
   echo
   notice "Configuring ROFL ${ROFLS[0]}:\n"
-  printf "   Enclave ID: ${CYAN}${ROFL_ENCLAVE_ID}${OFF}\n"
-
   ${OASIS_CLI_BINARY} account deposit ${ROFL_ADMIN_FUND} ${ROFL_ADMIN} --account test:alice --gas-price 0 -y >/dev/null
   printf "   ROFL admin ${CYAN}${ROFL_ADMIN}${OFF} funded ${ROFL_ADMIN_FUND} TEST\n"
 
   ${OASIS_CLI_BINARY} account deposit ${COMPUTE_NODE_FUND} ${COMPUTE_NODE_ADDRESS} --account test:alice --gas-price 0 -y >/dev/null
   printf "   Compute node ${CYAN}${COMPUTE_NODE_ADDRESS}${OFF} funded ${COMPUTE_NODE_FUND} TEST\n"
 
-  cat > ${POLICY_PATH} << EOF
-quotes:
-  pcs:
-    tcb_validity_period: 30
-    min_tcb_evaluation_data_number: 16
-enclaves:
-  - "${ROFL_ENCLAVE_ID}"
-endorsements:
-  - any: {}
-fees: endorsing_node
-max_expiration: 3
-EOF
   # XXX: Report ROFL app ID in JSON and properly parse it.
-  ROFL_APP_ID=$(${OASIS_CLI_BINARY} rofl create ${POLICY_PATH} --account ${ROFL_ADMIN} --scheme cn -y | tail -n1 | rev | cut -d' ' -f1 | rev)
+  ${OASIS_CLI_BINARY} rofl init --tee sgx --kind raw >/dev/null
+  ROFL_APP_ID=$(${OASIS_CLI_BINARY} rofl create --account ${ROFL_ADMIN} --network localnet -y | grep "Created ROFL app" | rev | cut -d' ' -f1 | rev)
   printf "   App ID: ${CYAN}${ROFL_APP_ID}${OFF}\n"
+
+  # Submit the hardcoded enclave ID to the chain.
+  sed -i "s@      enclaves: \[\]@      enclaves:\n        - id: ${ROFL_ENCLAVE_ID}@" ${ROFL_MANIFEST_PATH}
+  ${OASIS_CLI_BINARY} rofl update -y >/dev/null
+  printf "   Enclave ID: ${CYAN}${ROFL_ENCLAVE_ID}${OFF}\n"
 fi
 
 T_END="$(date +%s)"

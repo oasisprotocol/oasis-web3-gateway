@@ -66,6 +66,7 @@ fi
 if [ ! -z "${ROFL_BINARY:-}" ] && [ ! -z "${ROFL_BINARY_SGXS:-}" ]; then
   jq "
       .runtimes[${RT_IDX}].deployments[0].components[1].kind = \"rofl\" |
+      .runtimes[${RT_IDX}].deployments[0].components[1].name = \"localnet-testing-orc\" |
       .runtimes[${RT_IDX}].deployments[0].components[1].binaries.\"0\" = \"${ROFL_BINARY}\" |
       .runtimes[${RT_IDX}].deployments[0].components[1].binaries.\"1\" = \"${ROFL_BINARY_SGXS}\"
     " "$FIXTURE_FILE" >"$FIXTURE_FILE.tmp"
