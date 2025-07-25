@@ -32,23 +32,20 @@ func (c *Client) LatestBlock() uint64 {
 func (c *Client) GetStorageAt(
 	ctx context.Context,
 	address common.Address,
-	position hexutil.Big,
+	slot common.Hash,
 	blockNr uint64,
-) (hexutil.Big, error) {
+) (hexutil.Bytes, error) {
 	storageBytes, err := c.inner.StorageAt(
 		ctx,
 		address,
-		common.BigToHash((*big.Int)(&position)),
+		slot,
 		new(big.Int).SetUint64(blockNr),
 	)
 	if err != nil {
-		return hexutil.Big{}, fmt.Errorf("archive: failed to query storage: %w", err)
+		return nil, fmt.Errorf("archive: failed to query storage: %w", err)
 	}
 
-	// Oh for fuck's sake.
-	var storageBig big.Int
-	storageBig.SetBytes(storageBytes)
-	return hexutil.Big(storageBig), nil
+	return storageBytes, nil
 }
 
 func (c *Client) GetBalance(

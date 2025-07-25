@@ -6,9 +6,11 @@ import (
 	"context"
 	"crypto/sha512"
 	"database/sql"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -58,7 +60,7 @@ type API interface {
 	// GetBlockTransactionCountByNumber returns the number of transactions in the block.
 	GetBlockTransactionCountByNumber(ctx context.Context, blockNum ethrpc.BlockNumber) (hexutil.Uint, error)
 	// GetStorageAt returns the storage value at the provided position.
-	GetStorageAt(ctx context.Context, address common.Address, position hexutil.Big, blockNrOrHash ethrpc.BlockNumberOrHash) (hexutil.Big, error)
+	GetStorageAt(ctx context.Context, address common.Address, slot string, blockNrOrHash ethrpc.BlockNumberOrHash) (hexutil.Bytes, error)
 	// GetBalance returns the provided account's balance up to the provided block number.
 	GetBalance(ctx context.Context, address common.Address, blockNrOrHash ethrpc.BlockNumberOrHash) (*hexutil.Big, error)
 	// ChainId return the EIP-155 chain id for the current network.
@@ -232,33 +234,48 @@ func (api *publicAPI) GetBlockTransactionCountByNumber(ctx context.Context, bloc
 	return hexutil.Uint(n), nil
 }
 
-func (api *publicAPI) GetStorageAt(ctx context.Context, address common.Address, position hexutil.Big, blockNrOrHash ethrpc.BlockNumberOrHash) (hexutil.Big, error) {
-	logger := api.Logger.With("method", "eth_getStorageAt", "address", address, "position", position, "block_or_hash", blockNrOrHash)
+// These matches most other eth-compatible gateways, which are very lax about the slot hex encoding.
+func decodeHash(s string) (common.Hash, error) {
+	if strings.HasPrefix(s, "0x") || strings.HasPrefix(s, "0X") {
+		s = s[2:]
+	}
+	if (len(s) & 1) > 0 {
+		s = "0" + s
+	}
+	b, err := hex.DecodeString(s)
+	if err != nil {
+		return common.Hash{}, fmt.Errorf("hex string invalid")
+	}
+	if len(b) > 32 {
+		return common.Hash{}, fmt.Errorf("hex string too long, want at most 32 bytes")
+	}
+	return common.BytesToHash(b), nil
+}
+
+func (api *publicAPI) GetStorageAt(ctx context.Context, address common.Address, slotHex string, blockNrOrHash ethrpc.BlockNumberOrHash) (hexutil.Bytes, error) {
+	logger := api.Logger.With("method", "eth_getStorageAt", "address", address, "slot", slotHex, "block_or_hash", blockNrOrHash)
 	logger.Debug("request")
+
+	slot, err := decodeHash(slotHex)
+	if err != nil {
+		return hexutil.Bytes{}, fmt.Errorf("invalid slot: %w", err)
+	}
 
 	round, err := api.getBlockRound(ctx, logger, blockNrOrHash)
 	if err != nil {
-		return hexutil.Big{}, err
+		return hexutil.Bytes{}, err
 	}
 	if api.shouldQueryArchive(round) {
-		return api.archiveClient.GetStorageAt(ctx, address, position, round)
+		return api.archiveClient.GetStorageAt(ctx, address, slot, round)
 	}
-
-	// EVM module takes index as H256, which needs leading zeros.
-	position256 := make([]byte, 32)
-	// Unmarshalling to hexutil.Big rejects overlong inputs. Verify in `TestRejectOverlong`.
-	position.ToInt().FillBytes(position256)
 
 	ethmod := evm.NewV1(api.client)
-	res, err := ethmod.Storage(ctx, round, address[:], position256)
+	res, err := ethmod.Storage(ctx, round, address[:], slot[:])
 	if err != nil {
 		logger.Error("failed to query storage", "err", err)
-		return hexutil.Big{}, ErrInternalError
+		return nil, ErrInternalError
 	}
-	// Some apps expect no leading zeros, so output as big integer.
-	var resultBI big.Int
-	resultBI.SetBytes(res)
-	return hexutil.Big(resultBI), nil
+	return res[:], nil
 }
 
 func (api *publicAPI) GetBalance(ctx context.Context, address common.Address, blockNrOrHash ethrpc.BlockNumberOrHash) (*hexutil.Big, error) {
