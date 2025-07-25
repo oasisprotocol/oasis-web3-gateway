@@ -286,11 +286,11 @@ func (m *metricsWrapper) GetLogs(ctx context.Context, filter filters.FilterCrite
 }
 
 // GetStorageAt implements eth.API.
-func (m *metricsWrapper) GetStorageAt(ctx context.Context, address common.Address, position hexutil.Big, blockNrOrHash ethrpc.BlockNumberOrHash) (res hexutil.Big, err error) {
+func (m *metricsWrapper) GetStorageAt(ctx context.Context, address common.Address, slot string, blockNrOrHash ethrpc.BlockNumberOrHash) (res hexutil.Bytes, err error) {
 	r, s, f, i, d := metrics.GetAPIMethodMetrics("eth_getStorageAt")
 	defer metrics.InstrumentCaller(r, s, f, i, d, &err)()
 
-	res, err = m.api.GetStorageAt(ctx, address, position, blockNrOrHash)
+	res, err = m.api.GetStorageAt(ctx, address, slot, blockNrOrHash)
 	return
 }
 

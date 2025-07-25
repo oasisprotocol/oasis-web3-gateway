@@ -430,6 +430,44 @@ func TestEth_GetCode(t *testing.T) {
 	require.NotEmpty(t, storedCode)
 }
 
+func TestEth_GetStorageZero(t *testing.T) {
+	ec := localClient(t, false)
+
+	code := common.FromHex(strings.TrimSpace(evmSolTestCompiledHex))
+
+	chainID, err := ec.ChainID(context.Background())
+	require.Nil(t, err, "get chainid")
+
+	nonce, err := ec.NonceAt(context.Background(), tests.TestKey1.EthAddress, nil)
+	require.Nil(t, err, "get nonce failed")
+	t.Logf("got nonce: %v", nonce)
+
+	// Create transaction
+	tx := types.NewContractCreation(nonce, big.NewInt(0), GasLimit, GasPrice, code)
+	signer := types.LatestSignerForChainID(chainID)
+	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), tests.TestKey1.Private)
+	require.Nil(t, err, "sign tx")
+
+	signedTx, err := tx.WithSignature(signer, signature)
+	require.Nil(t, err, "pack tx")
+
+	err = ec.SendTransaction(context.Background(), signedTx)
+	require.Nil(t, err, "send transaction failed")
+
+	ctx, cancel := context.WithTimeout(context.Background(), ethTimeout)
+	defer cancel()
+
+	receipt, err := waitTransaction(ctx, ec, signedTx.Hash())
+	require.NoError(t, err)
+	t.Logf("SignedTx hash: %s", signedTx.Hash().Hex())
+	t.Logf("Contract address: %s", receipt.ContractAddress)
+
+	key := common.HexToHash("0x0")
+	res, err := ec.StorageAt(context.Background(), receipt.ContractAddress, key, nil)
+	require.NoError(t, err, "get storage at")
+	require.Equal(t, len(res), 32, "storage at should return 32 bytes (even if zero)")
+}
+
 func TestEth_Call(t *testing.T) {
 	abidata := `
 		[
