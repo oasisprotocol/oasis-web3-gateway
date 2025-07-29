@@ -185,11 +185,7 @@ func (api *publicAPI) roundParamFromBlockNum(ctx context.Context, logger *loggin
 			logger.Error("failed to get last retained block from indexer", "err", err)
 			return 0, ErrInternalError
 		}
-		if clrBlk.Header.Round < ilrRound {
-			earliest = ilrRound
-		} else {
-			earliest = clrBlk.Header.Round
-		}
+		earliest = max(clrBlk.Header.Round, ilrRound)
 		return earliest, nil
 	default:
 		if int64(blockNum) < 0 {
