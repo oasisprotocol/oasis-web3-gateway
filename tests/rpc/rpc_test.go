@@ -63,7 +63,7 @@ func call(t *testing.T, method string, params interface{}) *Response {
 }
 
 //nolint:unparam
-func submitTransaction(ctx context.Context, t *testing.T, to common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *types.Receipt {
+func submitTransaction(ctx context.Context, t *testing.T, to common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, legacy bool) *types.Receipt {
 	ec := localClient(t, false)
 	chainID, err := ec.ChainID(context.Background())
 	require.NoError(t, err)
@@ -81,6 +81,9 @@ func submitTransaction(ctx context.Context, t *testing.T, to common.Address, amo
 		data,
 	)
 	signer := types.LatestSignerForChainID(chainID)
+	if legacy {
+		signer = types.LatestSignerForChainID(nil)
+	}
 	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), tests.TestKey1.Private)
 	require.Nil(t, err, "sign tx")
 
@@ -100,7 +103,7 @@ func submitTransaction(ctx context.Context, t *testing.T, to common.Address, amo
 func submitTestTransaction(ctx context.Context, t *testing.T) *types.Receipt {
 	data := common.FromHex("0x7f7465737432000000000000000000000000000000000000000000000000000000600057")
 	to := common.BytesToAddress(common.FromHex("0x1122334455667788990011223344556677889900"))
-	return submitTransaction(ctx, t, to, big.NewInt(1), GasLimit, GasPrice, data)
+	return submitTransaction(ctx, t, to, big.NewInt(1), GasLimit, GasPrice, data, false)
 }
 
 func TestEth_GetBalance(t *testing.T) {
@@ -209,7 +212,19 @@ func TestEth_SendRawTransaction(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
 	defer cancel()
 
-	receipt := submitTransaction(ctx, t, common.Address{1}, big.NewInt(1), GasLimit, GasPrice, nil)
+	receipt := submitTransaction(ctx, t, common.Address{1}, big.NewInt(1), GasLimit, GasPrice, nil, false)
+	require.EqualValues(t, 1, receipt.Status)
+}
+
+func TestEth_SendRawLegacyTransaction(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), OasisBlockTimeout)
+	defer cancel()
+
+	// Legacy transactions are only supported on Sapphire (Emerald was not updated, since support was added).
+	ec := localClient(t, false)
+	skipIfNotSapphire(t, ec)
+
+	receipt := submitTransaction(ctx, t, common.Address{1}, big.NewInt(1), GasLimit, GasPrice, nil, true)
 	require.EqualValues(t, 1, receipt.Status)
 }
 
@@ -328,7 +343,7 @@ func TestEth_GetTransactionByHash(t *testing.T) {
 	input := "0x7f7465737432000000000000000000000000000000000000000000000000000000600057"
 	data := common.FromHex(input)
 	to := common.BytesToAddress(common.FromHex("0x1122334455667788990011223344556677889900"))
-	receipt := submitTransaction(ctx, t, to, big.NewInt(1), GasLimit, GasPrice, data)
+	receipt := submitTransaction(ctx, t, to, big.NewInt(1), GasLimit, GasPrice, data, false)
 	require.EqualValues(t, 1, receipt.Status)
 	require.NotNil(t, receipt)
 
@@ -361,7 +376,7 @@ func TestEth_GetTransactionByBlockAndIndex(t *testing.T) {
 	input := "0x7f7465737432000000000000000000000000000000000000000000000000000000600057"
 	data := common.FromHex(input)
 	to := common.BytesToAddress(common.FromHex("0x1122334455667788990011223344556677889900"))
-	receipt := submitTransaction(ctx, t, to, big.NewInt(1), GasLimit, GasPrice, data)
+	receipt := submitTransaction(ctx, t, to, big.NewInt(1), GasLimit, GasPrice, data, false)
 	require.EqualValues(t, 1, receipt.Status)
 	require.NotNil(t, receipt)
 
