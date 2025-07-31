@@ -149,7 +149,14 @@ func blockToModels(
 	for idx, ethTx := range transactions {
 		ethTxHex := ethTx.Hash().Hex()
 		v, r, s := ethTx.RawSignatureValues()
-		signer := ethtypes.LatestSignerForChainID(ethTx.ChainId())
+		chainID := ethTx.ChainId()
+		if chainID != nil && chainID.Cmp(big.NewInt(0)) == 0 {
+			// Legacy transactions don't have a chain ID but `ChainId()` returns 0, which is invalid
+			// for `LatestSignerForChainId` which expects a null in that case (zero causes a panic).
+			// https://github.com/ethereum/go-ethereum/issues/31653
+			chainID = nil
+		}
+		signer := ethtypes.LatestSignerForChainID(chainID)
 		from, _ := signer.Sender(ethTx)
 		ethAccList := ethTx.AccessList()
 		accList := make([]model.AccessTuple, 0, len(ethAccList))
