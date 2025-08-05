@@ -64,6 +64,7 @@ jobs:
             ghcr.io/oasisprotocol/${{ matrix.docker_image }}:latest
             ghcr.io/oasisprotocol/${{ matrix.docker_image }}:latest-${{ env.VERSION }}
           push: true
+          provenance: false
           labels: |
             org.opencontainers.image.source=${{ github.event.repository.html_url }}
             org.opencontainers.image.revision=${{ github.sha }}
