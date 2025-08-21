@@ -3,7 +3,7 @@ package indexer
 import (
 	"context"
 	"errors"
-	"sort"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -147,9 +147,7 @@ func (cb *cachingBackend) OnBlockIndexed(
 			rounds = append(rounds, key.(uint64))
 			return true
 		})
-		sort.Slice(rounds, func(i, j int) bool {
-			return rounds[i] < rounds[j]
-		})
+		slices.Sort(rounds)
 		for _, idx := range rounds {
 			cb.pruneCache(idx)
 			if cb.cacheSize <= cb.maxCacheSize {
