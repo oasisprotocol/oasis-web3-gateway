@@ -146,7 +146,7 @@ func DB2EthLogs(dbLogs []*model.Log) []*ethtypes.Log {
 // DB2EthHeader converts block in db to ethereum header.
 func DB2EthHeader(block *model.Block) *ethtypes.Header {
 	diff, _ := new(big.Int).SetString(block.Header.Difficulty, 10)
-	noPrefix := block.Header.Bloom[2 : len(block.Header.Bloom)-1]
+	noPrefix := block.Header.Bloom[2:]
 	bloomData, _ := hex.DecodeString(noPrefix)
 	baseFee, _ := new(big.Int).SetString(block.Header.BaseFee, 10)
 	res := &ethtypes.Header{
