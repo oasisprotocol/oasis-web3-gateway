@@ -26,7 +26,7 @@ require (
 	github.com/prometheus/client_golang v1.23.0
 	github.com/rs/cors v1.11.1
 	github.com/spf13/cobra v1.9.1
-	github.com/stretchr/testify v1.11.0
+	github.com/stretchr/testify v1.11.1
 	github.com/uptrace/bun v1.2.15
 	github.com/uptrace/bun/dialect/pgdialect v1.2.15
 	github.com/uptrace/bun/driver/pgdriver v1.2.15
