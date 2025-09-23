@@ -35,6 +35,7 @@ import (
 	"github.com/oasisprotocol/oasis-web3-gateway/storage"
 	"github.com/oasisprotocol/oasis-web3-gateway/storage/psql"
 	"github.com/oasisprotocol/oasis-web3-gateway/version"
+	"github.com/oasisprotocol/oasis-web3-gateway/worker"
 )
 
 var (
@@ -237,11 +238,23 @@ func runRoot() error {
 
 	// Initialize db again, now with configured timeouts.
 	var storage storage.Storage
-	storage, err = psql.InitDB(ctx, cfg.Database, false, dbReadOnly)
+	rawStorage, err := psql.InitDB(ctx, cfg.Database, false, dbReadOnly)
 	if err != nil {
 		logger.Error("failed to initialize db", "err", err)
 		return err
 	}
+	storage = rawStorage
+
+	// Start log tx_index fixer worker
+	if bunDB, ok := rawStorage.DB.(*bun.DB); ok {
+		logTxIndexFixer := worker.NewLogTxIndexFixer(bunDB)
+		go func() {
+			if err := logTxIndexFixer.Start(ctx); err != nil {
+				logger.Error("log tx_index fixer worker failed", "err", err)
+			}
+		}()
+	}
+
 	// Monitoring if enabled.
 	if cfg.Gateway.Monitoring.Enabled() {
 		storage = psql.NewMetricsWrapper(storage)
