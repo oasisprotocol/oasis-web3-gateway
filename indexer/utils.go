@@ -383,7 +383,7 @@ func (ib *indexBackend) StoreBlockData(ctx context.Context, oasisBlock *block.Bl
 				// Ignore any other events.
 			}
 		}
-		logs = append(logs, Logs2EthLogs(oasisLogs, blockNum, bhash, ethTx.Hash(), uint(len(logs)), uint32(txIndex))...)
+		logs = append(logs, Logs2EthLogs(oasisLogs, blockNum, bhash, ethTx.Hash(), uint(len(logs)), uint32(len(ethTxs)))...)
 
 		// Emerald GasUsed events were added in version 7.0.0.
 		// Default to using gas limit, which was the behaviour before.
