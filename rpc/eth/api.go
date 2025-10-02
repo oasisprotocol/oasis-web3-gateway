@@ -22,9 +22,6 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/secp256k1"
-	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/accounts"
-	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
-	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/evm"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 
 	"github.com/oasisprotocol/oasis-web3-gateway/archive"
@@ -32,6 +29,7 @@ import (
 	"github.com/oasisprotocol/oasis-web3-gateway/gas"
 	"github.com/oasisprotocol/oasis-web3-gateway/indexer"
 	"github.com/oasisprotocol/oasis-web3-gateway/rpc/utils"
+	"github.com/oasisprotocol/oasis-web3-gateway/source"
 )
 
 func estimateGasDummySigSpec() types.SignatureAddressSpec {
@@ -111,7 +109,7 @@ type API interface {
 }
 
 type publicAPI struct {
-	client         client.RuntimeClient
+	source         source.NodeSource
 	archiveClient  *archive.Client
 	backend        indexer.Backend
 	gasPriceOracle gas.Backend
@@ -122,7 +120,7 @@ type publicAPI struct {
 
 // NewPublicAPI creates an instance of the public ETH Web3 API.
 func NewPublicAPI(
-	client client.RuntimeClient,
+	source source.NodeSource,
 	archiveClient *archive.Client,
 	logger *logging.Logger,
 	chainID uint32,
@@ -131,7 +129,7 @@ func NewPublicAPI(
 	methodLimits *conf.MethodLimits,
 ) API {
 	return &publicAPI{
-		client:         client,
+		source:         source,
 		archiveClient:  archiveClient,
 		chainID:        chainID,
 		Logger:         logger,
@@ -175,9 +173,9 @@ func (api *publicAPI) roundParamFromBlockNum(ctx context.Context, logger *loggin
 		return client.RoundLatest, nil
 	case ethrpc.EarliestBlockNumber:
 		var earliest uint64
-		clrBlk, err := api.client.GetLastRetainedBlock(ctx)
+		clrBlk, err := api.source.GetLastRetainedBlock(ctx)
 		if err != nil {
-			logger.Error("failed to get last retained block from client", "err", err)
+			logger.Error("failed to get last retained block from source", "err", err)
 			return 0, ErrInternalError
 		}
 		ilrRound, err := api.backend.QueryLastRetainedRound(ctx)
@@ -265,8 +263,7 @@ func (api *publicAPI) GetStorageAt(ctx context.Context, address common.Address, 
 		return api.archiveClient.GetStorageAt(ctx, address, slot, round)
 	}
 
-	ethmod := evm.NewV1(api.client)
-	res, err := ethmod.Storage(ctx, round, address[:], slot[:])
+	res, err := api.source.EVMStorage(ctx, round, address[:], slot[:])
 	if err != nil {
 		logger.Error("failed to query storage", "err", err)
 		return nil, ErrInternalError
@@ -286,10 +283,9 @@ func (api *publicAPI) GetBalance(ctx context.Context, address common.Address, bl
 		return api.archiveClient.GetBalance(ctx, address, round)
 	}
 
-	ethmod := evm.NewV1(api.client)
-	res, err := ethmod.Balance(ctx, round, address[:])
+	res, err := api.source.EVMBalance(ctx, round, address[:])
 	if err != nil {
-		logger.Error("ethmod.Balance failed", "round", round, "err", err)
+		logger.Error("failed to get balance", "round", round, "err", err)
 		return nil, ErrInternalError
 	}
 
@@ -364,10 +360,9 @@ func (api *publicAPI) GetTransactionCount(ctx context.Context, ethAddr common.Ad
 		return api.archiveClient.GetTransactionCount(ctx, ethAddr, round)
 	}
 
-	accountsMod := accounts.NewV1(api.client)
 	accountsAddr := types.NewAddressRaw(types.AddressV0Secp256k1EthContext, ethAddr[:])
 
-	nonce, err := accountsMod.Nonce(ctx, round, accountsAddr)
+	nonce, err := api.source.AccountsNonce(ctx, round, accountsAddr)
 	if err != nil {
 		logger.Error("accounts.Nonce failed", "err", err)
 		return nil, ErrInternalError
@@ -388,10 +383,9 @@ func (api *publicAPI) GetCode(ctx context.Context, address common.Address, block
 		return api.archiveClient.GetCode(ctx, address, round)
 	}
 
-	ethmod := evm.NewV1(api.client)
-	res, err := ethmod.Code(ctx, round, address[:])
+	res, err := api.source.EVMCode(ctx, round, address[:])
 	if err != nil {
-		logger.Error("ethmod.Code failed", "err", err)
+		logger.Error("failed to get code", "err", err)
 		return nil, err
 	}
 
@@ -446,7 +440,7 @@ func (api *publicAPI) Call(ctx context.Context, args utils.TransactionArgs, bloc
 		sender = *args.From
 	}
 
-	res, err := evm.NewV1(api.client).SimulateCall(
+	res, err := api.source.EVMSimulateCall(
 		ctx,            // context
 		round,          // round
 		gasPrice,       // gasPrice
@@ -484,7 +478,7 @@ func (api *publicAPI) SendRawTransaction(ctx context.Context, data hexutil.Bytes
 		},
 	}
 
-	err := api.client.SubmitTxNoWait(ctx, &utx)
+	err := api.source.SubmitTxNoWait(ctx, &utx)
 	if err != nil {
 		logger.Debug("failed to submit transaction", "err", err)
 		return ethTx.Hash(), err
@@ -528,15 +522,16 @@ func (api *publicAPI) EstimateGas(ctx context.Context, args utils.TransactionArg
 	}
 	if args.To == nil {
 		// evm.create
-		tx = evm.NewV1(api.client).Create(ethTxValue, *ethTxInput).AppendAuthSignature(estimateGasSigSpec, 0).GetTransaction()
+		tx = api.source.EVMCreate(ethTxValue, *ethTxInput)
 	} else {
 		// evm.call
-		tx = evm.NewV1(api.client).Call(args.To.Bytes(), ethTxValue, *ethTxInput).AppendAuthSignature(estimateGasSigSpec, 0).GetTransaction()
+		tx = api.source.EVMCall(args.To.Bytes(), ethTxValue, *ethTxInput)
 	}
+	tx.AppendAuthSignature(estimateGasSigSpec, 0)
 
 	var ethAddress [20]byte
 	copy(ethAddress[:], args.From[:])
-	gas, err := core.NewV1(api.client).EstimateGasForCaller(ctx, round, types.CallerAddress{EthAddress: &ethAddress}, tx, true)
+	gas, err := api.source.CoreEstimateGasForCaller(ctx, round, types.CallerAddress{EthAddress: &ethAddress}, tx, true)
 	if err != nil {
 		logger.Debug("failed", "err", err)
 		return 0, err
@@ -682,8 +677,10 @@ func (api *publicAPI) GetLogs(ctx context.Context, filter filters.FilterCriteria
 		return nil, fmt.Errorf("%w: end round greater than start round", ErrInvalidRequest)
 	}
 
-	if limit := api.methodLimits.GetLogsMaxRounds; limit != 0 && endRoundInclusive-startRoundInclusive > limit {
-		return nil, fmt.Errorf("%w: max allowed of rounds in logs query is: %d", ErrInvalidRequest, limit)
+	if api.methodLimits != nil {
+		if limit := api.methodLimits.GetLogsMaxRounds; limit != 0 && endRoundInclusive-startRoundInclusive > limit {
+			return nil, fmt.Errorf("%w: max allowed of rounds in logs query is: %d", ErrInvalidRequest, limit)
+		}
 	}
 
 	ethLogs := []*ethtypes.Log{}
@@ -696,7 +693,6 @@ func (api *publicAPI) GetLogs(ctx context.Context, filter filters.FilterCriteria
 
 	// Early return if no further filtering.
 	if len(filter.Addresses) == 0 && len(filter.Topics) == 0 {
-		logger.Debug("response", "num_logs", len(ethLogs))
 		return ethLogs, nil
 	}
 

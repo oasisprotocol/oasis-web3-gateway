@@ -1,0 +1,10 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "key": "0xdf2c83fddb9990c91ab58662c572e4960d0344483324f260ddef632a36a42c00",
+    "checksum": "0x59dd7e7188b9736897ca719ece9dce6d9618e3f487553dccbc601ba848b65d9c",
+    "signature": "0xf78a442d9b63417e10b0c54febd1fb363e6a11d24a24d3b6abf4c94bb01d066ad500e3c7cf270f83b6ca81ebdd64832f84b151e3a6d59a980d780abcc2993101",
+    "epoch": 44431
+  }
+}

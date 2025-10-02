@@ -16,15 +16,18 @@ import (
 
 // Config contains the CLI configuration.
 type Config struct {
-	RuntimeID     string `koanf:"runtime_id"`
-	NodeAddress   string `koanf:"node_address"`
+	RuntimeID string `koanf:"runtime_id"`
+
+	NodeAddress   string  `koanf:"node_address"`
+	NodeCachePath *string `koanf:"node_cache_path"`
+
 	EnablePruning bool   `koanf:"enable_pruning"`
 	PruningStep   uint64 `koanf:"pruning_step"`
 	// IndexingStart. Skip indexing before this block number. Use this to avoid trying to index
 	// blocks that the node doesn't have data for, such as by skipping them in checkpoint sync.
-	// For sensible reasons, indexing may actually start at an even later block, such as if
-	// this block is already indexed or the node indicates that it doesn't have this block.
-	IndexingStart   uint64 `koanf:"indexing_start"`
+	IndexingStart uint64 `koanf:"indexing_start"`
+	// IndexingEnd. Stop indexing after reaching this block number.
+	IndexingEnd     uint64 `koanf:"indexing_end"`
 	IndexingDisable bool   `koanf:"indexing_disable"`
 
 	Log      *LogConfig      `koanf:"log"`

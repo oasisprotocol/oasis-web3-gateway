@@ -25,3 +25,7 @@ benchmarks/benchmarks
 .vscode
 
 dist/
+
+# E2E regression test artifacts.
+tests/e2e_regression/*/pebble-cache/
+tests/e2e_regression/*/actual/

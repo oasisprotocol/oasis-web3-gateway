@@ -7,7 +7,6 @@ import (
 	ethRpc "github.com/ethereum/go-ethereum/rpc"
 
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
-	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 
 	"github.com/oasisprotocol/oasis-web3-gateway/archive"
 	"github.com/oasisprotocol/oasis-web3-gateway/conf"
@@ -22,12 +21,13 @@ import (
 	"github.com/oasisprotocol/oasis-web3-gateway/rpc/txpool"
 	"github.com/oasisprotocol/oasis-web3-gateway/rpc/web3"
 	"github.com/oasisprotocol/oasis-web3-gateway/server"
+	"github.com/oasisprotocol/oasis-web3-gateway/source"
 )
 
 // GetRPCAPIs returns the list of enabled RPC APIs and accompanying health checks.
 func GetRPCAPIs(
 	ctx context.Context,
-	client client.RuntimeClient,
+	source source.NodeSource,
 	archiveClient *archive.Client,
 	backend indexer.Backend,
 	gasPriceOracle gas.Backend,
@@ -39,10 +39,10 @@ func GetRPCAPIs(
 
 	// Web3 JSON-RPC Spec APIs - always enabled.
 	web3Service := web3.NewPublicAPI()
-	ethService := eth.NewPublicAPI(client, archiveClient, logging.GetLogger("eth_rpc"), config.ChainID, backend, gasPriceOracle, config.MethodLimits)
+	ethService := eth.NewPublicAPI(source, archiveClient, logging.GetLogger("eth_rpc"), config.ChainID, backend, gasPriceOracle, config.MethodLimits)
 	netService := net.NewPublicAPI(config.ChainID)
 	txpoolService := txpool.NewPublicAPI()
-	filtersService := filters.NewPublicAPI(client, logging.GetLogger("eth_filters"), backend, eventSystem)
+	filtersService := filters.NewPublicAPI(logging.GetLogger("eth_filters"), backend, eventSystem)
 	if config.Monitoring.Enabled() {
 		web3Service = web3.NewMetricsWrapper(web3Service)
 		netService = net.NewMetricsWrapper(netService)
@@ -75,7 +75,7 @@ func GetRPCAPIs(
 
 	// Configure oasis_ APIs if enabled.
 	if config.ExposeOasisRPCs {
-		oasisService, oasisHealth := oasis.NewPublicAPI(ctx, client, logging.GetLogger("oasis"))
+		oasisService, oasisHealth := oasis.NewPublicAPI(ctx, source, logging.GetLogger("oasis"))
 		if config.Monitoring.Enabled() {
 			oasisService = oasis.NewMetricsWrapper(oasisService)
 		}

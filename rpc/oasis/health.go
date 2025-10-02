@@ -7,8 +7,7 @@ import (
 	"time"
 
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
-	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
-	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
+	"github.com/oasisprotocol/oasis-web3-gateway/source"
 )
 
 const (
@@ -18,7 +17,7 @@ const (
 
 type healthChecker struct {
 	ctx    context.Context
-	client client.RuntimeClient
+	source source.NodeSource
 	logger *logging.Logger
 
 	health uint32
@@ -49,7 +48,7 @@ func (h *healthChecker) run() {
 				defer cancel()
 
 				// Query public keys.
-				_, err := core.NewV1(h.client).CallDataPublicKey(ctx)
+				_, err := h.source.CoreCallDataPublicKey(ctx)
 				if err != nil {
 					h.logger.Error("failed to fetch public key", "err", err)
 					h.updateHealth(false)

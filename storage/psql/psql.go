@@ -348,6 +348,7 @@ func (db *PostDB) GetLogs(ctx context.Context, startRound, endRound uint64) ([]*
 	logs := []*model.Log{}
 	err := db.DB.NewSelect().Model(&logs).
 		Where("round BETWEEN ? AND ?", startRound, endRound).
+		Order("round ASC", "tx_index ASC", "index ASC").
 		Scan(ctx)
 	if err != nil {
 		return nil, err

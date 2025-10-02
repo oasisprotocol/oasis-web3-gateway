@@ -11,7 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
-	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/evm"
 )
 
@@ -108,9 +107,8 @@ func (api *publicAPI) handleCallFailure(ctx context.Context, logger *logging.Log
 	rtInfo := api.backend.RuntimeInfo()
 	if rtInfo == nil {
 		// In case the node has indexer disabled, query the runtime info on the fly.
-		// XXX: This could be cached per epoch.
 		var cerr error
-		rtInfo, cerr = core.NewV1(api.client).RuntimeInfo(ctx)
+		rtInfo, cerr = api.source.CoreRuntimeInfo(ctx)
 		if cerr != nil {
 			logger.Debug("failed querying runtime info", "err", err)
 		}

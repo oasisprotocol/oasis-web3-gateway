@@ -172,3 +172,49 @@ jobs:
 
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v5.5.1
+
+  test-e2e-regression:
+    strategy:
+      matrix:
+        suite:
+          - mainnet_sapphire_2025_09
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_HOST: 127.0.0.1
+          POSTGRES_PORT: 5432
+          POSTGRES_DB: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.25.x"
+
+      - name: Build Go
+        run: make oasis-web3-gateway
+
+      - name: Block access to external Oasis nodes
+        # External nodes should not be available in CI; we run everything from caches.
+        # Enforce unavailability to keep tests confidently reproducible, and to catch
+        # any bugs that might cause CI to accidentally use live external services.
+        run: |
+          sudo bash -c 'echo 0.0.0.0 grpc.oasis.io | tee -a /etc/hosts'
+
+      - name: Run e2e regression tests
+        run: make E2E_REGRESSION_SUITES=${{ matrix.suite }} test-e2e-regression
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Actual web3 gateway responses (${{ matrix.suite }})
+          path: |
+            tests/e2e_regression/${{ matrix.suite }}/actual
+        if: failure()

@@ -11,6 +11,7 @@ import (
 
 	"github.com/oasisprotocol/oasis-core/go/common/pubsub"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
+	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
@@ -18,60 +19,87 @@ import (
 	"github.com/oasisprotocol/oasis-web3-gateway/conf"
 	"github.com/oasisprotocol/oasis-web3-gateway/db/model"
 	"github.com/oasisprotocol/oasis-web3-gateway/indexer"
+	"github.com/oasisprotocol/oasis-web3-gateway/source"
 )
 
-type mockCoreClient struct {
+type mockNodeSource struct {
 	minGasPrice quantity.Quantity
 	shouldFail  bool
 }
 
-// EstimateGas implements core.V1.
-func (*mockCoreClient) EstimateGas(_ context.Context, _ uint64, _ *types.Transaction, _ bool) (uint64, error) {
+var _ source.NodeSource = (*mockNodeSource)(nil)
+
+func (*mockNodeSource) GetBlock(_ context.Context, _ uint64) (*block.Block, error) {
 	panic("unimplemented")
 }
 
-// EstimateGasForCaller implements core.V1.
-func (*mockCoreClient) EstimateGasForCaller(_ context.Context, _ uint64, _ types.CallerAddress, _ *types.Transaction, _ bool) (uint64, error) {
+func (*mockNodeSource) GetTransactionsWithResults(_ context.Context, _ uint64) ([]*client.TransactionWithResults, error) {
 	panic("unimplemented")
 }
 
-// GetEvents implements core.V1.
-func (*mockCoreClient) GetEvents(_ context.Context, _ uint64) ([]*core.Event, error) {
+func (*mockNodeSource) GetLastRetainedBlock(_ context.Context) (*block.Block, error) {
 	panic("unimplemented")
 }
 
-// Parameters implements core.V1.
-func (*mockCoreClient) Parameters(_ context.Context, _ uint64) (*core.Parameters, error) {
+func (*mockNodeSource) CoreParameters(_ context.Context, _ uint64) (*core.Parameters, error) {
 	panic("unimplemented")
 }
 
-// RuntimeInfo implements core.V1.
-func (*mockCoreClient) RuntimeInfo(_ context.Context) (*core.RuntimeInfoResponse, error) {
+func (*mockNodeSource) CoreRuntimeInfo(_ context.Context) (*core.RuntimeInfoResponse, error) {
 	panic("unimplemented")
 }
 
-// RuntimeInfo implements core.V1.
-func (*mockCoreClient) CallDataPublicKey(_ context.Context) (*core.CallDataPublicKeyResponse, error) {
+func (*mockNodeSource) CoreCallDataPublicKey(_ context.Context) (*core.CallDataPublicKeyResponse, error) {
 	panic("unimplemented")
 }
 
-// RuntimeInfo implements core.V1.
-func (*mockCoreClient) ExecuteReadOnlyTx(_ context.Context, _ uint64, _ *types.UnverifiedTransaction) (*core.ExecuteReadOnlyTxResponse, error) {
+func (*mockNodeSource) CoreEstimateGasForCaller(_ context.Context, _ uint64, _ types.CallerAddress, _ *types.Transaction, _ bool) (uint64, error) {
 	panic("unimplemented")
 }
 
-// MinGasPrice implements core.V1.
-func (m *mockCoreClient) MinGasPrice(_ context.Context, _ uint64) (map[types.Denomination]quantity.Quantity, error) {
+func (m *mockNodeSource) CoreMinGasPrice(_ context.Context, _ uint64) (map[types.Denomination]types.Quantity, error) {
 	if m.shouldFail {
 		return nil, fmt.Errorf("failed")
 	}
-	return map[types.Denomination]quantity.Quantity{
+	return map[types.Denomination]types.Quantity{
 		types.NativeDenomination: m.minGasPrice,
 	}, nil
 }
 
-func (m *mockCoreClient) DecodeEvent(*types.Event) ([]client.DecodedEvent, error) {
+func (*mockNodeSource) AccountsNonce(_ context.Context, _ uint64, _ types.Address) (uint64, error) {
 	panic("unimplemented")
+}
+
+func (*mockNodeSource) EVMCode(_ context.Context, _ uint64, _ []byte) ([]byte, error) {
+	panic("unimplemented")
+}
+
+func (*mockNodeSource) EVMBalance(_ context.Context, _ uint64, _ []byte) (*types.Quantity, error) {
+	panic("unimplemented")
+}
+
+func (*mockNodeSource) EVMStorage(_ context.Context, _ uint64, _ []byte, _ []byte) ([]byte, error) {
+	panic("unimplemented")
+}
+
+func (*mockNodeSource) EVMSimulateCall(_ context.Context, _ uint64, _ []byte, _ uint64, _ []byte, _ []byte, _ []byte, _ []byte) ([]byte, error) {
+	panic("unimplemented")
+}
+
+func (*mockNodeSource) EVMCreate(_ []byte, _ []byte) *types.Transaction {
+	panic("unimplemented")
+}
+
+func (*mockNodeSource) EVMCall(_ []byte, _ []byte, _ []byte) *types.Transaction {
+	panic("unimplemented")
+}
+
+func (*mockNodeSource) SubmitTxNoWait(_ context.Context, _ *types.UnverifiedTransaction) error {
+	panic("unimplemented")
+}
+
+func (*mockNodeSource) Close() error {
+	return nil
 }
 
 type mockBlockEmitter struct {
@@ -103,6 +131,9 @@ func emitBlock(emitter *mockBlockEmitter, fullBlock bool, txPrice *quantity.Quan
 }
 
 func TestGasPriceOracle(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	windowSize := 5
 	cfg := &conf.GasConfig{
 		BlockFullThreshold: 0.8,
@@ -114,14 +145,14 @@ func TestGasPriceOracle(t *testing.T) {
 		notifier: pubsub.NewBroker(false),
 	}
 
-	coreClient := mockCoreClient{
+	nodeSource := mockNodeSource{
 		minGasPrice: *quantity.NewFromUint64(142_000_000_000), // 142 gwei.
 		shouldFail:  true,
 	}
 
-	// Gas price oracle with failing core client.
-	gasPriceOracle := New(context.Background(), cfg, &emitter, &coreClient)
-	require.NoError(gasPriceOracle.Start())
+	// Gas price oracle with failing node source.
+	gasPriceOracle := New(cfg, &emitter, &nodeSource)
+	go gasPriceOracle.Start(ctx)
 
 	// Default gas price should be returned by the oracle.
 	require.EqualValues(defaultGasPrice.ToBigInt(), gasPriceOracle.GasPrice(), "oracle should return default gas price")
@@ -156,12 +187,16 @@ func TestGasPriceOracle(t *testing.T) {
 
 	// Default gas price should be returned by the oracle.
 	require.EqualValues(defaultGasPrice.ToBigInt(), gasPriceOracle.GasPrice(), "oracle should return default gas price")
-	gasPriceOracle.Stop()
 
-	// Create a new gas price oracle with working coreClient.
-	coreClient.shouldFail = false
-	gasPriceOracle = New(context.Background(), cfg, &emitter, &coreClient)
-	require.NoError(gasPriceOracle.Start())
+	// Cancel and create a new context for the next oracle.
+	cancel()
+	ctx, cancel = context.WithCancel(context.Background())
+	defer cancel()
+
+	// Create a new gas price oracle with working nodeSource.
+	nodeSource.shouldFail = false
+	gasPriceOracle = New(cfg, &emitter, &nodeSource)
+	go gasPriceOracle.Start(ctx)
 
 	// Emit a non-full block.
 	emitBlock(&emitter, false, nil)
@@ -170,7 +205,7 @@ func TestGasPriceOracle(t *testing.T) {
 
 	// Wait a bit so that a MinGasPrice query is made.
 	time.Sleep(3 * time.Second)
-	require.EqualValues(coreClient.minGasPrice.ToBigInt(), gasPriceOracle.GasPrice(), "oracle should return gas reported by the node query")
+	require.EqualValues(nodeSource.minGasPrice.ToBigInt(), gasPriceOracle.GasPrice(), "oracle should return gas reported by the node query")
 
 	// Emit a full block.
 	emitBlock(&emitter, true, quantity.NewFromUint64(1_000_000_000_000)) // 1000 gwei.
@@ -183,11 +218,10 @@ func TestGasPriceOracle(t *testing.T) {
 		emitBlock(&emitter, false, nil)
 	}
 
-	require.EqualValues(coreClient.minGasPrice.ToBigInt(), gasPriceOracle.GasPrice(), "oracle should return gas reported by the node query")
+	require.EqualValues(nodeSource.minGasPrice.ToBigInt(), gasPriceOracle.GasPrice(), "oracle should return gas reported by the node query")
 
 	// Emit a full block with a transaction cheaper than the min gas price reported by the oasis node.
 	emitBlock(&emitter, true, quantity.NewFromUint64(1)) // 1 wei.
 
-	require.EqualValues(coreClient.minGasPrice.ToBigInt(), gasPriceOracle.GasPrice(), "oracle should return gas reported by the node query")
-	gasPriceOracle.Stop()
+	require.EqualValues(nodeSource.minGasPrice.ToBigInt(), gasPriceOracle.GasPrice(), "oracle should return gas reported by the node query")
 }

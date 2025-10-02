@@ -8,9 +8,8 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
-	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
-	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
 	"github.com/oasisprotocol/oasis-web3-gateway/server"
+	"github.com/oasisprotocol/oasis-web3-gateway/source"
 )
 
 var ErrInternalError = errors.New("internal error")
@@ -36,25 +35,25 @@ type CallDataPublicKey struct {
 }
 
 type publicAPI struct {
-	client client.RuntimeClient
+	source source.NodeSource
 	logger *logging.Logger
 }
 
 // NewPublicAPI creates an instance of the Web3 API and accompanying health check.
 func NewPublicAPI(
 	ctx context.Context,
-	client client.RuntimeClient,
+	source source.NodeSource,
 	logger *logging.Logger,
 ) (API, server.HealthCheck) {
-	health := &healthChecker{ctx: ctx, client: client, logger: logger}
+	health := &healthChecker{ctx: ctx, source: source, logger: logger}
 	go health.run()
 
-	return &publicAPI{client: client, logger: logger}, health
+	return &publicAPI{source: source, logger: logger}, health
 }
 
 func (api *publicAPI) CallDataPublicKey(ctx context.Context) (*CallDataPublicKey, error) {
 	logger := api.logger.With("method", "oasis_callDataPublicKey")
-	res, err := core.NewV1(api.client).CallDataPublicKey(ctx)
+	res, err := api.source.CoreCallDataPublicKey(ctx)
 	if err != nil {
 		logger.Error("failed to fetch public key", "err", err)
 		return nil, ErrInternalError

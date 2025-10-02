@@ -39,6 +39,7 @@ linters:
             - github.com/spf13/cobra
             - github.com/stretchr/testify
             - github.com/uptrace/bun
+            - github.com/cockroachdb/pebble
             - golang.org/x/crypto
             - google.golang.org/grpc
           deny:

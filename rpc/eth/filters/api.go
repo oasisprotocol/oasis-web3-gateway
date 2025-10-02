@@ -10,7 +10,6 @@ import (
 	ethrpc "github.com/ethereum/go-ethereum/rpc"
 
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
-	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 
 	eventFilters "github.com/oasisprotocol/oasis-web3-gateway/filters"
 	"github.com/oasisprotocol/oasis-web3-gateway/indexer"
@@ -25,7 +24,6 @@ type API interface {
 }
 
 type publicFilterAPI struct {
-	client  client.RuntimeClient
 	backend indexer.Backend
 	Logger  *logging.Logger
 	es      *eventFilters.EventSystem
@@ -33,13 +31,11 @@ type publicFilterAPI struct {
 
 // NewPublicAPI creates an instance of the public ETH Web3 API with filter func.
 func NewPublicAPI(
-	client client.RuntimeClient,
 	logger *logging.Logger,
 	backend indexer.Backend,
 	eventSystem *eventFilters.EventSystem,
 ) API {
 	return &publicFilterAPI{
-		client:  client,
 		Logger:  logger,
 		backend: backend,
 		es:      eventSystem,
