@@ -206,7 +206,7 @@ func (ib *indexBackend) blockNumberFromRound(ctx context.Context, round uint64) 
 	default:
 		number = round
 	}
-	return
+	return number, err
 }
 
 // QueryBlockRound returns block number for the provided hash.

@@ -108,7 +108,7 @@ func (m *metricsWrapper) Accounts() (res []common.Address, err error) {
 	defer metrics.InstrumentCaller(r, s, f, i, d, &err)()
 
 	res, err = m.api.Accounts()
-	return
+	return res, err
 }
 
 // BlockNumber implements eth.API.
@@ -117,7 +117,7 @@ func (m *metricsWrapper) BlockNumber(ctx context.Context) (res hexutil.Uint64, e
 	defer metrics.InstrumentCaller(r, s, f, i, d, &err)()
 
 	res, err = m.api.BlockNumber(ctx)
-	return
+	return res, err
 }
 
 // Check if the transaction (presumably via `eth_call` RPC) is a signed query.
@@ -151,7 +151,7 @@ func (m *metricsWrapper) Call(ctx context.Context, args utils.TransactionArgs, b
 	}
 
 	res, err = m.api.Call(ctx, args, blockNrOrHash, so)
-	return
+	return res, err
 }
 
 // ChainId implements eth.API.
@@ -162,7 +162,7 @@ func (m *metricsWrapper) ChainId() (res *hexutil.Big, err error) {
 	defer metrics.InstrumentCaller(r, s, f, i, d, &err)()
 
 	res, err = m.api.ChainId()
-	return
+	return res, err
 }
 
 // EstimateGas implements eth.API.
@@ -171,7 +171,7 @@ func (m *metricsWrapper) EstimateGas(ctx context.Context, args utils.Transaction
 	defer metrics.InstrumentCaller(r, s, f, i, d, &err)()
 
 	res, err = m.api.EstimateGas(ctx, args, blockNum)
-	return
+	return res, err
 }
 
 // GasPrice implements eth.API.
@@ -180,7 +180,7 @@ func (m *metricsWrapper) GasPrice(ctx context.Context) (res *hexutil.Big, err er
 	defer metrics.InstrumentCaller(r, s, f, i, d, &err)()
 
 	res, err = m.api.GasPrice(ctx)
-	return
+	return res, err
 }
 
 // MaxPriorityFeePerGas implements eth.API.
@@ -189,7 +189,7 @@ func (m *metricsWrapper) MaxPriorityFeePerGas(ctx context.Context) (res *hexutil
 	defer metrics.InstrumentCaller(r, s, f, i, d, &err)()
 
 	res, err = m.api.MaxPriorityFeePerGas(ctx)
-	return
+	return res, err
 }
 
 // FeeHistory implements eth.API.
@@ -198,7 +198,7 @@ func (m *metricsWrapper) FeeHistory(ctx context.Context, blockCount math.HexOrDe
 	defer metrics.InstrumentCaller(r, s, f, i, d, &err)()
 
 	res, err = m.api.FeeHistory(ctx, blockCount, lastBlock, rewardPercentiles)
-	return
+	return res, err
 }
 
 // GetBalance implements eth.API.
@@ -207,7 +207,7 @@ func (m *metricsWrapper) GetBalance(ctx context.Context, address common.Address,
 	defer metrics.InstrumentCaller(r, s, f, i, d, &err)()
 
 	res, err = m.api.GetBalance(ctx, address, blockNrOrHash)
-	return
+	return res, err
 }
 
 // GetBlockByHash implements eth.API.
@@ -216,7 +216,7 @@ func (m *metricsWrapper) GetBlockByHash(ctx context.Context, blockHash common.Ha
 	defer metrics.InstrumentCaller(r, s, f, i, d, &err)()
 
 	res, err = m.api.GetBlockByHash(ctx, blockHash, fullTx)
-	return
+	return res, err
 }
 
 // GetBlockByNumber implements eth.API.
@@ -229,7 +229,7 @@ func (m *metricsWrapper) GetBlockByNumber(ctx context.Context, blockNum ethrpc.B
 	// Measure request height difference from latest height.
 	go m.meassureRequestHeightDiff("eth_getBlockByNumber", blockNum)
 
-	return
+	return res, err
 }
 
 // GetBlockHash implements eth.API.
@@ -242,7 +242,7 @@ func (m *metricsWrapper) GetBlockHash(ctx context.Context, blockNum ethrpc.Block
 	// Measure request height difference from latest height.
 	go m.meassureRequestHeightDiff("eth_getBlockHash", blockNum)
 
-	return
+	return res, err
 }
 
 // GetBlockTransactionCountByHash implements eth.API.
@@ -251,7 +251,7 @@ func (m *metricsWrapper) GetBlockTransactionCountByHash(ctx context.Context, blo
 	defer metrics.InstrumentCaller(r, s, f, i, d, &err)()
 
 	res, err = m.api.GetBlockTransactionCountByHash(ctx, blockHash)
-	return
+	return res, err
 }
 
 // GetBlockTransactionCountByNumber implements eth.API.
@@ -264,7 +264,7 @@ func (m *metricsWrapper) GetBlockTransactionCountByNumber(ctx context.Context, b
 	// Measure request height difference from latest height.
 	go m.meassureRequestHeightDiff("eth_getBlockTransationCountByNumber", blockNum)
 
-	return
+	return res, err
 }
 
 // GetCode implements eth.API.
@@ -273,7 +273,7 @@ func (m *metricsWrapper) GetCode(ctx context.Context, address common.Address, bl
 	defer metrics.InstrumentCaller(r, s, f, i, d, &err)()
 
 	res, err = m.api.GetCode(ctx, address, blockNrOrHash)
-	return
+	return res, err
 }
 
 // GetLogs implements eth.API.
@@ -282,7 +282,7 @@ func (m *metricsWrapper) GetLogs(ctx context.Context, filter filters.FilterCrite
 	defer metrics.InstrumentCaller(r, s, f, i, d, &err)()
 
 	res, err = m.api.GetLogs(ctx, filter)
-	return
+	return res, err
 }
 
 // GetStorageAt implements eth.API.
@@ -291,7 +291,7 @@ func (m *metricsWrapper) GetStorageAt(ctx context.Context, address common.Addres
 	defer metrics.InstrumentCaller(r, s, f, i, d, &err)()
 
 	res, err = m.api.GetStorageAt(ctx, address, slot, blockNrOrHash)
-	return
+	return res, err
 }
 
 // GetTransactionByBlockHashAndIndex implements eth.API.
@@ -300,7 +300,7 @@ func (m *metricsWrapper) GetTransactionByBlockHashAndIndex(ctx context.Context, 
 	defer metrics.InstrumentCaller(r, s, f, i, d, &err)()
 
 	res, err = m.api.GetTransactionByBlockHashAndIndex(ctx, blockHash, index)
-	return
+	return res, err
 }
 
 // GetTransactionByBlockNumberAndIndex implements eth.API.
@@ -313,7 +313,7 @@ func (m *metricsWrapper) GetTransactionByBlockNumberAndIndex(ctx context.Context
 	// Measure request height difference from latest height.
 	go m.meassureRequestHeightDiff("eth_getTransactionByBlockNumberAndIndex", blockNum)
 
-	return
+	return res, err
 }
 
 // GetTransactionByHash implements eth.API.
@@ -322,7 +322,7 @@ func (m *metricsWrapper) GetTransactionByHash(ctx context.Context, hash common.H
 	defer metrics.InstrumentCaller(r, s, f, i, d, &err)()
 
 	res, err = m.api.GetTransactionByHash(ctx, hash)
-	return
+	return res, err
 }
 
 // GetTransactionCount implements eth.API.
@@ -331,7 +331,7 @@ func (m *metricsWrapper) GetTransactionCount(ctx context.Context, ethAddr common
 	defer metrics.InstrumentCaller(r, s, f, i, d, &err)()
 
 	h, err = m.api.GetTransactionCount(ctx, ethAddr, blockNrOrHash)
-	return
+	return h, err
 }
 
 // GetTransactionReceipt implements eth.API.
@@ -340,7 +340,7 @@ func (m *metricsWrapper) GetTransactionReceipt(ctx context.Context, txHash commo
 	defer metrics.InstrumentCaller(r, s, f, i, d, &err)()
 
 	res, err = m.api.GetTransactionReceipt(ctx, txHash)
-	return
+	return res, err
 }
 
 // Hashrate implements eth.API.
@@ -365,7 +365,7 @@ func (m *metricsWrapper) SendRawTransaction(ctx context.Context, data hexutil.By
 	defer metrics.InstrumentCaller(r, s, f, i, d, &err)()
 
 	h, err = m.api.SendRawTransaction(ctx, data)
-	return
+	return h, err
 }
 
 // Syncing implements eth.API.
@@ -374,7 +374,7 @@ func (m *metricsWrapper) Syncing(ctx context.Context) (res interface{}, err erro
 	defer metrics.InstrumentCaller(r, s, f, i, d, &err)()
 
 	res, err = m.api.Syncing(ctx)
-	return
+	return res, err
 }
 
 // NewMetricsWrapper returns an instrumanted API service.

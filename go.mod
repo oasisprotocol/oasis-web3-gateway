@@ -1,8 +1,6 @@
 module github.com/oasisprotocol/oasis-web3-gateway
 
-go 1.24.0
-
-toolchain go1.24.3
+go 1.25.0
 
 replace (
 	// Should be synced with Oasis Core as replace directives are not propagated.
