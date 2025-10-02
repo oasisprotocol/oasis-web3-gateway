@@ -12,7 +12,8 @@ func (m *metricsWrapper) Content() (res map[string][]interface{}, err error) {
 	defer metrics.InstrumentCaller(r, s, f, i, d, &err)()
 
 	res, err = m.api.Content()
-	return
+
+	return res, err
 }
 
 // NewMetricsWrapper returns an instrumanted API service.

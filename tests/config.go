@@ -11,8 +11,7 @@ var TestsConfig *conf.Config
 // InitTestsConfig initializes configuration file for tests.
 func InitTestsConfig() (err error) {
 	TestsConfig, err = conf.InitConfig("../../conf/tests.yml")
-
-	return
+	return err
 }
 
 // MustInitConfig initializes configuration for tests or exits.
