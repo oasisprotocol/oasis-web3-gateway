@@ -143,7 +143,7 @@ func (g *gasPriceOracle) trackFeeHistory(block *model.Block, txs []*model.Transa
 	// Base fee.
 	var baseFee big.Int
 	if err := baseFee.UnmarshalText([]byte(block.Header.BaseFee)); err != nil {
-		g.Logger.Error("unmarshal base fee", "base_fee", block.Header.BaseFee, "block", block, "err", err)
+		g.logger.Error("unmarshal base fee", "base_fee", block.Header.BaseFee, "block", block, "err", err)
 		return
 	}
 	d.baseFee = (*hexutil.Big)(&baseFee)
@@ -152,11 +152,11 @@ func (g *gasPriceOracle) trackFeeHistory(block *model.Block, txs []*model.Transa
 	for i, tx := range txs {
 		var tipGas, feeCap big.Int
 		if err := feeCap.UnmarshalText([]byte(tx.GasFeeCap)); err != nil {
-			g.Logger.Error("unmarshal gas fee cap", "fee_cap", tx.GasFeeCap, "block", block, "tx", tx, "err", err)
+			g.logger.Error("unmarshal gas fee cap", "fee_cap", tx.GasFeeCap, "block", block, "tx", tx, "err", err)
 			return
 		}
 		if err := tipGas.UnmarshalText([]byte(tx.GasTipCap)); err != nil {
-			g.Logger.Error("unmarshal gas tip cap", "tip_cap", tx.GasTipCap, "block", block, "tx", tx, "err", err)
+			g.logger.Error("unmarshal gas tip cap", "tip_cap", tx.GasTipCap, "block", block, "tx", tx, "err", err)
 			return
 		}
 

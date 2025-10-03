@@ -9,7 +9,9 @@ import (
 	_ "net/http/pprof" // nolint:gosec
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/uptrace/bun"
@@ -21,7 +23,6 @@ import (
 	cmnGrpc "github.com/oasisprotocol/oasis-core/go/common/grpc"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
-	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
 
 	"github.com/oasisprotocol/oasis-web3-gateway/archive"
 	"github.com/oasisprotocol/oasis-web3-gateway/conf"
@@ -32,6 +33,9 @@ import (
 	"github.com/oasisprotocol/oasis-web3-gateway/log"
 	"github.com/oasisprotocol/oasis-web3-gateway/rpc"
 	"github.com/oasisprotocol/oasis-web3-gateway/server"
+	"github.com/oasisprotocol/oasis-web3-gateway/source"
+	srcNode "github.com/oasisprotocol/oasis-web3-gateway/source/node"
+	"github.com/oasisprotocol/oasis-web3-gateway/source/pebble"
 	"github.com/oasisprotocol/oasis-web3-gateway/storage"
 	"github.com/oasisprotocol/oasis-web3-gateway/storage/psql"
 	"github.com/oasisprotocol/oasis-web3-gateway/version"
@@ -166,8 +170,11 @@ func migrateExec(_ *cobra.Command, _ []string) error {
 	return nil
 }
 
+//nolint:gocyclo
 func runRoot() error {
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	// Initialize server config
 	cfg, err := conf.InitConfig(configFile)
 	if err != nil {
@@ -177,6 +184,7 @@ func runRoot() error {
 	if err = log.InitLogging(cfg); err != nil {
 		return err
 	}
+	logger := logging.GetLogger("main")
 
 	// Enable pprof if configured.
 	if cfg.PprofAddr != "" {
@@ -187,17 +195,13 @@ func runRoot() error {
 		}()
 	}
 
-	logger := logging.GetLogger("main")
-
-	// Decode hex runtime ID into something we can use.
 	var runtimeID common.Namespace
 	if err = runtimeID.UnmarshalHex(cfg.RuntimeID); err != nil {
-		logger.Error("malformed runtime ID", "err", err)
-		return err
+		return fmt.Errorf("invalid runtime ID: %w", err)
 	}
 
 	// Establish a gRPC connection with the client node.
-	logger.Info("connecting to local node", "addr", cfg.NodeAddress)
+	logger.Info("connecting to node", "addr", cfg.NodeAddress)
 	var dialOpts []grpc.DialOption
 	switch cmnGrpc.IsLocalAddress(cfg.NodeAddress) {
 	case true:
@@ -209,8 +213,7 @@ func runRoot() error {
 	}
 	conn, err := cmnGrpc.Dial(cfg.NodeAddress, dialOpts...)
 	if err != nil {
-		logger.Error("failed to establish connection", "err", err)
-		return err
+		return fmt.Errorf("failed to connect to node: %w", err)
 	}
 	defer conn.Close() // nolint:errcheck
 
@@ -222,109 +225,195 @@ func runRoot() error {
 	// can be done.  Deal with it.
 	dbReadOnly := cfg.IndexingDisable
 
-	// Initialize db for migrations (higher timeouts).
-	db, err := psql.InitDB(ctx, cfg.Database, true, dbReadOnly)
-	if err != nil {
-		logger.Error("failed to initialize db", "err", err)
-		return err
-	}
-	// Run migrations.
-	if err = db.RunMigrations(ctx); err != nil {
-		return fmt.Errorf("failed to migrate DB: %w", err)
-	}
-	if err = db.DB.(*bun.DB).DB.Close(); err != nil {
-		return fmt.Errorf("failed to close migrations DB: %w", err)
+	if !dbReadOnly {
+		// Initialize db for migrations (higher timeouts).
+		db, err := psql.InitDB(ctx, cfg.Database, true, dbReadOnly)
+		if err != nil {
+			return fmt.Errorf("failed to initialize migrations DB: %w", err)
+		}
+		// Run migrations.
+		if err = db.RunMigrations(ctx); err != nil {
+			return fmt.Errorf("failed to migrate DB: %w", err)
+		}
+		if err = db.DB.(*bun.DB).DB.Close(); err != nil {
+			return fmt.Errorf("failed to close migrations DB: %w", err)
+		}
 	}
 
 	// Initialize db again, now with configured timeouts.
 	var storage storage.Storage
 	rawStorage, err := psql.InitDB(ctx, cfg.Database, false, dbReadOnly)
 	if err != nil {
-		logger.Error("failed to initialize db", "err", err)
-		return err
+		return fmt.Errorf("failed to initialize DB: %w", err)
 	}
 	storage = rawStorage
 
-	// Start log tx_index fixer worker
+	// Configure storage monitoring if enabled.
+	if cfg.Gateway != nil && cfg.Gateway.Monitoring.Enabled() {
+		storage = psql.NewMetricsWrapper(storage)
+	}
+
+	// Initialize services.
+	errCh := make(chan error, 4)
+	var wg sync.WaitGroup
+
+	// Start log tx_index fixer worker.
 	if bunDB, ok := rawStorage.DB.(*bun.DB); ok {
 		logTxIndexFixer := worker.NewLogTxIndexFixer(bunDB)
+		wg.Add(1)
 		go func() {
+			defer wg.Done()
 			if err := logTxIndexFixer.Start(ctx); err != nil {
-				logger.Error("log tx_index fixer worker failed", "err", err)
+				errCh <- fmt.Errorf("logs index fixer: %w", err)
 			}
 		}()
 	}
 
-	// Monitoring if enabled.
-	if cfg.Gateway.Monitoring.Enabled() {
-		storage = psql.NewMetricsWrapper(storage)
-	}
-
-	// Create Indexer.
+	// Create indexer backend.
 	subBackend, err := filters.NewSubscribeBackend(storage)
 	if err != nil {
 		return err
 	}
+
 	backend := indexer.NewIndexBackend(runtimeID, storage, subBackend)
-	indx, backend, err := indexer.New(ctx, backend, rc, runtimeID, cfg)
+	backend = indexer.NewCachingBackend(backend, cfg.Cache)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err := backend.(*indexer.CachingBackend).Start(ctx); err != nil {
+			errCh <- fmt.Errorf("backend: %w", err)
+		}
+	}()
+
+	// Create source (node + optional pebble cache).
+	var src source.NodeSource
+	src = srcNode.New(rc)
+	if cfg.NodeCachePath != nil {
+		src, err = pebble.New(src, *cfg.NodeCachePath)
+		if err != nil {
+			return fmt.Errorf("creating pebble source: %w", err)
+		}
+	}
+
+	// Create Indexer.
+	indexer, err := indexer.New(ctx, backend, src, runtimeID, cfg)
 	if err != nil {
 		logger.Error("failed to create indexer", err)
 		return err
 	}
-	indx.Start()
-
-	// Create event system.
-	es := filters.NewEventSystem(subBackend)
-
-	// Create web3 gateway instance.
-	w3, err := server.New(ctx, cfg.Gateway)
-	if err != nil {
-		logger.Error("failed to create web3", err)
-		return err
-	}
-	gasPriceOracle := gas.New(ctx, cfg.Gas, backend, core.NewV1(rc))
-	if err = gasPriceOracle.Start(); err != nil {
-		logger.Error("failed to start gas price oracle", err)
-		return err
-	}
-
-	var archiveClient *archive.Client
-	if cfg.ArchiveURI != "" {
-		if archiveClient, err = archive.New(ctx, cfg.ArchiveURI, cfg.ArchiveHeightMax); err != nil {
-			logger.Error("failed to create archive client", err)
-			return err
-		}
-	}
-
-	apis, checks := rpc.GetRPCAPIs(ctx, rc, archiveClient, backend, gasPriceOracle, cfg.Gateway, es)
-	w3.RegisterAPIs(apis)
-	checks = append(checks, indx)
-	w3.RegisterHealthChecks(checks)
-
-	svr := server.Server{
-		Config: cfg,
-		Web3:   w3,
-		DB:     storage,
-	}
-
-	if err = svr.Start(); err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: Unable to start Web3 server: %v\n", err)
-		return err
-	}
-
+	wg.Add(1)
 	go func() {
-		sigc := make(chan os.Signal, 1)
-		signal.Notify(sigc, syscall.SIGINT, syscall.SIGTERM)
-		defer signal.Stop(sigc)
+		defer wg.Done()
 
-		<-sigc
-		logger.Info("Got interrupt, shutting down...")
-		go svr.Close() //nolint:errcheck
-		go indx.Stop()
-		go gasPriceOracle.Stop()
+		// If no server is running, stop the process when the indexer finishes.
+		if cfg.Gateway == nil {
+			defer cancel()
+		}
+		if err := indexer.Start(ctx); err != nil {
+			errCh <- fmt.Errorf("indexer: %w", err)
+		}
 	}()
 
-	svr.Wait()
+	// Initialize gas price oracle.
+	gasPriceOracle := gas.New(cfg.Gas, backend, src)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err := gasPriceOracle.Start(ctx); err != nil {
+			errCh <- fmt.Errorf("gas price oracle: %w", err)
+		}
+	}()
+
+	// Start Web3 gateway if configured.
+	if cfg.Gateway != nil {
+		logger.Info("Starting Web3 gateway")
+
+		// Create event system for gateway.
+		es := filters.NewEventSystem(subBackend)
+
+		// Create archive client if configured.
+		var archiveClient *archive.Client
+		if cfg.ArchiveURI != "" {
+			if archiveClient, err = archive.New(ctx, cfg.ArchiveURI, cfg.ArchiveHeightMax); err != nil {
+				return fmt.Errorf("creating archive client: %w", err)
+			}
+		}
+
+		// Create web3 gateway instance.
+		w3, err := server.New(ctx, cfg.Gateway)
+		if err != nil {
+			return fmt.Errorf("creating web3 gateway: %w", err)
+		}
+
+		// Register APIs and health checks.
+		apis, checks := rpc.GetRPCAPIs(ctx, src, archiveClient, backend, gasPriceOracle, cfg.Gateway, es)
+		w3.RegisterAPIs(apis)
+		checks = append(checks, indexer)
+		w3.RegisterHealthChecks(checks)
+
+		// Start the gateway server.
+		server := server.Server{
+			Config: cfg,
+			Web3:   w3,
+			DB:     storage,
+		}
+
+		if err = server.Start(); err != nil {
+			return fmt.Errorf("starting web3 server: %w", err)
+		}
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			closed := make(chan struct{})
+			go func() {
+				server.Wait()
+				close(closed)
+			}()
+
+			select {
+			case <-ctx.Done():
+				_ = server.Close()
+				errCh <- ctx.Err()
+			case <-closed:
+				errCh <- fmt.Errorf("web3 server stopped")
+			}
+		}()
+	}
+
+	logger.Info("started all services")
+
+	// Ensure clean shutdown.
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+	defer signal.Stop(stop)
+	select {
+	case err := <-errCh:
+		logger.Error("service stopped", "err", err)
+	case <-stop:
+		logger.Info("received signal to stop")
+	case <-ctx.Done():
+		logger.Info("context done")
+	}
+	cancel()
+
+	logger.Info("waiting for services to shutdown")
+
+	// Wait for services to shutdown.
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		logger.Info("services shut down")
+	case <-time.After(30 * time.Second):
+		logger.Error("services did not shutdown in time, forcing exit")
+		os.Exit(1)
+	}
 
 	return nil
 }

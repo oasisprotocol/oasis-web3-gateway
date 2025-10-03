@@ -1,0 +1,21 @@
+# Config for phase 1 of 2 of e2e regression tests.
+# Phase 1 runs the indexer to populate the database and pebble cache.
+
+runtime_id: "000000000000000000000000000000000000000000000000f80306c9858e7279"
+node_address: "grpc.oasis.io:443"
+node_cache_path: "tests/e2e_regression/mainnet_sapphire_2025_09/pebble-cache"
+
+# Index a 2000 block range for testing.
+indexing_start: 10840395
+indexing_end: 10842395
+
+database:
+  host: "localhost"
+  port: 5432
+  db: "postgres"
+  user: "postgres"
+  password: "postgres"
+
+log:
+  level: "debug"
+  format: "json"

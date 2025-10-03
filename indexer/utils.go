@@ -523,8 +523,12 @@ func (ib *indexBackend) StoreBlockData(ctx context.Context, oasisBlock *block.Bl
 		Hash:  bhash,
 		Logs:  dbLogs,
 	}
-	ib.subscribe.ChainChan() <- chainEvent
-	ib.logger.Debug("sent chain event to event system", "height", blockNum)
+	select {
+	case ib.subscribe.ChainChan() <- chainEvent:
+		ib.logger.Debug("sent chain event to event system", "height", blockNum)
+	default:
+		ib.logger.Debug("dropping chain event, no subscribers", "height", blockNum)
+	}
 
 	bd := &BlockData{
 		Block:                     blk,

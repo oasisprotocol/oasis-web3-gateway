@@ -36,7 +36,7 @@ func NewLogTxIndexFixer(db *bun.DB) *LogTxIndexFixer {
 	}
 }
 
-// Start begins the worker with the given context.
+// Start starts the worker.
 func (w *LogTxIndexFixer) Start(ctx context.Context) error {
 	w.logger.Info("starting log tx_index fixer worker")
 

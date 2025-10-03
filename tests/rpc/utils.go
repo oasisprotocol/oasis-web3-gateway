@@ -33,6 +33,7 @@ import (
 	"github.com/oasisprotocol/oasis-web3-gateway/log"
 	"github.com/oasisprotocol/oasis-web3-gateway/rpc"
 	"github.com/oasisprotocol/oasis-web3-gateway/server"
+	srcNode "github.com/oasisprotocol/oasis-web3-gateway/source/node"
 	"github.com/oasisprotocol/oasis-web3-gateway/storage"
 	"github.com/oasisprotocol/oasis-web3-gateway/storage/psql"
 	"github.com/oasisprotocol/oasis-web3-gateway/tests"
@@ -153,17 +154,20 @@ func Setup() error {
 		storage = psql.NewMetricsWrapper(storage)
 	}
 
+	// Create source.
+	src := srcNode.New(rc)
+
 	// Create Indexer.
 	subBackend, err := filters.NewSubscribeBackend(storage)
 	if err != nil {
 		return err
 	}
 	backend := indexer.NewIndexBackend(runtimeID, storage, subBackend)
-	indx, backend, err = indexer.New(ctx, backend, rc, runtimeID, tests.TestsConfig)
+	indx, err = indexer.New(ctx, backend, src, runtimeID, tests.TestsConfig)
 	if err != nil {
 		return err
 	}
-	indx.Start()
+	go func() { _ = indx.Start(ctx) }()
 
 	// Create event system.
 	es := filters.NewEventSystem(subBackend)
@@ -174,12 +178,10 @@ func Setup() error {
 		return fmt.Errorf("setup: failed creating server: %w", err)
 	}
 
-	gasPriceOracle = gas.New(ctx, tests.TestsConfig.Gas, backend, core.NewV1(rc))
-	if err = gasPriceOracle.Start(); err != nil {
-		return fmt.Errorf("setup: failed starting gas price oracle: %w", err)
-	}
+	gasPriceOracle = gas.New(tests.TestsConfig.Gas, backend, src)
+	go func() { _ = gasPriceOracle.Start(ctx) }()
 
-	apis, checks := rpc.GetRPCAPIs(ctx, rc, nil, backend, gasPriceOracle, tests.TestsConfig.Gateway, es)
+	apis, checks := rpc.GetRPCAPIs(ctx, src, nil, backend, gasPriceOracle, tests.TestsConfig.Gateway, es)
 	w3.RegisterAPIs(apis)
 	checks = append(checks, indx)
 	w3.RegisterHealthChecks(checks)
@@ -194,8 +196,6 @@ func Setup() error {
 
 func Stop() {
 	_ = w3.Close()
-	indx.Stop()
-	gasPriceOracle.Stop()
 }
 
 func waitForDepositEvent(ch <-chan *client.BlockEvents, from types.Address, nonce uint64, to types.Address, amount types.BaseUnits) error {

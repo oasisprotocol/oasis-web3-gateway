@@ -85,9 +85,9 @@ func (m *cacheMetrics) Accumulate(label string) {
 	metricCacheHitRatio.WithLabelValues(label).Set(ratio)
 }
 
-// cachingBackend is a Backend that interposes a cache above an existing
+// CachingBackend is a Backend that interposes a cache above an existing
 // backend.
-type cachingBackend struct {
+type CachingBackend struct {
 	inner Backend
 
 	cacheSize    uint64
@@ -113,13 +113,13 @@ type cachingBackend struct {
 }
 
 // SetObserver sets the intrusive backend observer.
-func (cb *cachingBackend) SetObserver(
+func (cb *CachingBackend) SetObserver(
 	_ BackendObserver,
 ) {
 	panic("indexer: caching backend does not support an observer")
 }
 
-func (cb *cachingBackend) OnBlockIndexed(
+func (cb *CachingBackend) OnBlockIndexed(
 	bd *BlockData,
 ) {
 	// A new block was indexed, insert it into the various caches.
@@ -157,13 +157,13 @@ func (cb *cachingBackend) OnBlockIndexed(
 	}
 }
 
-func (cb *cachingBackend) OnLastRetainedRound(
+func (cb *CachingBackend) OnLastRetainedRound(
 	round uint64,
 ) {
 	atomic.StoreUint64(&cb.lastRetainedRound, round)
 }
 
-func (cb *cachingBackend) Index(
+func (cb *CachingBackend) Index(
 	ctx context.Context,
 	oasisBlock *block.Block,
 	txResults []*client.TransactionWithResults,
@@ -173,7 +173,7 @@ func (cb *cachingBackend) Index(
 	return cb.inner.Index(ctx, oasisBlock, txResults, coreParameters, rtInfo)
 }
 
-func (cb *cachingBackend) Prune(
+func (cb *CachingBackend) Prune(
 	ctx context.Context,
 	round uint64,
 ) error {
@@ -184,7 +184,7 @@ func (cb *cachingBackend) Prune(
 	return cb.inner.Prune(ctx, round)
 }
 
-func (cb *cachingBackend) QueryBlockRound(
+func (cb *CachingBackend) QueryBlockRound(
 	ctx context.Context,
 	blockHash ethcommon.Hash,
 ) (uint64, error) {
@@ -196,7 +196,7 @@ func (cb *cachingBackend) QueryBlockRound(
 	return cb.inner.QueryBlockRound(ctx, blockHash)
 }
 
-func (cb *cachingBackend) QueryBlockHash(
+func (cb *CachingBackend) QueryBlockHash(
 	ctx context.Context,
 	round uint64,
 ) (ethcommon.Hash, error) {
@@ -212,7 +212,7 @@ func (cb *cachingBackend) QueryBlockHash(
 	return cb.inner.QueryBlockHash(ctx, round)
 }
 
-func (cb *cachingBackend) QueryLastIndexedRound(
+func (cb *CachingBackend) QueryLastIndexedRound(
 	ctx context.Context,
 ) (uint64, error) {
 	lastIndexed := atomic.LoadUint64(&cb.lastIndexedRound)
@@ -226,7 +226,7 @@ func (cb *cachingBackend) QueryLastIndexedRound(
 	return cb.inner.QueryLastIndexedRound(ctx)
 }
 
-func (cb *cachingBackend) QueryLastRetainedRound(
+func (cb *CachingBackend) QueryLastRetainedRound(
 	ctx context.Context,
 ) (uint64, error) {
 	lastRetained := atomic.LoadUint64(&cb.lastRetainedRound)
@@ -252,7 +252,7 @@ func (cb *cachingBackend) QueryLastRetainedRound(
 	return lastRetained, nil
 }
 
-func (cb *cachingBackend) QueryTransaction(
+func (cb *CachingBackend) QueryTransaction(
 	ctx context.Context,
 	ethTxHash ethcommon.Hash,
 ) (*model.Transaction, error) {
@@ -266,7 +266,7 @@ func (cb *cachingBackend) QueryTransaction(
 	return cb.inner.QueryTransaction(ctx, ethTxHash)
 }
 
-func (cb *cachingBackend) GetBlockByRound(
+func (cb *CachingBackend) GetBlockByRound(
 	ctx context.Context,
 	round uint64,
 ) (*model.Block, error) {
@@ -282,7 +282,7 @@ func (cb *cachingBackend) GetBlockByRound(
 	return cb.inner.GetBlockByRound(ctx, blockNumber)
 }
 
-func (cb *cachingBackend) GetBlockByHash(
+func (cb *CachingBackend) GetBlockByHash(
 	ctx context.Context,
 	blockHash ethcommon.Hash,
 ) (*model.Block, error) {
@@ -294,7 +294,7 @@ func (cb *cachingBackend) GetBlockByHash(
 	return cb.inner.GetBlockByHash(ctx, blockHash)
 }
 
-func (cb *cachingBackend) GetBlockTransactionCountByRound(
+func (cb *CachingBackend) GetBlockTransactionCountByRound(
 	ctx context.Context,
 	round uint64,
 ) (int, error) {
@@ -310,7 +310,7 @@ func (cb *cachingBackend) GetBlockTransactionCountByRound(
 	return cb.inner.GetBlockTransactionCountByRound(ctx, blockNumber)
 }
 
-func (cb *cachingBackend) GetBlockTransactionCountByHash(
+func (cb *CachingBackend) GetBlockTransactionCountByHash(
 	ctx context.Context,
 	blockHash ethcommon.Hash,
 ) (int, error) {
@@ -322,7 +322,7 @@ func (cb *cachingBackend) GetBlockTransactionCountByHash(
 	return cb.inner.GetBlockTransactionCountByHash(ctx, blockHash)
 }
 
-func (cb *cachingBackend) GetTransactionByBlockHashAndIndex(
+func (cb *CachingBackend) GetTransactionByBlockHashAndIndex(
 	ctx context.Context,
 	blockHash ethcommon.Hash,
 	txIndex int,
@@ -343,7 +343,7 @@ func (cb *cachingBackend) GetTransactionByBlockHashAndIndex(
 	return cb.inner.GetTransactionByBlockHashAndIndex(ctx, blockHash, txIndex)
 }
 
-func (cb *cachingBackend) GetTransactionReceipt(
+func (cb *CachingBackend) GetTransactionReceipt(
 	ctx context.Context,
 	txHash ethcommon.Hash,
 ) (map[string]interface{}, error) {
@@ -353,7 +353,7 @@ func (cb *cachingBackend) GetTransactionReceipt(
 	return cb.inner.GetTransactionReceipt(ctx, txHash)
 }
 
-func (cb *cachingBackend) BlockNumber(
+func (cb *CachingBackend) BlockNumber(
 	_ context.Context,
 ) (uint64, error) {
 	// The underlying backend has a separate notion of BlockNumber and
@@ -369,7 +369,7 @@ func (cb *cachingBackend) BlockNumber(
 	}
 }
 
-func (cb *cachingBackend) GetLogs(
+func (cb *CachingBackend) GetLogs(
 	ctx context.Context,
 	startRound uint64,
 	endRound uint64,
@@ -405,15 +405,15 @@ func (cb *cachingBackend) GetLogs(
 	return cb.inner.GetLogs(ctx, startRound, endRound)
 }
 
-func (cb *cachingBackend) WatchBlocks(ctx context.Context, buffer int64) (<-chan *BlockData, pubsub.ClosableSubscription, error) {
+func (cb *CachingBackend) WatchBlocks(ctx context.Context, buffer int64) (<-chan *BlockData, pubsub.ClosableSubscription, error) {
 	return cb.inner.WatchBlocks(ctx, buffer)
 }
 
-func (cb *cachingBackend) RuntimeInfo() *core.RuntimeInfoResponse {
+func (cb *CachingBackend) RuntimeInfo() *core.RuntimeInfoResponse {
 	return cb.inner.RuntimeInfo()
 }
 
-func (cb *cachingBackend) pruneCache(
+func (cb *CachingBackend) pruneCache(
 	blockNumber uint64,
 ) {
 	bd, ok := cb.cachedBlockDataByNumber(blockNumber)
@@ -456,7 +456,7 @@ func (cb *cachingBackend) pruneCache(
 	cb.cacheSize--
 }
 
-func (cb *cachingBackend) cacheTxes(
+func (cb *CachingBackend) cacheTxes(
 	blockNumber uint64,
 	txes []*model.Transaction,
 ) {
@@ -469,7 +469,7 @@ func (cb *cachingBackend) cacheTxes(
 	}
 }
 
-func (cb *cachingBackend) cacheReceipts(
+func (cb *CachingBackend) cacheReceipts(
 	blockNumber uint64,
 	receipts []*model.Receipt,
 ) {
@@ -482,7 +482,7 @@ func (cb *cachingBackend) cacheReceipts(
 	}
 }
 
-func (cb *cachingBackend) cacheLogsByBlockNumber(
+func (cb *CachingBackend) cacheLogsByBlockNumber(
 	blockNumber uint64,
 	receipts []*model.Receipt,
 ) {
@@ -493,7 +493,7 @@ func (cb *cachingBackend) cacheLogsByBlockNumber(
 	cb.logsByBlockNumber.Store(blockNumber, logs)
 }
 
-func (cb *cachingBackend) blockNumberFromRound(
+func (cb *CachingBackend) blockNumberFromRound(
 	ctx context.Context,
 	round uint64,
 ) (uint64, error) {
@@ -504,7 +504,7 @@ func (cb *cachingBackend) blockNumberFromRound(
 	return round, nil
 }
 
-func (cb *cachingBackend) cachedBlockDataByNumber(
+func (cb *CachingBackend) cachedBlockDataByNumber(
 	blockNumber uint64,
 ) (*BlockData, bool) {
 	untypedBlockData, ok := cb.blockDataByNumber.Load(blockNumber)
@@ -514,7 +514,7 @@ func (cb *cachingBackend) cachedBlockDataByNumber(
 	return nil, false
 }
 
-func (cb *cachingBackend) cachedBlockByNumber(
+func (cb *CachingBackend) cachedBlockByNumber(
 	blockNumber uint64,
 ) (*model.Block, bool) {
 	if entry, ok := cb.cachedBlockDataByNumber(blockNumber); ok {
@@ -530,7 +530,7 @@ func (cb *cachingBackend) cachedBlockByNumber(
 	return nil, false
 }
 
-func (cb *cachingBackend) cachedBlockByHash(
+func (cb *CachingBackend) cachedBlockByHash(
 	blockHash ethcommon.Hash,
 ) (*model.Block, bool) {
 	untypedBlock, ok := cb.blockByHashHex.Load(blockHash.Hex())
@@ -547,7 +547,7 @@ func (cb *cachingBackend) cachedBlockByHash(
 	return nil, false
 }
 
-func (cb *cachingBackend) cachedTxByHash(
+func (cb *CachingBackend) cachedTxByHash(
 	ethTxHash ethcommon.Hash,
 ) (*model.Transaction, bool) {
 	untypedEntry, ok := cb.txByHashHex.Load(ethTxHash.Hex())
@@ -564,7 +564,7 @@ func (cb *cachingBackend) cachedTxByHash(
 	return nil, false
 }
 
-func (cb *cachingBackend) cachedReceiptByTxHash(
+func (cb *CachingBackend) cachedReceiptByTxHash(
 	ethTxHash ethcommon.Hash,
 ) (*model.Receipt, bool) {
 	untypedEntry, ok := cb.receiptByTxHashHex.Load(ethTxHash.Hex())
@@ -581,7 +581,7 @@ func (cb *cachingBackend) cachedReceiptByTxHash(
 	return nil, false
 }
 
-func (cb *cachingBackend) cachedLogsByNumber(
+func (cb *CachingBackend) cachedLogsByNumber(
 	blockNumber uint64,
 ) ([]*model.Log, bool) {
 	untypedLogs, ok := cb.logsByBlockNumber.Load(blockNumber)
@@ -591,7 +591,7 @@ func (cb *cachingBackend) cachedLogsByNumber(
 	return nil, false
 }
 
-func (cb *cachingBackend) metricsWorker(ctx context.Context) {
+func (cb *CachingBackend) metricsWorker(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -605,11 +605,30 @@ func (cb *cachingBackend) metricsWorker(ctx context.Context) {
 	}
 }
 
-func newCachingBackend(
-	ctx context.Context,
+func (cb *CachingBackend) Start(ctx context.Context) error {
+	// Try to initialize the last indexed/retained rounds.  Failures
+	// are ok.
+	var err error
+	cb.lastIndexedRound, _ = cb.inner.QueryLastIndexedRound(ctx)
+	if cb.lastRetainedRound, err = cb.inner.QueryLastRetainedRound(ctx); err == nil {
+		cb.lastRetainedRoundValid = 1
+	}
+
+	// TODO: This could warm up the caches by doing db queries.
+
+	if cb.trackMetrics {
+		go cb.metricsWorker(ctx)
+	}
+
+	<-ctx.Done()
+	return ctx.Err()
+}
+
+// NewCachingBackend creates a new caching backend that wraps the provided backend.
+func NewCachingBackend(
 	backend Backend,
 	cfg *conf.CacheConfig,
-) Backend {
+) *CachingBackend {
 	const defaultBlockCacheSize = 128 // In blocks
 
 	if cfg == nil {
@@ -619,27 +638,13 @@ func newCachingBackend(
 		cfg.BlockSize = defaultBlockCacheSize
 	}
 
-	cb := &cachingBackend{
+	cb := &CachingBackend{
 		inner:        backend,
 		maxCacheSize: cfg.BlockSize,
 		trackMetrics: cfg.Metrics,
 	}
 
 	cb.inner.SetObserver(cb)
-
-	// Try to initialize the last indexed/retained rounds.  Failures
-	// are ok.
-	var err error
-	cb.lastIndexedRound, _ = backend.QueryLastIndexedRound(ctx)
-	if cb.lastRetainedRound, err = backend.QueryLastRetainedRound(ctx); err == nil {
-		cb.lastRetainedRoundValid = 1
-	}
-
-	// TODO: This could warm up the caches by doing db queries.
-
-	if cfg.Metrics {
-		go cb.metricsWorker(ctx)
-	}
 
 	return cb
 }

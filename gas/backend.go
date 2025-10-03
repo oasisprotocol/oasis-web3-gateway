@@ -3,6 +3,7 @@ package gas
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -11,15 +12,14 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
+	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
-	"github.com/oasisprotocol/oasis-core/go/common/service"
-	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
-	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 
 	"github.com/oasisprotocol/oasis-web3-gateway/conf"
 	"github.com/oasisprotocol/oasis-web3-gateway/db/model"
 	"github.com/oasisprotocol/oasis-web3-gateway/indexer"
+	"github.com/oasisprotocol/oasis-web3-gateway/source"
 )
 
 var (
@@ -29,7 +29,8 @@ var (
 
 // Backend is the gas price oracle backend.
 type Backend interface {
-	service.BackgroundService
+	// Start starts the service.
+	Start(ctx context.Context) error
 
 	// GasPrice returns the currently recommended minimum gas price.
 	GasPrice() *hexutil.Big
@@ -80,10 +81,7 @@ var (
 //
 // Return the greater of (a) and (b), default to a `defaultGasPrice `if neither are available.
 type gasPriceOracle struct {
-	service.BaseBackgroundService
-
-	ctx       context.Context
-	cancelCtx context.CancelFunc
+	logger *logging.Logger
 
 	// protects nodeMinGasPrice and computedMinGasPrice.
 	priceLock sync.RWMutex
@@ -112,12 +110,10 @@ type gasPriceOracle struct {
 	computedPriceMargin quantity.Quantity
 
 	blockWatcher indexer.BlockWatcher
-	coreClient   core.V1
+	nodeSource   source.NodeSource
 }
 
-func New(ctx context.Context, cfg *conf.GasConfig, blockWatcher indexer.BlockWatcher, coreClient core.V1) Backend {
-	ctxB, cancelCtx := context.WithCancel(ctx)
-
+func New(cfg *conf.GasConfig, blockWatcher indexer.BlockWatcher, nodeSource source.NodeSource) Backend {
 	windowSize := defaultWindowSize
 	blockFullThreshold := defaultFullBlockThreshold
 	minGasPrice := defaultGasPrice
@@ -142,17 +138,15 @@ func New(ctx context.Context, cfg *conf.GasConfig, blockWatcher indexer.BlockWat
 	}
 
 	g := &gasPriceOracle{
-		BaseBackgroundService: *service.NewBaseBackgroundService("gas-price-oracle"),
-		ctx:                   ctxB,
-		cancelCtx:             cancelCtx,
-		feeHistoryData:        make([]*feeHistoryBlockData, 0, feeHistorySize),
-		feeHistorySize:        feeHistorySize,
-		windowSize:            windowSize,
-		fullBlockThreshold:    blockFullThreshold,
-		defaultGasPrice:       minGasPrice,
-		computedPriceMargin:   computedPriceMargin,
-		blockWatcher:          blockWatcher,
-		coreClient:            coreClient,
+		logger:              logging.GetLogger("gas/oracle"),
+		feeHistoryData:      make([]*feeHistoryBlockData, 0, feeHistorySize),
+		feeHistorySize:      feeHistorySize,
+		windowSize:          windowSize,
+		fullBlockThreshold:  blockFullThreshold,
+		defaultGasPrice:     minGasPrice,
+		computedPriceMargin: computedPriceMargin,
+		blockWatcher:        blockWatcher,
+		nodeSource:          nodeSource,
 	}
 
 	g.blockPrices = make([]*quantity.Quantity, windowSize)
@@ -164,15 +158,44 @@ func New(ctx context.Context, cfg *conf.GasConfig, blockWatcher indexer.BlockWat
 }
 
 // Start starts service.
-func (g *gasPriceOracle) Start() error {
-	go g.indexedBlockWatcher()
+func (g *gasPriceOracle) Start(ctx context.Context) error {
+	ch, sub, err := g.blockWatcher.WatchBlocks(ctx, int64(g.windowSize))
+	if err != nil {
+		return fmt.Errorf("gas: failed to watch blocks: %w", err)
+	}
+	defer sub.Close()
 
-	return nil
-}
+	// Guards against multiple concurrent queries in case web3 is catching up
+	// with the chain.
+	var queryLock sync.Mutex
+	var queryInProgress bool
 
-// Stop stops service.
-func (g *gasPriceOracle) Stop() {
-	g.cancelCtx()
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case blk := <-ch:
+			// After every block fetch the reported min gas price from the node.
+			// The returned price will reflect min price changes in the next block if
+			// dynamic min gas price is enabled for the runtime.
+			queryLock.Lock()
+			if !queryInProgress {
+				queryInProgress = true
+				go func() {
+					g.fetchMinGasPrice(ctx, blk.Block.Round)
+					queryLock.Lock()
+					queryInProgress = false
+					queryLock.Unlock()
+				}()
+			}
+			queryLock.Unlock()
+
+			// Track price for the block.
+			g.onBlock(blk.Block, blk.MedianTransactionGasPrice)
+			// Track fee history.
+			g.trackFeeHistory(blk.Block, blk.UniqueTxes, blk.Receipts)
+		}
+	}
 }
 
 // Implements Backend.
@@ -200,13 +223,13 @@ func (g *gasPriceOracle) GasPrice() *hexutil.Big {
 	return &price
 }
 
-func (g *gasPriceOracle) fetchMinGasPrice(ctx context.Context) {
+func (g *gasPriceOracle) fetchMinGasPrice(ctx context.Context, round uint64) {
 	ctx, cancel := context.WithTimeout(ctx, time.Second*10)
 	defer cancel()
 
-	mgp, err := g.coreClient.MinGasPrice(ctx, client.RoundLatest)
+	mgp, err := g.nodeSource.CoreMinGasPrice(ctx, round)
 	if err != nil {
-		g.Logger.Error("node min gas price query failed", "err", err)
+		g.logger.Error("node min gas price query failed", "round", round, "err", err)
 		return
 	}
 	price := mgp[types.NativeDenomination]
@@ -216,47 +239,6 @@ func (g *gasPriceOracle) fetchMinGasPrice(ctx context.Context) {
 	g.priceLock.Unlock()
 
 	metricNodeMinPrice.Set(float64(price.ToBigInt().Int64()))
-}
-
-func (g *gasPriceOracle) indexedBlockWatcher() {
-	ch, sub, err := g.blockWatcher.WatchBlocks(g.ctx, int64(g.windowSize))
-	if err != nil {
-		g.Logger.Error("indexed block watcher failed to watch blocks", "err", err)
-		return
-	}
-	defer sub.Close()
-
-	// Guards against multiple concurrent queries in case web3 is catching up
-	// with the chain.
-	var queryLock sync.Mutex
-	var queryInProgress bool
-
-	for {
-		select {
-		case <-g.ctx.Done():
-			return
-		case blk := <-ch:
-			// After every block fetch the reported min gas price from the node.
-			// The returned price will reflect min price changes in the next block if
-			// dynamic min gas price is enabled for the runtime.
-			queryLock.Lock()
-			if !queryInProgress {
-				queryInProgress = true
-				go func() {
-					g.fetchMinGasPrice(g.ctx)
-					queryLock.Lock()
-					queryInProgress = false
-					queryLock.Unlock()
-				}()
-			}
-			queryLock.Unlock()
-
-			// Track price for the block.
-			g.onBlock(blk.Block, blk.MedianTransactionGasPrice)
-			// Track fee history.
-			g.trackFeeHistory(blk.Block, blk.UniqueTxes, blk.Receipts)
-		}
-	}
 }
 
 func (g *gasPriceOracle) onBlock(b *model.Block, medTxPrice *quantity.Quantity) {
@@ -269,12 +251,12 @@ func (g *gasPriceOracle) onBlock(b *model.Block, medTxPrice *quantity.Quantity) 
 	}
 
 	if medTxPrice == nil {
-		g.Logger.Error("no med tx gas price for block", "block", b)
+		g.logger.Error("no med tx gas price for block", "block", b)
 		return
 	}
 	trackPrice := medTxPrice.Clone()
 	if err := trackPrice.Add(&g.computedPriceMargin); err != nil {
-		g.Logger.Error("failed to add minPriceEps to medTxPrice", "err", err)
+		g.logger.Error("failed to add minPriceEps to medTxPrice", "err", err)
 	}
 	g.trackPrice(trackPrice)
 }

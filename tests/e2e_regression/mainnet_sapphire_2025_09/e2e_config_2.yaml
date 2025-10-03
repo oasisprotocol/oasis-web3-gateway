@@ -1,0 +1,31 @@
+# Config for phase 2 of 2 of e2e regression tests.
+# Phase 2 runs the web3 gateway using the populated database and cache.
+
+runtime_id: "000000000000000000000000000000000000000000000000f80306c9858e7279"
+node_address: "grpc.oasis.io:443"
+node_cache_path: "tests/e2e_regression/mainnet_sapphire_2025_09/pebble-cache"
+
+# Disable indexing for this phase.
+indexing_disable: true
+
+database:
+  host: "localhost"
+  port: 5432
+  db: "postgres"
+  user: "postgres"
+  password: "postgres"
+
+# Web3 gateway configuration.
+gateway:
+  chain_id: "23294"
+  http:
+    host: "localhost"
+    port: 8545
+  ws:
+    host: "localhost"
+    port: 8546
+  oasis_rpcs: true
+
+log:
+  level: "debug"
+  format: "json"
