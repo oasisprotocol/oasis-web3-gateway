@@ -1,7 +1,7 @@
 ARG PARATIME_VERSION=1.0.0-testnet
 ARG PARATIME_NAME=sapphire
 
-FROM ghcr.io/oasisprotocol/oasis-core-dev:stable-25.4.x AS oasis-core-dev
+FROM ghcr.io/oasisprotocol/oasis-core-dev:stable-25.5.x AS oasis-core-dev
 
 ARG PARATIME_VERSION
 ARG PARATIME_NAME
@@ -11,10 +11,10 @@ ARG PARATIME_NAME
 # variant.
 # Note that the simple keymanager is always freshly built because we need to
 # specify different build options from what is in the release version.
-ARG OASIS_CORE_SIMPLE_KM_BRANCH=stable/25.4.x
-ARG OASIS_CORE_VERSION=25.4
+ARG OASIS_CORE_SIMPLE_KM_BRANCH=stable/25.5.x
+ARG OASIS_CORE_VERSION=25.5
 #ARG OASIS_CORE_BRANCH=stable/24.3.x
-ARG OASIS_CLI_VERSION=0.14.2
+ARG OASIS_CLI_VERSION=0.16.0
 #ARG OASIS_CLI_BRANCH=master
 ARG OASIS_WEB3_GATEWAY_BRANCH=v5.3.0
 #ARG OASIS_WEB3_GATEWAY_VERSION=main
@@ -154,7 +154,7 @@ RUN set -e; \
 
 
 # Build sapphire-localnet
-FROM postgres:16-bookworm
+FROM docker.io/postgres:16-bookworm
 
 # Docker-specific variables.
 ARG PARATIME_VERSION
