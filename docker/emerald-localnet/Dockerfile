@@ -4,9 +4,9 @@ FROM golang:1.25.0 AS oasis-web3-gateway
 COPY . /go/oasis-web3-gateway
 RUN cd oasis-web3-gateway && make && strip -S -x oasis-web3-gateway
 
-FROM ghcr.io/oasisprotocol/oasis-core-dev:stable-25.2.x AS oasis-core-dev
+FROM ghcr.io/oasisprotocol/oasis-core-dev:stable-25.6.x AS oasis-core-dev
 
-ARG NEXUS_VERSION=0.6.13
+ARG NEXUS_VERSION=0.7.17
 RUN wget https://github.com/oasisprotocol/nexus/releases/download/v${NEXUS_VERSION}/oasis_nexus_${NEXUS_VERSION}_linux_amd64.tar.gz \
     && tar -zxvf oasis_nexus_${NEXUS_VERSION}_linux_amd64.tar.gz \
     && strip -S -x /oasis_nexus_${NEXUS_VERSION}_linux_amd64/nexus \
@@ -46,7 +46,7 @@ RUN git clone ${EXPLORER_REPO} explorer --depth 1 \
 
 
 # Build emerald-localnet
-FROM postgres:16-bookworm
+FROM docker.io/postgres:16-bookworm
 RUN apt update && apt install -y bash libseccomp2 unzip jq binutils curl wget nginx && apt clean \
     && su -c "POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres /usr/local/bin/docker-entrypoint.sh postgres &" postgres \
 	# Explorer frontend deps.
@@ -63,8 +63,8 @@ RUN apt update && apt install -y bash libseccomp2 unzip jq binutils curl wget ng
     && rm -f /etc/apt/keyrings/envoy-keyring.gpg
 
 # Docker-specific variables
-ENV OASIS_CORE_VERSION=25.3
-ENV OASIS_CLI_VERSION=0.13.4
+ENV OASIS_CORE_VERSION=25.6
+ENV OASIS_CLI_VERSION=0.16.0
 ENV PARATIME_VERSION=11.0.0-testnet
 ENV PARATIME_NAME=emerald
 ENV GATEWAY__CHAIN_ID=0xa514
