@@ -83,7 +83,7 @@ jobs:
 
       - name: Upload oasis-node logs artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: oasis-node-logs
           path: |
@@ -162,7 +162,7 @@ jobs:
 
       - name: Upload oasis-node logs artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: oasis-node-logs-c10l
           path: |
@@ -212,7 +212,7 @@ jobs:
       - name: Run e2e regression tests
         run: make E2E_REGRESSION_SUITES=${{ matrix.suite }} test-e2e-regression
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: Actual web3 gateway responses (${{ matrix.suite }})
           path: |
