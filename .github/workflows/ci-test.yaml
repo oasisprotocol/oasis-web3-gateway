@@ -107,14 +107,14 @@ jobs:
         ports:
           - 5432:5432
     env:
-      OASIS_CORE_VERSION: "25.3"
+      OASIS_CORE_VERSION: "25.6"
       OASIS_NODE_BINARY: ${{ github.workspace }}/oasis_core/oasis-node
       OASIS_NET_RUNNER_BINARY: ${{ github.workspace }}/oasis_core/oasis-net-runner
-      SAPPHIRE_PARATIME_VERSION: 1.0.0-testnet
+      SAPPHIRE_PARATIME_VERSION: 1.1.2-testnet
       GATEWAY__CHAIN_ID: 23293
       GATEWAY__OASIS_RPCS: true
       SAPPHIRE_PARATIME: ${{ github.workspace }}/oasis_core/sapphire-paratime
-      KEYMANAGER_ARTIFACT_URL: https://buildkite.com/organizations/oasisprotocol/pipelines/oasis-core-ci/builds/15683/jobs/019837cd-8499-4567-ab19-70a46601a3eb/artifacts/019837d5-6805-45b8-8fa1-9a951b85867d # Find this at https://buildkite.com/oasisprotocol/oasis-core-ci/builds?branch=stable%2F<...> under "Build runtimes": simple-keymanager.mocksgx.
+      KEYMANAGER_ARTIFACT_URL: https://buildkite.com/organizations/oasisprotocol/pipelines/oasis-core-ci/builds/16070/jobs/019a2725-f1f8-43a1-a7b0-615227854f17/artifacts/019a272c-0b96-4a18-85f1-115ffae35403 # Find this at https://buildkite.com/oasisprotocol/oasis-core-ci/builds?branch=stable%2F<...> under "Build runtimes": simple-keymanager.mocksgx.
       KEYMANAGER_BINARY: ${{ github.workspace }}/oasis_core/simple-keymanager
       OASIS_NODE_DATADIR: /tmp/eth-runtime-test
       OASIS_DOCKER_START_EXPLORER: no
