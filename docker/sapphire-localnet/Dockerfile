@@ -138,10 +138,11 @@ RUN set -e; \
     fi \
     \
     && cd / \
-    && git clone https://github.com/oasisprotocol/explorer.git explorer --depth 1 \
+    && git clone https://github.com/oasisprotocol/explorer.git explorer --recurse-submodules --depth 1 \
     && cd explorer \
     && git fetch origin ${EXPLORER_BRANCH} --depth 1 \
     && git checkout FETCH_HEAD \
+    && git submodule update --init --recursive --depth 1 \
     && mv /out/nexus.env.production .env.production \
     && echo "REACT_APP_LOCALNET_SAPPHIRE=true\nREACT_APP_LOCALNET_EMERALD=false" >> .env.production \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
