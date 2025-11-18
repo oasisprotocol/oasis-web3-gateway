@@ -75,7 +75,7 @@ func InitDB(
 	// advisory rather than something that is securely enforced.
 	if readOnly {
 		opts = append(opts, pgdriver.WithConnParams(
-			map[string]interface{}{
+			map[string]any{
 				"default_transaction_read_only": "on",
 			},
 		))
@@ -120,9 +120,9 @@ func (db *PostDB) GetTransaction(ctx context.Context, hash string) (*model.Trans
 }
 
 // Inserts a single record in the DB.
-func (db *PostDB) Insert(ctx context.Context, value interface{}) error {
+func (db *PostDB) Insert(ctx context.Context, value any) error {
 	switch values := value.(type) {
-	case []interface{}:
+	case []any:
 		for v := range values {
 			if _, err := db.DB.NewInsert().
 				Model(v).
@@ -130,7 +130,7 @@ func (db *PostDB) Insert(ctx context.Context, value interface{}) error {
 				return err
 			}
 		}
-	case interface{}:
+	case any:
 		_, err := db.DB.NewInsert().
 			Model(value).
 			Exec(ctx)
@@ -139,7 +139,7 @@ func (db *PostDB) Insert(ctx context.Context, value interface{}) error {
 	return nil
 }
 
-func (db *PostDB) insertSingle(ctx context.Context, value interface{}, upsert bool) error {
+func (db *PostDB) insertSingle(ctx context.Context, value any, upsert bool) error {
 	typ := reflect.TypeOf(value)
 	table := db.DB.Dialect().Tables().Get(typ)
 	pks := make([]string, len(table.PKs))
@@ -164,37 +164,37 @@ func (db *PostDB) insertSingle(ctx context.Context, value interface{}, upsert bo
 }
 
 // InsertIfNotExists inserts the record if it does not yet exist.
-func (db *PostDB) InsertIfNotExists(ctx context.Context, value interface{}) error {
+func (db *PostDB) InsertIfNotExists(ctx context.Context, value any) error {
 	switch values := value.(type) {
-	case []interface{}:
+	case []any:
 		for v := range values {
 			if err := db.insertSingle(ctx, v, false); err != nil {
 				return err
 			}
 		}
-	case interface{}:
+	case any:
 		return db.insertSingle(ctx, value, false)
 	}
 	return nil
 }
 
 // Upsert upserts the record.
-func (db *PostDB) Upsert(ctx context.Context, value interface{}) error {
+func (db *PostDB) Upsert(ctx context.Context, value any) error {
 	switch values := value.(type) {
-	case []interface{}:
+	case []any:
 		for v := range values {
 			if err := db.insertSingle(ctx, v, true); err != nil {
 				return err
 			}
 		}
-	case interface{}:
+	case any:
 		return db.insertSingle(ctx, value, true)
 	}
 	return nil
 }
 
 // Delete deletes all records with round less than the given round.
-func (db *PostDB) Delete(ctx context.Context, table interface{}, round uint64) error {
+func (db *PostDB) Delete(ctx context.Context, table any, round uint64) error {
 	_, err := db.DB.NewDelete().Model(table).Where("round < ?", round).Exec(ctx)
 	return err
 }

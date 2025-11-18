@@ -25,7 +25,7 @@ type revertError struct {
 }
 
 // ErrorData returns the hex encoded error reason.
-func (e *revertError) ErrorData() interface{} {
+func (e *revertError) ErrorData() any {
 	return e.reason
 }
 

@@ -23,7 +23,7 @@ func measureDuration(label string) func() {
 	}
 }
 
-func getTypeName(t interface{}) string {
+func getTypeName(t any) string {
 	return reflect.TypeOf(t).String()
 }
 
@@ -32,7 +32,7 @@ type metricsWrapper struct {
 }
 
 // Delete implements storage.Storage.
-func (m *metricsWrapper) Delete(ctx context.Context, table interface{}, round uint64) error {
+func (m *metricsWrapper) Delete(ctx context.Context, table any, round uint64) error {
 	defer measureDuration(fmt.Sprintf("Delete(%s)", getTypeName(table)))()
 
 	return m.s.Delete(ctx, table, round)
@@ -137,14 +137,14 @@ func (m *metricsWrapper) GetTransactionReceipt(ctx context.Context, txHash strin
 }
 
 // Insert implements storage.Storage.
-func (m *metricsWrapper) Insert(ctx context.Context, value interface{}) error {
+func (m *metricsWrapper) Insert(ctx context.Context, value any) error {
 	defer measureDuration(fmt.Sprintf("Insert(%s)", getTypeName(value)))()
 
 	return m.s.Insert(ctx, value)
 }
 
 // InsertIfNotExists implements storage.Storage.
-func (m *metricsWrapper) InsertIfNotExists(ctx context.Context, value interface{}) error {
+func (m *metricsWrapper) InsertIfNotExists(ctx context.Context, value any) error {
 	defer measureDuration(fmt.Sprintf("InsertIfNotExists(%s)", getTypeName(value)))()
 
 	return m.s.InsertIfNotExists(ctx, value)
@@ -169,7 +169,7 @@ func (m *metricsWrapper) RunInTransaction(ctx context.Context, fn func(storage.S
 }
 
 // Upsert implements storage.Storage.
-func (m *metricsWrapper) Upsert(ctx context.Context, value interface{}) error {
+func (m *metricsWrapper) Upsert(ctx context.Context, value any) error {
 	defer measureDuration(fmt.Sprintf("Upsert(%s)", getTypeName(value)))()
 
 	return m.s.Upsert(ctx, value)
