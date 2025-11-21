@@ -26,10 +26,10 @@ require (
 	github.com/rs/cors v1.11.1
 	github.com/spf13/cobra v1.10.1
 	github.com/stretchr/testify v1.11.1
-	github.com/uptrace/bun v1.2.15
-	github.com/uptrace/bun/dialect/pgdialect v1.2.15
-	github.com/uptrace/bun/driver/pgdriver v1.2.15
-	golang.org/x/crypto v0.44.0
+	github.com/uptrace/bun v1.2.16
+	github.com/uptrace/bun/dialect/pgdialect v1.2.16
+	github.com/uptrace/bun/driver/pgdriver v1.2.16
+	golang.org/x/crypto v0.45.0
 	google.golang.org/grpc v1.76.0
 )
 
@@ -157,13 +157,13 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/zeebo/errs v1.4.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	go.opentelemetry.io/otel v1.37.0 // indirect
-	go.opentelemetry.io/otel/trace v1.37.0 // indirect
+	go.opentelemetry.io/otel v1.38.0 // indirect
+	go.opentelemetry.io/otel/trace v1.38.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	golang.org/x/exp v0.0.0-20250606033433-dcc06ee1d476 // indirect
-	golang.org/x/net v0.46.0 // indirect
+	golang.org/x/net v0.47.0 // indirect
 	golang.org/x/sync v0.18.0 // indirect
 	golang.org/x/sys v0.38.0 // indirect
 	golang.org/x/text v0.31.0 // indirect
