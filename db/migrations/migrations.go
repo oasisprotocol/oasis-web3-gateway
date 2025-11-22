@@ -34,7 +34,7 @@ func DropTables(ctx context.Context, db *bun.DB) error {
 		return err
 	}
 
-	var results []map[string]interface{}
+	var results []map[string]any
 	if err = db.ScanRows(ctx, rows, &results); err != nil {
 		return err
 	}

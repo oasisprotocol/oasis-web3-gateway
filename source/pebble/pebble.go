@@ -17,8 +17,8 @@ import (
 
 var _ source.NodeSource = (*Source)(nil)
 
-func makeKey(method string, params ...interface{}) []byte {
-	return cbor.Marshal([]interface{}{method, params})
+func makeKey(method string, params ...any) []byte {
+	return cbor.Marshal([]any{method, params})
 }
 
 // Source is a pebble backend source.

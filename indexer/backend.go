@@ -63,7 +63,7 @@ type GetEthInfoBackend interface {
 	GetBlockTransactionCountByRound(ctx context.Context, round uint64) (int, error)
 	GetBlockTransactionCountByHash(ctx context.Context, blockHash ethcommon.Hash) (int, error)
 	GetTransactionByBlockHashAndIndex(ctx context.Context, blockHash ethcommon.Hash, txIndex int) (*model.Transaction, error)
-	GetTransactionReceipt(ctx context.Context, txHash ethcommon.Hash) (map[string]interface{}, error)
+	GetTransactionReceipt(ctx context.Context, txHash ethcommon.Hash) (map[string]any, error)
 	BlockNumber(ctx context.Context) (uint64, error)
 	GetLogs(ctx context.Context, startRound, endRound uint64) ([]*model.Log, error)
 }
@@ -320,7 +320,7 @@ func (ib *indexBackend) GetTransactionByBlockHashAndIndex(ctx context.Context, b
 }
 
 // GetTransactionReceipt returns the receipt for the given tx.
-func (ib *indexBackend) GetTransactionReceipt(ctx context.Context, txHash ethcommon.Hash) (map[string]interface{}, error) {
+func (ib *indexBackend) GetTransactionReceipt(ctx context.Context, txHash ethcommon.Hash) (map[string]any, error) {
 	dbReceipt, err := ib.storage.GetTransactionReceipt(ctx, txHash.String())
 	if err != nil {
 		return nil, err

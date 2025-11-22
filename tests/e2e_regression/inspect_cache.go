@@ -36,7 +36,7 @@ func main() {
 
 	for iter.First(); iter.Valid(); iter.Next() {
 		key := iter.Key()
-		var decoded []interface{}
+		var decoded []any
 		if err := cbor.Unmarshal(key, &decoded); err == nil {
 			if len(decoded) > 0 {
 				method := fmt.Sprintf("%v", decoded[0])
@@ -44,7 +44,7 @@ func main() {
 				if method == "CoreMinGasPrice" {
 					minGasPriceCount++
 					if len(decoded) > 1 {
-						if params, ok := decoded[1].([]interface{}); ok && len(params) > 0 {
+						if params, ok := decoded[1].([]any); ok && len(params) > 0 {
 							if round, ok := params[0].(uint64); ok {
 								minGasPriceRounds[round] = true
 							}

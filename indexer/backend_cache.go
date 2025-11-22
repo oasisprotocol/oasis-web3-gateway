@@ -143,7 +143,7 @@ func (cb *CachingBackend) OnBlockIndexed(
 		// need to be all that large to service the vast majority of
 		// requests.
 		rounds := make([]uint64, 0, cb.cacheSize)
-		cb.blockDataByNumber.Range(func(key, _ interface{}) bool {
+		cb.blockDataByNumber.Range(func(key, _ any) bool {
 			rounds = append(rounds, key.(uint64))
 			return true
 		})
@@ -346,7 +346,7 @@ func (cb *CachingBackend) GetTransactionByBlockHashAndIndex(
 func (cb *CachingBackend) GetTransactionReceipt(
 	ctx context.Context,
 	txHash ethcommon.Hash,
-) (map[string]interface{}, error) {
+) (map[string]any, error) {
 	if receipt, ok := cb.cachedReceiptByTxHash(txHash); ok {
 		return db2EthReceipt(receipt), nil
 	}

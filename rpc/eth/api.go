@@ -54,7 +54,7 @@ var (
 // API is the eth_ prefixed set of APIs in the Web3 JSON-RPC spec.
 type API interface {
 	// GetBlockByNumber returns the block identified by number.
-	GetBlockByNumber(ctx context.Context, blockNum ethrpc.BlockNumber, fullTx bool) (map[string]interface{}, error)
+	GetBlockByNumber(ctx context.Context, blockNum ethrpc.BlockNumber, fullTx bool) (map[string]any, error)
 	// GetBlockTransactionCountByNumber returns the number of transactions in the block.
 	GetBlockTransactionCountByNumber(ctx context.Context, blockNum ethrpc.BlockNumber) (hexutil.Uint, error)
 	// GetStorageAt returns the storage value at the provided position.
@@ -82,7 +82,7 @@ type API interface {
 	// EstimateGas returns an estimate of gas usage for the given transaction.
 	EstimateGas(ctx context.Context, args utils.TransactionArgs, blockNum *ethrpc.BlockNumber) (hexutil.Uint64, error)
 	// GetBlockByHash returns the block identified by hash.
-	GetBlockByHash(ctx context.Context, blockHash common.Hash, fullTx bool) (map[string]interface{}, error)
+	GetBlockByHash(ctx context.Context, blockHash common.Hash, fullTx bool) (map[string]any, error)
 	// GetTransactionByHash returns the transaction identified by hash.
 	GetTransactionByHash(ctx context.Context, hash common.Hash) (*utils.RPCTransaction, error)
 	// GetTransactionByBlockHashAndIndex returns the transaction for the given block hash and index.
@@ -90,7 +90,7 @@ type API interface {
 	// GetTransactionByBlockNumberAndIndex returns the transaction identified by number and index.
 	GetTransactionByBlockNumberAndIndex(ctx context.Context, blockNum ethrpc.BlockNumber, index hexutil.Uint) (*utils.RPCTransaction, error)
 	// GetTransactionReceipt returns the transaction receipt by hash.
-	GetTransactionReceipt(ctx context.Context, txHash common.Hash) (map[string]interface{}, error)
+	GetTransactionReceipt(ctx context.Context, txHash common.Hash) (map[string]any, error)
 	// GetLogs returns the ethereum logs.
 	GetLogs(ctx context.Context, filter filters.FilterCriteria) ([]*ethtypes.Log, error)
 	// GetBlockHash returns the block hash by the given number.
@@ -105,7 +105,7 @@ type API interface {
 	Hashrate() hexutil.Uint64
 	// Syncing returns false in case the node is currently not syncing with the network, otherwise
 	// returns syncing information.
-	Syncing(ctx context.Context) (interface{}, error)
+	Syncing(ctx context.Context) (any, error)
 }
 
 type publicAPI struct {
@@ -195,7 +195,7 @@ func (api *publicAPI) roundParamFromBlockNum(ctx context.Context, logger *loggin
 	}
 }
 
-func (api *publicAPI) GetBlockByNumber(ctx context.Context, blockNum ethrpc.BlockNumber, fullTx bool) (map[string]interface{}, error) {
+func (api *publicAPI) GetBlockByNumber(ctx context.Context, blockNum ethrpc.BlockNumber, fullTx bool) (map[string]any, error) {
 	logger := api.Logger.With("method", "eth_getBlockByNumber", "block_number", blockNum, "full_tx", fullTx)
 	logger.Debug("request")
 
@@ -542,7 +542,7 @@ func (api *publicAPI) EstimateGas(ctx context.Context, args utils.TransactionArg
 	return hexutil.Uint64(gas), nil
 }
 
-func (api *publicAPI) GetBlockByHash(ctx context.Context, blockHash common.Hash, fullTx bool) (map[string]interface{}, error) {
+func (api *publicAPI) GetBlockByHash(ctx context.Context, blockHash common.Hash, fullTx bool) (map[string]any, error) {
 	logger := api.Logger.With("method", "eth_getBlockByHash", "block_hash", blockHash, "full_tx", fullTx)
 	logger.Debug("request")
 
@@ -598,7 +598,7 @@ func (api *publicAPI) GetTransactionByBlockNumberAndIndex(ctx context.Context, b
 	return api.GetTransactionByBlockHashAndIndex(ctx, blockHash, index)
 }
 
-func (api *publicAPI) GetTransactionReceipt(ctx context.Context, txHash common.Hash) (map[string]interface{}, error) {
+func (api *publicAPI) GetTransactionReceipt(ctx context.Context, txHash common.Hash) (map[string]any, error) {
 	logger := api.Logger.With("method", "eth_getTransactionReceipt", "hash", txHash)
 	logger.Debug("request")
 
@@ -769,7 +769,7 @@ func (api *publicAPI) Hashrate() hexutil.Uint64 {
 	return 0
 }
 
-func (api *publicAPI) Syncing(_ context.Context) (interface{}, error) {
+func (api *publicAPI) Syncing(_ context.Context) (any, error) {
 	logger := api.Logger.With("method", "eth_syncing")
 	logger.Debug("request")
 
