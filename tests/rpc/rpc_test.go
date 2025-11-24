@@ -24,7 +24,7 @@ import (
 	"github.com/oasisprotocol/oasis-web3-gateway/tests"
 )
 
-func createRequest(method string, params interface{}) Request {
+func createRequest(method string, params any) Request {
 	return Request{
 		Version: "2.0",
 		Method:  method,
@@ -33,7 +33,7 @@ func createRequest(method string, params interface{}) Request {
 	}
 }
 
-func call(t *testing.T, method string, params interface{}) *Response {
+func call(t *testing.T, method string, params any) *Response {
 	rawReq, err := json.Marshal(createRequest(method, params))
 	require.NoError(t, err)
 
@@ -117,7 +117,7 @@ func TestEth_GetBalance(t *testing.T) {
 }
 
 func getNonce(t *testing.T, from string) hexutil.Uint64 {
-	param := []interface{}{from, "latest"}
+	param := []any{from, "latest"}
 	rpcRes := call(t, "eth_getTransactionCount", param)
 
 	var nonce hexutil.Uint64
@@ -264,9 +264,9 @@ func TestEth_GetBlockByNumberAndGetBlockByHash(t *testing.T) {
 	// accessible by go-ethereum. To overcome this, we perform getBlockByNumber
 	// query with raw HTTP client and use the block's hash from that response.
 	// For details, see https://github.com/oasisprotocol/oasis-web3-gateway/issues/72
-	param := []interface{}{fmt.Sprintf("0x%x", number), false}
+	param := []any{fmt.Sprintf("0x%x", number), false}
 	rpcRes := call(t, "eth_getBlockByNumber", param)
-	blk2 := make(map[string]interface{})
+	blk2 := make(map[string]any)
 	err = json.Unmarshal(rpcRes.Result, &blk2)
 	require.NoError(t, err)
 	require.Equal(t, fmt.Sprintf("0x%x", number), blk2["number"])
@@ -354,7 +354,7 @@ func TestEth_GetTransactionByHash(t *testing.T) {
 	require.Equal(t, tx2.Hash(), receipt.TxHash)
 
 	// Ensure `input` field in response is correctly encoded.
-	rsp := make(map[string]interface{})
+	rsp := make(map[string]any)
 	rawRsp := call(t, "eth_getTransactionByHash", []string{receipt.TxHash.Hex()})
 	require.NoError(t, json.Unmarshal(rawRsp.Result, &rsp))
 	require.Equal(t, input, rsp["input"], "getTransactionByHash 'input' response should be correct")
@@ -387,13 +387,13 @@ func TestEth_GetTransactionByBlockAndIndex(t *testing.T) {
 	require.Equal(t, tx2.Hash(), receipt.TxHash)
 
 	// Test eth_getTransactionByBlockHashAndIndex.
-	rsp := make(map[string]interface{})
+	rsp := make(map[string]any)
 	rawRsp := call(t, "eth_getTransactionByBlockHashAndIndex", []string{receipt.BlockHash.Hex(), hexutil.Uint(receipt.TransactionIndex).String()})
 	require.NoError(t, json.Unmarshal(rawRsp.Result, &rsp))
 	require.Equal(t, input, rsp["input"], "getTransactionByHash 'input' response should be correct")
 
 	// Test eth_getTransactionByBlockNumberAndIndex.
-	rsp = make(map[string]interface{})
+	rsp = make(map[string]any)
 	rawRsp = call(t, "eth_getTransactionByBlockNumberAndIndex", []string{hexutil.EncodeBig(receipt.BlockNumber), hexutil.Uint(receipt.TransactionIndex).String()})
 	require.NoError(t, json.Unmarshal(rawRsp.Result, &rsp))
 	require.Equal(t, input, rsp["input"], "getTransactionByHash 'input' response should be correct")
@@ -409,28 +409,28 @@ func TestEth_GetBlockByHashRawResponses(t *testing.T) {
 	require.NotNil(t, receipt)
 
 	// GetBlockByHash(fullTx=false).
-	rsp := make(map[string]interface{})
-	rawRsp := call(t, "eth_getBlockByHash", []interface{}{receipt.BlockHash.Hex(), false})
+	rsp := make(map[string]any)
+	rawRsp := call(t, "eth_getBlockByHash", []any{receipt.BlockHash.Hex(), false})
 	require.NoError(t, json.Unmarshal(rawRsp.Result, &rsp))
 
-	transactions := rsp["transactions"].([]interface{})
+	transactions := rsp["transactions"].([]any)
 	// There should be one transaction in response.
 	require.EqualValues(t, 1, len(transactions))
 	// The transaction should be a hash.
 	require.IsType(t, "string", transactions[0], "getBlockByHash(fullTx=false) should only return transaction hashes")
 
 	// GetBlockByHash(fullTx=true).
-	rawRsp = call(t, "eth_getBlockByHash", []interface{}{receipt.BlockHash.Hex(), true})
+	rawRsp = call(t, "eth_getBlockByHash", []any{receipt.BlockHash.Hex(), true})
 	require.NoError(t, json.Unmarshal(rawRsp.Result, &rsp))
 
-	transactions = rsp["transactions"].([]interface{})
+	transactions = rsp["transactions"].([]any)
 	// There should be one transaction in response.
 	require.EqualValues(t, 1, len(transactions))
 	// The transaction should be an object.
-	require.IsType(t, make(map[string]interface{}), transactions[0], "getBlockByHash(fullTx=true) should only return full transaction objects")
+	require.IsType(t, make(map[string]any), transactions[0], "getBlockByHash(fullTx=true) should only return full transaction objects")
 
 	// The transaction in getBlockByHash should match transaction obtained by getTransactionByHash.
-	txRsp := make(map[string]interface{})
+	txRsp := make(map[string]any)
 	rawRsp = call(t, "eth_getTransactionByHash", []string{receipt.TxHash.Hex()})
 	require.NoError(t, json.Unmarshal(rawRsp.Result, &txRsp))
 	require.EqualValues(t, transactions[0], txRsp, "getBlockByHash.transaction should match getTransactionByHash response")
@@ -446,13 +446,13 @@ func TestEth_GetTransactionReceiptRawResponses(t *testing.T) {
 	require.NotNil(t, receipt)
 
 	// GetTransactionReceipt.
-	rsp := make(map[string]interface{})
-	rawRsp := call(t, "eth_getTransactionReceipt", []interface{}{receipt.TxHash.Hex()})
+	rsp := make(map[string]any)
+	rawRsp := call(t, "eth_getTransactionReceipt", []any{receipt.TxHash.Hex()})
 	require.NoError(t, json.Unmarshal(rawRsp.Result, &rsp))
 	require.Nil(t, rsp["contractAddress"], "contract address should be nil")
 
 	// Non existing transaction receipt.
-	rawRsp = call(t, "eth_getTransactionReceipt", []interface{}{common.Hash{}})
+	rawRsp = call(t, "eth_getTransactionReceipt", []any{common.Hash{}})
 	require.NoError(t, json.Unmarshal(rawRsp.Result, &rsp))
 	require.Empty(t, rsp, "nonexistent receipt should be empty")
 }

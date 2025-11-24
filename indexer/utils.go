@@ -547,7 +547,7 @@ func (ib *indexBackend) StoreBlockData(ctx context.Context, oasisBlock *block.Bl
 }
 
 // db2EthReceipt converts model.Receipt to the GetTransactionReceipt format.
-func db2EthReceipt(dbReceipt *model.Receipt) map[string]interface{} {
+func db2EthReceipt(dbReceipt *model.Receipt) map[string]any {
 	ethLogs := make([]*ethtypes.Log, 0, len(dbReceipt.Logs))
 	for _, dbLog := range dbReceipt.Logs {
 		topics := make([]common.Hash, 0, len(dbLog.Topics))
@@ -573,7 +573,7 @@ func db2EthReceipt(dbReceipt *model.Receipt) map[string]interface{} {
 	}
 
 	effectiveGasPrice, _ := new(big.Int).SetString(dbReceipt.EffectiveGasPrice, 10)
-	receipt := map[string]interface{}{
+	receipt := map[string]any{
 		"status":            hexutil.Uint(dbReceipt.Status),
 		"cumulativeGasUsed": hexutil.Uint64(dbReceipt.CumulativeGasUsed),
 		"logsBloom":         ethtypes.BytesToBloom(logsBloom(ethLogs)),

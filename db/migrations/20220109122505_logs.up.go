@@ -128,7 +128,7 @@ func (s *Storage) InsertLogs(ctx context.Context, values []*Log) error {
 }
 
 // Upsert upserts a value.
-func (s *Storage) Upsert(ctx context.Context, value interface{}) error {
+func (s *Storage) Upsert(ctx context.Context, value any) error {
 	typ := reflect.TypeOf(value)
 	table := s.DB.Dialect().Tables().Get(typ)
 	pks := make([]string, len(table.PKs))

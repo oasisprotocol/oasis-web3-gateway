@@ -70,8 +70,8 @@ func NewRPCTransaction(dbTx *model.Transaction) *RPCTransaction {
 }
 
 // ConvertToEthBlock converts block in db to rpc response format of a block.
-func ConvertToEthBlock(block *model.Block, fullTx bool) map[string]interface{} {
-	transactions := []interface{}{}
+func ConvertToEthBlock(block *model.Block, fullTx bool) map[string]any {
+	transactions := []any{}
 	for _, dbTx := range block.Transactions {
 		tx := NewRPCTransaction(dbTx)
 		if fullTx {
@@ -84,7 +84,7 @@ func ConvertToEthBlock(block *model.Block, fullTx bool) map[string]interface{} {
 	header := DB2EthHeader(block)
 	serialized := cbor.Marshal(block)
 
-	res := map[string]interface{}{
+	res := map[string]any{
 		"parentHash":       header.ParentHash,
 		"sha3Uncles":       header.UncleHash,
 		"miner":            header.Coinbase,

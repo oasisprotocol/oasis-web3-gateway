@@ -14,16 +14,16 @@ var ErrNoRoundsIndexed = fmt.Errorf("no rounds indexed")
 
 type Storage interface {
 	// Insert inserts a record. On conflict the insert errors.
-	Insert(ctx context.Context, value interface{}) error
+	Insert(ctx context.Context, value any) error
 
 	// InsertIfNotExists inserts a record if a record with same primary key does not exist.
-	InsertIfNotExists(ctx context.Context, value interface{}) error
+	InsertIfNotExists(ctx context.Context, value any) error
 
 	// Upsert upserts a record.
-	Upsert(ctx context.Context, value interface{}) error
+	Upsert(ctx context.Context, value any) error
 
 	// Delete deletes all records with round less than the given round.
-	Delete(ctx context.Context, table interface{}, round uint64) error
+	Delete(ctx context.Context, table any, round uint64) error
 
 	// GetBlockRound returns block round by block hash.
 	GetBlockRound(ctx context.Context, hash string) (uint64, error)
