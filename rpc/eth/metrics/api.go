@@ -211,7 +211,7 @@ func (m *metricsWrapper) GetBalance(ctx context.Context, address common.Address,
 }
 
 // GetBlockByHash implements eth.API.
-func (m *metricsWrapper) GetBlockByHash(ctx context.Context, blockHash common.Hash, fullTx bool) (res map[string]interface{}, err error) {
+func (m *metricsWrapper) GetBlockByHash(ctx context.Context, blockHash common.Hash, fullTx bool) (res map[string]any, err error) {
 	r, s, f, i, d := metrics.GetAPIMethodMetrics("eth_getBlockByHash")
 	defer metrics.InstrumentCaller(r, s, f, i, d, &err)()
 
@@ -220,7 +220,7 @@ func (m *metricsWrapper) GetBlockByHash(ctx context.Context, blockHash common.Ha
 }
 
 // GetBlockByNumber implements eth.API.
-func (m *metricsWrapper) GetBlockByNumber(ctx context.Context, blockNum ethrpc.BlockNumber, fullTx bool) (res map[string]interface{}, err error) {
+func (m *metricsWrapper) GetBlockByNumber(ctx context.Context, blockNum ethrpc.BlockNumber, fullTx bool) (res map[string]any, err error) {
 	r, s, f, i, d := metrics.GetAPIMethodMetrics("eth_getBlockByNumber")
 	defer metrics.InstrumentCaller(r, s, f, i, d, &err)()
 
@@ -335,7 +335,7 @@ func (m *metricsWrapper) GetTransactionCount(ctx context.Context, ethAddr common
 }
 
 // GetTransactionReceipt implements eth.API.
-func (m *metricsWrapper) GetTransactionReceipt(ctx context.Context, txHash common.Hash) (res map[string]interface{}, err error) {
+func (m *metricsWrapper) GetTransactionReceipt(ctx context.Context, txHash common.Hash) (res map[string]any, err error) {
 	r, s, f, i, d := metrics.GetAPIMethodMetrics("eth_getTransactionReceipt")
 	defer metrics.InstrumentCaller(r, s, f, i, d, &err)()
 
@@ -369,7 +369,7 @@ func (m *metricsWrapper) SendRawTransaction(ctx context.Context, data hexutil.By
 }
 
 // Syncing implements eth.API.
-func (m *metricsWrapper) Syncing(ctx context.Context) (res interface{}, err error) {
+func (m *metricsWrapper) Syncing(ctx context.Context) (res any, err error) {
 	r, s, f, i, d := metrics.GetAPIMethodMetrics("eth_syncing")
 	defer metrics.InstrumentCaller(r, s, f, i, d, &err)()
 

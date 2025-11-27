@@ -72,8 +72,8 @@ var (
 )
 
 func initVersions() {
-	cobra.AddTemplateFunc("toolchain", func() interface{} { return version.Toolchain })
-	cobra.AddTemplateFunc("sdk", func() interface{} { return version.GetOasisSDKVersion() })
+	cobra.AddTemplateFunc("toolchain", func() any { return version.Toolchain })
+	cobra.AddTemplateFunc("sdk", func() any { return version.GetOasisSDKVersion() })
 
 	rootCmd.SetVersionTemplate(`Software version: {{.Version}}
 Oasis SDK version: {{ sdk }}
