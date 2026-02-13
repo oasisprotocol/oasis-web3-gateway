@@ -246,17 +246,26 @@ function populate_accounts() {
 T_START="$(date +%s)"
 
 if [[ "${PARATIME_NAME}" == "sapphire" ]]; then
-  ROFLS=($(ls /rofls/*.orc 2>/dev/null || exit 0))
-  if [[ ${#ROFLS[@]} -eq 0 ]]; then
+  if [ ! -f "/rofls/rofl.yaml" ]; then
     notice "No ROFLs detected.\n"
   else
+    TEE=$(yq -r .tee /rofls/rofl.yaml)
+    if [[ "${TEE}" == "tdx" ]]; then
+      ROFLS=("/rofl-appd-localnet.localnet.orc")
+      notice "TDX ROFL detected. Localnet appd service will be accessible on the host via rofl-appd.sock in the shared volume\n"
+    elif [[ "${TEE}" == "sgx" ]]; then
+      ROFLS=($(ls /rofls/*.orc 2>/dev/null || exit 0))
+      notice "Detected SGX ROFL bundle: ${ROFLS[0]}\n"
+    else
+      notice "Invalid tee kind in rofl.yaml: ${TEE}. Aborting.\n"
+      exit -1
+    fi
     unzip -q "${ROFLS[0]}" "app.elf"
     mv "app.elf" "rofl.elf"
     # Create a dummy, non-empty SGXS for mock sgx.
     echo "dummy" > "rofl.sgxs"
     export ROFL_BINARY="/rofl.elf"
     export ROFL_BINARY_SGXS="/rofl.sgxs"
-    notice "Detected ROFL bundle: ${ROFLS[0]}\n"
   fi
 fi
 

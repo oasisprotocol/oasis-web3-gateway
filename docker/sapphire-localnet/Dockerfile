@@ -19,6 +19,8 @@ ARG OASIS_CLI_BRANCH=master
 ARG OASIS_WEB3_GATEWAY_BRANCH=v5.3.4
 #ARG OASIS_WEB3_GATEWAY_VERSION=main
 #ARG OASIS_SAPPHIRE_PARATIME_BRANCH=main
+ARG OASIS_ROFL_APPD_LOCALNET_VERSION=0.1.0
+#ARG OASIS_ROFL_APPD_LOCALNET_BRANCH=main
 
 ARG NEXUS_VERSION=0.7.17
 # ARG NEXUS_BRANCH=main
@@ -104,6 +106,17 @@ RUN set -e; \
         && rm "localnet-${PARATIME_NAME}-paratime.orc"; \
     fi \
     \
+    && if [ "x${OASIS_ROFL_APPD_LOCALNET_BRANCH}" != "x" ]; then \
+        git clone https://github.com/oasisprotocol/oasis-sdk.git oasis-sdk-git --branch ${OASIS_ROFL_APPD_LOCALNET_BRANCH} --depth 1 \
+        && cd /oasis-sdk-git \
+        && cd rofl-appd-localnet \
+        && /out/oasis rofl build --offline \
+        && mv /oasis-sdk-git/rofl-appd-localnet/rofl-appd-localnet.localnet.orc /out/rofl-appd-localnet.localnet.orc \
+        && rm -rf /oasis-sdk-git; \
+    else \
+        wget -O /out/rofl-appd-localnet.localnet.orc https://github.com/oasisprotocol/oasis-sdk/releases/download/rofl-appd-localnet/v${OASIS_ROFL_APPD_LOCALNET_VERSION}/rofl-appd-localnet.localnet.orc; \
+    fi \
+    \
     && cd / \
     && if [ "x${NEXUS_BRANCH}" != "x" ]; then \
         git clone https://github.com/oasisprotocol/nexus.git nexus-git --depth 1 \
@@ -182,7 +195,7 @@ ENV GODEBUG=cpu.all=off
 
 ARG VERSION
 
-RUN apt update && apt install -y --no-install-recommends bash libseccomp2 jq curl ca-certificates unzip binutils file \
+RUN apt update && apt install -y --no-install-recommends bash libseccomp2 jq yq curl ca-certificates unzip binutils file \
     && su -c "POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres /usr/local/bin/docker-entrypoint.sh postgres &" postgres \
     # Explorer frontend deps.
     && apt install -y --no-install-recommends nginx \
