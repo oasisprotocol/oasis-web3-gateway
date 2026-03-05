@@ -6,7 +6,7 @@ RUN cd oasis-web3-gateway && make && strip -S -x oasis-web3-gateway
 
 FROM ghcr.io/oasisprotocol/oasis-core-dev:stable-25.6.x AS oasis-core-dev
 
-ARG NEXUS_VERSION=0.7.17
+ARG NEXUS_VERSION=0.7.22
 RUN wget https://github.com/oasisprotocol/nexus/releases/download/v${NEXUS_VERSION}/oasis_nexus_${NEXUS_VERSION}_linux_amd64.tar.gz \
     && tar -zxvf oasis_nexus_${NEXUS_VERSION}_linux_amd64.tar.gz \
     && strip -S -x /oasis_nexus_${NEXUS_VERSION}_linux_amd64/nexus \
@@ -30,12 +30,13 @@ RUN wget https://github.com/oasisprotocol/nexus/releases/download/v${NEXUS_VERSI
 #     && rm -rf /nexus-git
 
 ARG EXPLORER_REPO=https://github.com/oasisprotocol/explorer.git
-ARG EXPLORER_VERSION=v1.20.0
+ARG EXPLORER_VERSION=v1.26.2
 COPY docker/common/nexus.env.production /nexus.env.production
-RUN git clone ${EXPLORER_REPO} explorer --depth 1 \
+RUN git clone ${EXPLORER_REPO} explorer --recurse-submodules --depth 1 \
     && cd explorer \
     && git fetch origin ${EXPLORER_VERSION} --depth 1 \
     && git checkout FETCH_HEAD \
+    && git submodule update --init --recursive --depth 1 \
     && mv /nexus.env.production .env.production \
     && echo "REACT_APP_LOCALNET_EMERALD=true\nREACT_APP_LOCALNET_SAPPHIRE=false" >> .env.production \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
