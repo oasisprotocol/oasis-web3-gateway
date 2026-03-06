@@ -6,6 +6,12 @@ RUN cd oasis-web3-gateway && make && strip -S -x oasis-web3-gateway
 
 FROM ghcr.io/oasisprotocol/oasis-core-dev:stable-25.6.x AS oasis-core-dev
 
+# Set _BRANCH to build from source; comment it out to use the pre-built release.
+ARG OASIS_CORE_VERSION=25.6
+ARG OASIS_CORE_BRANCH=master
+ARG OASIS_CLI_VERSION=0.18.5
+ARG OASIS_CLI_BRANCH=master
+
 ARG NEXUS_VERSION=0.7.17
 RUN wget https://github.com/oasisprotocol/nexus/releases/download/v${NEXUS_VERSION}/oasis_nexus_${NEXUS_VERSION}_linux_amd64.tar.gz \
     && tar -zxvf oasis_nexus_${NEXUS_VERSION}_linux_amd64.tar.gz \
@@ -44,6 +50,44 @@ RUN git clone ${EXPLORER_REPO} explorer --depth 1 \
     && yarn install \
     && NODE_ENV=production yarn build
 
+# Build or fetch oasis-core and CLI.
+RUN set -e; \
+    cd / \
+    && if [ "x${OASIS_CORE_BRANCH}" != "x" ]; then \
+        git clone https://github.com/oasisprotocol/oasis-core.git --depth 1 \
+        && cd /oasis-core \
+        && git fetch origin ${OASIS_CORE_BRANCH} --depth 1 \
+        && git checkout FETCH_HEAD \
+        && make -C go oasis-node oasis-net-runner \
+        && strip -s /oasis-core/go/oasis-net-runner/oasis-net-runner /oasis-core/go/oasis-node/oasis-node \
+        && mv /oasis-core/go/oasis-net-runner/oasis-net-runner /oasis-core/go/oasis-node/oasis-node / \
+        && rm -rf /oasis-core; \
+    else \
+        wget https://github.com/oasisprotocol/oasis-core/releases/download/v${OASIS_CORE_VERSION}/oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz \
+        && tar -zxvf oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz \
+        && strip -s oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-node oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-net-runner \
+        && mv oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-node oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-net-runner / \
+        && rm -rf /oasis_core_${OASIS_CORE_VERSION}_linux_amd64*; \
+    fi \
+    \
+    && cd / \
+    && if [ "x${OASIS_CLI_BRANCH}" != "x" ]; then \
+        git clone https://github.com/oasisprotocol/cli.git --depth 1 \
+        && cd /cli \
+        && git fetch origin ${OASIS_CLI_BRANCH} --depth 1 \
+        && git checkout FETCH_HEAD \
+        && make CGO_ENABLED=0 \
+        && strip -s oasis \
+        && mv oasis / \
+        && rm -rf /cli; \
+    else \
+        wget https://github.com/oasisprotocol/cli/releases/download/v${OASIS_CLI_VERSION}/oasis_cli_${OASIS_CLI_VERSION}_linux_amd64.tar.gz \
+        && tar -zxvf oasis_cli_${OASIS_CLI_VERSION}_linux_amd64.tar.gz \
+        && strip -s /oasis_cli_${OASIS_CLI_VERSION}_linux_amd64/oasis \
+        && mv /oasis_cli_${OASIS_CLI_VERSION}_linux_amd64/oasis / \
+        && rm -rf /oasis_cli_${OASIS_CLI_VERSION}_linux_amd64*; \
+    fi
+
 
 # Build emerald-localnet
 FROM docker.io/postgres:16-bookworm
@@ -64,7 +108,7 @@ RUN apt update && apt install -y bash libseccomp2 unzip jq binutils curl wget ng
 
 # Docker-specific variables
 ENV OASIS_CORE_VERSION=25.6
-ENV OASIS_CLI_VERSION=0.16.0
+ENV OASIS_CLI_VERSION=0.18.5
 ENV PARATIME_VERSION=11.0.0-testnet
 ENV PARATIME_NAME=emerald
 ENV GATEWAY__CHAIN_ID=0xa514
@@ -85,6 +129,8 @@ ENV OASIS_NEXUS_CONFIG_FILE=/nexus.yml
 ENV OASIS_NEXUS_MIGRATIONS=/nexus-migrations
 ENV OASIS_EXPLORER_DIR=/explorer
 ENV OASIS_EXPLORER_NGINX_CONFIG_FILE=/explorer.nginx.conf
+# Workaround for Rosetta x86_64 emulation on Apple Silicon (chacha20poly1305 SIMD corruption).
+ENV GODEBUG=cpu.all=off
 
 ARG VERSION
 
@@ -100,36 +146,20 @@ COPY tests/tools/* /
 COPY --from=oasis-core-dev /nexus ${OASIS_NEXUS_BINARY}
 COPY --from=oasis-core-dev /nexus-migrations ${OASIS_NEXUS_MIGRATIONS}
 COPY --from=oasis-core-dev /explorer/build ${OASIS_EXPLORER_DIR}
+COPY --from=oasis-core-dev /oasis-node ${OASIS_NODE_BINARY}
+COPY --from=oasis-core-dev /oasis-net-runner ${OASIS_NET_RUNNER_BINARY}
+COPY --from=oasis-core-dev /oasis ${OASIS_CLI_BINARY}
 
 # Create symbolic links for convenience.
 RUN ln -s ${OASIS_NODE_BINARY} ${OASIS_CLI_BINARY} /usr/local/bin
 
-# Configure oasis-node and oasis-net-runner.
-RUN wget --quiet "https://github.com/oasisprotocol/oasis-core/releases/download/v${OASIS_CORE_VERSION}/oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz"  \
-	&& tar xfvz "oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz" \
-	&& mkdir -p "$(dirname ${OASIS_NODE_BINARY})" "$(dirname ${OASIS_NET_RUNNER_BINARY})" \
-	&& mv "oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-node" "${OASIS_NODE_BINARY}" \
-	&& mv "oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-net-runner" "${OASIS_NET_RUNNER_BINARY}" \
-	&& rm "oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz" \
-	&& rm -rf "oasis_core_${OASIS_CORE_VERSION}_linux_amd64" \
-	&& echo "" \
-	&& echo "Configure the ParaTime." \
-	&& mkdir -p "$(dirname ${PARATIME_BINARY})" \
+# Configure ParaTime and write VERSION info.
+RUN mkdir -p "$(dirname ${PARATIME_BINARY})" \
 	&& wget --quiet "https://github.com/oasisprotocol/${PARATIME_NAME}-paratime/releases/download/v${PARATIME_VERSION}/localnet-${PARATIME_NAME}-paratime.orc" -O "/paratime.orc" \
 	&& unzip "paratime.orc" \
 	&& chmod a+x "runtime.elf" \
 	&& rm "paratime.orc" \
-	&& echo "" \
-	&& echo "Configure oasis-cli." \
-	&& wget --quiet "https://github.com/oasisprotocol/cli/releases/download/v${OASIS_CLI_VERSION}/oasis_cli_${OASIS_CLI_VERSION}_linux_amd64.tar.gz" \
-	&& tar -xvf "/oasis_cli_${OASIS_CLI_VERSION}_linux_amd64.tar.gz" \
-	&& mv "/oasis_cli_${OASIS_CLI_VERSION}_linux_amd64/oasis" / \
-	&& rm -rf "/oasis_cli_${OASIS_CLI_VERSION}_linux_amd64/" \
-	&& rm -rf "/oasis_cli_${OASIS_CLI_VERSION}_linux_amd64.tar.gz" \
-	&& echo "" \
-	&& echo "Write VERSION information." \
-	&& echo "${VERSION}" > /VERSION \
-	&& strip -S -x ${OASIS_NET_RUNNER_BINARY} ${OASIS_NODE_BINARY} ${OASIS_CLI_BINARY}
+	&& echo "${VERSION}" > /VERSION
 
 
 # Envoy proxy port.
