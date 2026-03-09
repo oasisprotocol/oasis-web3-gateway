@@ -183,7 +183,7 @@ function populate_accounts() {
     IFS=","
     for addr in ${TO};
     do
-      ${OASIS_CLI_BINARY} account deposit ${AMOUNT} ${addr} --account test:alice --gas-price 0 -y > /dev/null
+      ${OASIS_CLI_BINARY} account deposit ${AMOUNT} ${addr} --account test:alice --gas-price 0 -y > /dev/null 2>&1
     done
     IFS=" "
   elif [[ ${TO} =~ [[:space:]] ]]; then
@@ -191,8 +191,8 @@ function populate_accounts() {
     for n in $(seq 0 $((N-1)))
     do
       acct="account$n"
-      ${OASIS_CLI_BINARY} wallet import ${acct} --algorithm secp256k1-bip44 --number ${n} --secret "${TO}" -y > /dev/null
-      ${OASIS_CLI_BINARY} account deposit ${AMOUNT} ${acct} --account test:alice --gas-price 0 -y > /dev/null
+      ${OASIS_CLI_BINARY} wallet import ${acct} --algorithm secp256k1-bip44 --number ${n} --secret "${TO}" -y > /dev/null 2>&1
+      ${OASIS_CLI_BINARY} account deposit ${AMOUNT} ${acct} --account test:alice --gas-price 0 -y > /dev/null 2>&1
     done
 
     ACCT_OUT=""
@@ -203,7 +203,7 @@ function populate_accounts() {
 
       # Parse Ethereum address and private key from output.
       IFS="#"
-      out=$(${OASIS_CLI_BINARY} wallet export ${acct} -y)
+      out=$(${OASIS_CLI_BINARY} wallet export ${acct} -y 2>/dev/null)
       eth_addr=$(echo "${out}" | grep -e '^Ethereum address:' | cut -d':' -f2 | awk '{$1=$1};1')
       pk=$(echo "${out}" | tail -1)
       IFS=" "
@@ -246,17 +246,26 @@ function populate_accounts() {
 T_START="$(date +%s)"
 
 if [[ "${PARATIME_NAME}" == "sapphire" ]]; then
-  ROFLS=($(ls /rofls/*.orc 2>/dev/null || exit 0))
-  if [[ ${#ROFLS[@]} -eq 0 ]]; then
+  if [ ! -f "/rofls/rofl.yaml" ]; then
     notice "No ROFLs detected.\n"
   else
+    TEE=$(yq -r .tee /rofls/rofl.yaml)
+    if [[ "${TEE}" == "tdx" ]]; then
+      ROFLS=("/rofl-appd-localnet.localnet.orc")
+      notice "TDX ROFL detected. Localnet appd service will be accessible on the host via rofl-appd.sock in the shared volume\n"
+    elif [[ "${TEE}" == "sgx" ]]; then
+      ROFLS=($(ls /rofls/*.orc 2>/dev/null || exit 0))
+      notice "Detected SGX ROFL bundle: ${ROFLS[0]}\n"
+    else
+      notice "Invalid tee kind in rofl.yaml: ${TEE}. Aborting.\n"
+      exit -1
+    fi
     unzip -q "${ROFLS[0]}" "app.elf"
     mv "app.elf" "rofl.elf"
     # Create a dummy, non-empty SGXS for mock sgx.
     echo "dummy" > "rofl.sgxs"
     export ROFL_BINARY="/rofl.elf"
     export ROFL_BINARY_SGXS="/rofl.sgxs"
-    notice "Detected ROFL bundle: ${ROFLS[0]}\n"
   fi
 fi
 
@@ -431,20 +440,20 @@ if [ ! -z "${ROFL_BINARY:-}" ]; then
 
   echo
   notice "Configuring ROFL ${ROFLS[0]}:\n"
-  ${OASIS_CLI_BINARY} account deposit ${ROFL_ADMIN_FUND} ${ROFL_ADMIN} --account test:alice --gas-price 0 -y >/dev/null
+  ${OASIS_CLI_BINARY} account deposit ${ROFL_ADMIN_FUND} ${ROFL_ADMIN} --account test:alice --gas-price 0 -y > /dev/null 2>&1
   printf "   ROFL admin ${CYAN}${ROFL_ADMIN}${OFF} funded ${ROFL_ADMIN_FUND} TEST\n"
 
-  ${OASIS_CLI_BINARY} account deposit ${COMPUTE_NODE_FUND} ${COMPUTE_NODE_ADDRESS} --account test:alice --gas-price 0 -y >/dev/null
+  ${OASIS_CLI_BINARY} account deposit ${COMPUTE_NODE_FUND} ${COMPUTE_NODE_ADDRESS} --account test:alice --gas-price 0 -y > /dev/null 2>&1
   printf "   Compute node ${CYAN}${COMPUTE_NODE_ADDRESS}${OFF} funded ${COMPUTE_NODE_FUND} TEST\n"
 
   # XXX: Report ROFL app ID in JSON and properly parse it.
-  ${OASIS_CLI_BINARY} rofl init --tee sgx --kind raw >/dev/null
-  ROFL_APP_ID=$(${OASIS_CLI_BINARY} rofl create --account ${ROFL_ADMIN} --network localnet -y | grep "Created ROFL app" | rev | cut -d' ' -f1 | rev)
+  ${OASIS_CLI_BINARY} rofl init --tee sgx --kind raw > /dev/null 2>&1
+  ROFL_APP_ID=$(${OASIS_CLI_BINARY} rofl create --account ${ROFL_ADMIN} --network localnet -y 2>/dev/null | grep "Created ROFL app" | rev | cut -d' ' -f1 | rev)
   printf "   App ID: ${CYAN}${ROFL_APP_ID}${OFF}\n"
 
   # Submit the hardcoded enclave ID to the chain.
   sed -i "s@      enclaves: \[\]@      enclaves:\n        - id: ${ROFL_ENCLAVE_ID}@" ${ROFL_MANIFEST_PATH}
-  ${OASIS_CLI_BINARY} rofl update -y >/dev/null
+  ${OASIS_CLI_BINARY} rofl update -y > /dev/null 2>&1
   printf "   Enclave ID: ${CYAN}${ROFL_ENCLAVE_ID}${OFF}\n"
 fi
 

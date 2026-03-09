@@ -11,14 +11,16 @@ ARG PARATIME_NAME
 # variant.
 # Note that the simple keymanager is always freshly built because we need to
 # specify different build options from what is in the release version.
-ARG OASIS_CORE_SIMPLE_KM_BRANCH=stable/25.6.x
-ARG OASIS_CORE_VERSION=25.6
+ARG OASIS_CORE_SIMPLE_KM_BRANCH=master
+#ARG OASIS_CORE_VERSION=25.6
 ARG OASIS_CORE_BRANCH=master
-ARG OASIS_CLI_VERSION=0.18.5
+#ARG OASIS_CLI_VERSION=0.18.5
 ARG OASIS_CLI_BRANCH=master
 ARG OASIS_WEB3_GATEWAY_BRANCH=v5.3.4
 #ARG OASIS_WEB3_GATEWAY_VERSION=main
 #ARG OASIS_SAPPHIRE_PARATIME_BRANCH=main
+ARG OASIS_ROFL_APPD_LOCALNET_VERSION=0.1.0
+#ARG OASIS_ROFL_APPD_LOCALNET_BRANCH=main
 
 ARG NEXUS_VERSION=0.7.17
 # ARG NEXUS_BRANCH=main
@@ -39,10 +41,8 @@ RUN set -e; \
     \
     && cd / \
     && if [ "x${OASIS_CORE_BRANCH}" != "x" ]; then \
-        git clone https://github.com/oasisprotocol/oasis-core.git --depth 1 \
+        git clone https://github.com/oasisprotocol/oasis-core.git --branch ${OASIS_CORE_BRANCH} --depth 1 \
         && cd /oasis-core \
-        && git fetch origin ${OASIS_CORE_BRANCH} --depth 1 \
-        && git checkout FETCH_HEAD \
         && make -C go oasis-node oasis-net-runner \
         && strip -s /oasis-core/go/oasis-net-runner/oasis-net-runner /oasis-core/go/oasis-node/oasis-node \
         && mv /oasis-core/go/oasis-net-runner/oasis-net-runner /oasis-core/go/oasis-node/oasis-node /out \
@@ -57,10 +57,8 @@ RUN set -e; \
     \
     && cd / \
     && if [ "x${OASIS_CLI_BRANCH}" != "x" ]; then \
-        git clone https://github.com/oasisprotocol/cli.git --depth 1 \
+        git clone https://github.com/oasisprotocol/cli.git --branch ${OASIS_CLI_BRANCH} --depth 1 \
         && cd /cli \
-        && git fetch origin ${OASIS_CLI_BRANCH} --depth 1 \
-        && git checkout FETCH_HEAD \
         && make CGO_ENABLED=0 \
         && strip -s oasis \
         && mv oasis /out \
@@ -75,10 +73,8 @@ RUN set -e; \
     \
     && cd / \
     && if [ "x${OASIS_WEB3_GATEWAY_BRANCH}" != "x" ]; then \
-        git clone https://github.com/oasisprotocol/oasis-web3-gateway.git oasis-web3-gateway-git --depth 1 \
+        git clone https://github.com/oasisprotocol/oasis-web3-gateway.git oasis-web3-gateway-git --branch ${OASIS_WEB3_GATEWAY_BRANCH} --depth 1 \
         && cd /oasis-web3-gateway-git \
-        && git fetch origin ${OASIS_WEB3_GATEWAY_BRANCH} --depth 1 \
-        && git checkout FETCH_HEAD \
         && make \
         && strip -s oasis-web3-gateway \
         && mv oasis-web3-gateway /out \
@@ -93,16 +89,14 @@ RUN set -e; \
     \
     && cd / \
     && if [ "x${OASIS_SAPPHIRE_PARATIME_BRANCH}" != "x" ]; then \
-        git clone https://github.com/oasisprotocol/sapphire-paratime.git sapphire-paratime-git --depth 1 \
+        git clone https://github.com/oasisprotocol/sapphire-paratime.git sapphire-paratime-git --branch ${OASIS_SAPPHIRE_PARATIME_BRANCH} --depth 1 \
         && cd /sapphire-paratime-git \
-        && git fetch origin ${OASIS_SAPPHIRE_PARATIME_BRANCH} --depth 1 \
-        && git checkout FETCH_HEAD \
         && cd runtime \
         && OASIS_UNSAFE_SKIP_AVR_VERIFY=1 OASIS_UNSAFE_ALLOW_DEBUG_ENCLAVES=1 OASIS_UNSAFE_USE_LOCALNET_CHAINID=1 \
         cargo build --release --locked --features debug-mock-sgx \
         && strip -s /sapphire-paratime-git/runtime/target/release/sapphire-paratime \
         && mv /sapphire-paratime-git/runtime/target/release/sapphire-paratime /out/ronl.elf \
-        && rm -rf sapphire-paratime-git; \
+        && rm -rf /sapphire-paratime-git; \
     else \
         wget https://github.com/oasisprotocol/${PARATIME_NAME}-paratime/releases/download/v${PARATIME_VERSION}/localnet-${PARATIME_NAME}-paratime.orc \
         && unzip "localnet-${PARATIME_NAME}-paratime.orc" ronl.elf \
@@ -110,6 +104,17 @@ RUN set -e; \
         && strip -s ronl.elf \
         && mv ronl.elf /out \
         && rm "localnet-${PARATIME_NAME}-paratime.orc"; \
+    fi \
+    \
+    && if [ "x${OASIS_ROFL_APPD_LOCALNET_BRANCH}" != "x" ]; then \
+        git clone https://github.com/oasisprotocol/oasis-sdk.git oasis-sdk-git --branch ${OASIS_ROFL_APPD_LOCALNET_BRANCH} --depth 1 \
+        && cd /oasis-sdk-git \
+        && cd rofl-appd-localnet \
+        && /out/oasis rofl build --offline \
+        && mv /oasis-sdk-git/rofl-appd-localnet/rofl-appd-localnet.localnet.orc /out/rofl-appd-localnet.localnet.orc \
+        && rm -rf /oasis-sdk-git; \
+    else \
+        wget -O /out/rofl-appd-localnet.localnet.orc https://github.com/oasisprotocol/oasis-sdk/releases/download/rofl-appd-localnet/v${OASIS_ROFL_APPD_LOCALNET_VERSION}/rofl-appd-localnet.localnet.orc; \
     fi \
     \
     && cd / \
@@ -190,7 +195,7 @@ ENV GODEBUG=cpu.all=off
 
 ARG VERSION
 
-RUN apt update && apt install -y --no-install-recommends bash libseccomp2 jq curl ca-certificates unzip binutils file \
+RUN apt update && apt install -y --no-install-recommends bash libseccomp2 jq yq curl ca-certificates unzip binutils file \
     && su -c "POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres /usr/local/bin/docker-entrypoint.sh postgres &" postgres \
     # Explorer frontend deps.
     && apt install -y --no-install-recommends nginx \
