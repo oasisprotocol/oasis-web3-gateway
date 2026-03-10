@@ -19,6 +19,13 @@
 
 rm -f /CONTAINER_READY
 
+# Localnet requires x86_64; other architectures lack compatible binaries.
+ARCH=$(uname -m)
+if [[ "${ARCH}" != "x86_64" ]]; then
+  echo "ERROR: ${ARCH} is not supported. Please run this image with '--platform linux/amd64'."
+  exit 1
+fi
+
 export OASIS_DOCKER_START_EXPLORER=${OASIS_DOCKER_START_EXPLORER:-yes}
 
 export OASIS_DOCKER_NO_GATEWAY=${OASIS_DOCKER_NO_GATEWAY:-no}
