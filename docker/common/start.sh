@@ -57,6 +57,7 @@ OASIS_NODE_PID=""
 ENVOY_PID=""
 NEXUS_PID=""
 EXPLORER_PID=""
+SOCAT_PID=""
 
 set -euo pipefail
 
@@ -75,6 +76,9 @@ function cleanup {
   fi
   if [[ -n "${EXPLORER_PID}" ]]; then
     kill -9 ${EXPLORER_PID}
+  fi
+  if [[ -n "${SOCAT_PID}" ]]; then
+    kill -9 ${SOCAT_PID}
   fi
 }
 
@@ -259,7 +263,7 @@ if [[ "${PARATIME_NAME}" == "sapphire" ]]; then
     TEE=$(yq -r .tee /rofls/rofl.yaml)
     if [[ "${TEE}" == "tdx" ]]; then
       ROFLS=("/rofl-appd-localnet.localnet.orc")
-      notice "TDX ROFL detected. Localnet appd service will be accessible on the host via rofl-appd.sock in the shared volume\n"
+      notice "TDX ROFL detected. Localnet appd service will be accessible via UNIX socket and TCP port\n"
     elif [[ "${TEE}" == "sgx" ]]; then
       ROFLS=($(ls /rofls/*.orc 2>/dev/null || exit 0))
       notice "Detected SGX ROFL bundle: ${ROFLS[0]}\n"
@@ -462,6 +466,13 @@ if [ ! -z "${ROFL_BINARY:-}" ]; then
   sed -i "s@      enclaves: \[\]@      enclaves:\n        - id: ${ROFL_ENCLAVE_ID}@" ${ROFL_MANIFEST_PATH}
   ${OASIS_CLI_BINARY} rofl update -y > /dev/null 2>&1
   printf "   Enclave ID: ${CYAN}${ROFL_ENCLAVE_ID}${OFF}\n"
+
+  # Bridge rofl-appd Unix socket to TCP for macOS host access (TDX only).
+  if [[ "${TEE}" == "tdx" ]]; then
+    while [[ ! -S /rofls/rofl-appd.sock ]]; do sleep 1; done
+    socat TCP-LISTEN:8549,reuseaddr,fork UNIX-CONNECT:/rofls/rofl-appd.sock &
+    SOCAT_PID=$!
+  fi
 fi
 
 T_END="$(date +%s)"
@@ -476,6 +487,9 @@ fi
 if [[ "${OASIS_DOCKER_START_EXPLORER}" == "yes" ]]; then
   notice "Nexus API listening on ${CYAN}http://localhost:8547${OFF}.\n"
   notice "Localnet Explorer available at ${CYAN}http://localhost:${EXPLORER_PORT}${OFF}.\n"
+fi
+if [[ -n "${SOCAT_PID}" ]]; then
+  notice "ROFL appd listening on ${CYAN}rofl-appd.sock${OFF} and ${CYAN}http://localhost:8549${OFF}.\n"
 fi
 
 notice "Container start-up took ${CYAN}$((T_END-T_START))${OFF} seconds, node log level is set to ${CYAN}${OASIS_NODE_LOG_LEVEL}${OFF}.\n"

@@ -195,7 +195,7 @@ ENV GODEBUG=cpu.all=off
 
 ARG VERSION
 
-RUN apt update && apt install -y --no-install-recommends bash libseccomp2 jq yq curl ca-certificates unzip binutils file \
+RUN apt update && apt install -y --no-install-recommends bash libseccomp2 jq yq curl ca-certificates unzip binutils file socat \
     && su -c "POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres /usr/local/bin/docker-entrypoint.sh postgres &" postgres \
     # Explorer frontend deps.
     && apt install -y --no-install-recommends nginx \
@@ -240,6 +240,8 @@ EXPOSE 8546/tcp
 EXPOSE 8547/tcp
 # Explorer port.
 EXPOSE 8548/tcp
+# ROFL appd port (socat bridge from Unix socket for macOS host access).
+EXPOSE 8549/tcp
 
 USER root
 ENTRYPOINT ["/start.sh"]
