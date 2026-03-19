@@ -5,6 +5,9 @@
 # ParaTime.
 # Supported ENV Variables:
 # - all ENV variables required by spinup-oasis-stack.sh
+# - TO (optional): comma-separated deposit addresses (0x or oasis1 format) or mnemonic.
+# - N (optional): number of addresses to derive from mnemonic.
+# - AMOUNT (optional): Amount to deposit in ParaTime base units.
 # - OASIS_WEB3_GATEWAY_BINARY: path to oasis-web3-gateway binary
 # - OASIS_WEB3_GATEWAY_CONFIG_FILE: path to oasis-web3-gateway config file
 # - BEACON_BACKEND: beacon epoch transition mode 'mock' (default) or 'default'
@@ -25,6 +28,12 @@ if [[ "${ARCH}" != "x86_64" ]]; then
   echo "ERROR: ${ARCH} is not supported. Please run this image with '--platform linux/amd64'."
   exit 1
 fi
+
+export TO=${TO:-""}
+
+export N=${N:-"5"}
+
+export AMOUNT=${AMOUNT:-"10_000"}
 
 export OASIS_DOCKER_START_EXPLORER=${OASIS_DOCKER_START_EXPLORER:-yes}
 
@@ -133,9 +142,6 @@ fi
 
 # Parse command-line arguments for test account population at the beginning,
 # so that we exit early if there are any errors.
-AMOUNT="10_000"
-TO=""
-N="5"
 while [[ $# -gt 0 ]]; do
   case $1 in
     -amount)
