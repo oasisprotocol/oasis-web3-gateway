@@ -1,7 +1,7 @@
-ARG PARATIME_VERSION=1.1.2-testnet
+ARG PARATIME_VERSION=1.2.0-testnet
 ARG PARATIME_NAME=sapphire
 
-FROM ghcr.io/oasisprotocol/oasis-core-dev:stable-25.6.x AS oasis-core-dev
+FROM ghcr.io/oasisprotocol/oasis-core-dev:stable-26.0.x AS oasis-core-dev
 
 ARG PARATIME_VERSION
 ARG PARATIME_NAME
@@ -12,13 +12,13 @@ ARG PARATIME_NAME
 # Note that the simple keymanager is always freshly built because we need to
 # specify different build options from what is in the release version.
 ARG OASIS_CORE_SIMPLE_KM_BRANCH=master
-#ARG OASIS_CORE_VERSION=25.6
-ARG OASIS_CORE_BRANCH=master
-#ARG OASIS_CLI_VERSION=0.18.5
-ARG OASIS_CLI_BRANCH=master
+ARG OASIS_CORE_VERSION=26.0
+#ARG OASIS_CORE_BRANCH=master
+ARG OASIS_CLI_VERSION=0.18.6
+#ARG OASIS_CLI_BRANCH=master
 ARG OASIS_WEB3_GATEWAY_BRANCH=v5.3.4
 #ARG OASIS_WEB3_GATEWAY_VERSION=main
-#ARG OASIS_SAPPHIRE_PARATIME_BRANCH=main
+ARG OASIS_SAPPHIRE_PARATIME_BRANCH=matevz/bump/sapphire-paratime-evm-1.1
 ARG OASIS_ROFL_APPD_LOCALNET_VERSION=0.1.0
 #ARG OASIS_ROFL_APPD_LOCALNET_BRANCH=main
 
@@ -160,7 +160,7 @@ RUN set -e; \
 
 
 # Build sapphire-localnet
-FROM docker.io/postgres:16-bookworm
+FROM docker.io/postgres:18-trixie
 
 # Docker-specific variables.
 ARG PARATIME_VERSION
@@ -215,6 +215,9 @@ RUN apt update && apt install -y --no-install-recommends bash libseccomp2 jq yq 
 
 # Copy all results from build step.
 COPY --from=oasis-core-dev /out /
+
+# TODO: evm-1.1
+#COPY docker/sapphire-localnet/sapphire-paratime /ronl.elf
 
 # Create symlinks for convenience and a dir to put all your rofls into,
 # also print version info.
