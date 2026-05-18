@@ -1,5 +1,5 @@
 # Build oasis-web3-gateway
-FROM golang:1.25.0 AS oasis-web3-gateway
+FROM docker.io/golang:1.25.0 AS oasis-web3-gateway
 
 COPY . /go/oasis-web3-gateway
 RUN cd oasis-web3-gateway && make && strip -S -x oasis-web3-gateway
@@ -90,7 +90,7 @@ RUN set -e; \
 
 
 # Build emerald-localnet
-FROM docker.io/postgres:16-bookworm
+FROM docker.io/postgres:18-trixie
 RUN apt update && apt install -y bash libseccomp2 unzip jq binutils curl wget nginx && apt clean \
     && su -c "POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres /usr/local/bin/docker-entrypoint.sh postgres &" postgres \
 	# Explorer frontend deps.
