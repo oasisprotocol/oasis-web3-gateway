@@ -1,4 +1,4 @@
-ARG PARATIME_VERSION=1.1.2-testnet
+ARG PARATIME_VERSION=1.3.0-testnet
 ARG PARATIME_NAME=sapphire
 
 FROM ghcr.io/oasisprotocol/oasis-core-dev:stable-25.6.x AS oasis-core-dev
