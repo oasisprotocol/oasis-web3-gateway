@@ -32,6 +32,11 @@ import (
 	"github.com/oasisprotocol/oasis-web3-gateway/source"
 )
 
+const (
+	// maxQueryLimit is the max number of requested percentiles.
+	maxQueryLimit = 100
+)
+
 func estimateGasDummySigSpec() types.SignatureAddressSpec {
 	pk := sha512.Sum512_256([]byte("estimateGas: dummy sigspec"))
 	signer := secp256k1.NewSigner(pk[:])
@@ -324,11 +329,15 @@ func (api *publicAPI) FeeHistory(_ context.Context, blockCount math.HexOrDecimal
 	}
 
 	// Validate reward percentiles.
+	if len(rewardPercentiles) > maxQueryLimit {
+		return nil, fmt.Errorf("%w: over the query limit %d", ErrInvalidPercentile, maxQueryLimit)
+	}
+
 	for i, p := range rewardPercentiles {
 		if p < 0 || p > 100 {
 			return nil, fmt.Errorf("%w: %f", ErrInvalidPercentile, p)
 		}
-		if i > 0 && p < rewardPercentiles[i-1] {
+		if i > 0 && p <= rewardPercentiles[i-1] {
 			return nil, fmt.Errorf("%w: #%d:%f > #%d:%f", ErrInvalidPercentile, i-1, rewardPercentiles[i-1], i, p)
 		}
 	}
