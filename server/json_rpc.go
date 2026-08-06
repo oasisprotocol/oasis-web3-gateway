@@ -19,6 +19,13 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 )
 
+const (
+	// batchItemLimit is the maximum number of items in a batch.
+	batchItemLimit = 1000
+	// batchResponseLimit is the maximum number of response bytes across all requests in a batch.
+	batchResponseLimit = 25 * 1024 * 1024 // 25 MB
+)
+
 var metricHealthy = promauto.NewGauge(prometheus.GaugeOpts{Name: "oasis_web3_gateway_health", Help: "1 if gateway healthcheck is reporting as healthy, 0 otherwise."})
 
 // httpConfig is the JSON-RPC/HTTP configuration.
@@ -172,17 +179,21 @@ func (h *httpServer) stop() {
 func (h *httpServer) enableRPC(apis []rpc.API, healthChecks []HealthCheck, config httpConfig) error {
 	// Create RPC server and handler.
 	srv := rpc.NewServer()
+	srv.SetBatchLimits(batchItemLimit, batchResponseLimit)
+
 	if err := RegisterApis(apis, config.Modules, srv, false); err != nil {
 		return err
 	}
-	h.httpConfig = config
+
+	router := mux.NewRouter()
+	router.PathPrefix(config.prefix).HandlerFunc(srv.ServeHTTP).Methods("POST")
+	router.HandleFunc("/health", healthCheckHandler(healthChecks)).Methods("GET")
+
+	handler := newCorsHandler(router, h.httpConfig.CorsAllowedOrigins)
 
 	h.rpcServer = srv
-	router := mux.NewRouter()
-	router.PathPrefix(h.httpConfig.prefix).HandlerFunc(h.rpcServer.ServeHTTP).Methods("POST")
-	h.rpcHandler = newCorsHandler(router, h.httpConfig.CorsAllowedOrigins)
-
-	router.HandleFunc("/health", healthCheckHandler(healthChecks)).Methods("GET")
+	h.rpcHandler = handler
+	h.httpConfig = config
 
 	return nil
 }
@@ -191,15 +202,18 @@ func (h *httpServer) enableRPC(apis []rpc.API, healthChecks []HealthCheck, confi
 func (h *httpServer) enableWS(apis []rpc.API, config wsConfig) error {
 	// Create RPC server and handler.
 	srv := rpc.NewServer()
+	srv.SetBatchLimits(batchItemLimit, batchResponseLimit)
+
 	if err := RegisterApis(apis, config.Modules, srv, false); err != nil {
 		return err
 	}
-	h.wsConfig = config
+
+	router := mux.NewRouter()
+	router.PathPrefix(config.prefix).HandlerFunc(srv.WebsocketHandler(config.Origins).ServeHTTP)
 
 	h.rpcServer = srv
-	router := mux.NewRouter()
-	router.PathPrefix(h.wsConfig.prefix).HandlerFunc(h.rpcServer.WebsocketHandler(config.Origins).ServeHTTP)
 	h.rpcHandler = router
+	h.wsConfig = config
 
 	return nil
 }
