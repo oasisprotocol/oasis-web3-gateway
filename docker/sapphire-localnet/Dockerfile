@@ -1,7 +1,7 @@
 ARG PARATIME_VERSION=1.3.0-testnet
 ARG PARATIME_NAME=sapphire
 
-FROM ghcr.io/oasisprotocol/oasis-core-dev:stable-25.6.x AS oasis-core-dev
+FROM ghcr.io/oasisprotocol/oasis-core-dev:stable-26.2.x AS oasis-core-dev
 
 ARG PARATIME_VERSION
 ARG PARATIME_NAME
@@ -12,20 +12,20 @@ ARG PARATIME_NAME
 # Note that the simple keymanager is always freshly built because we need to
 # specify different build options from what is in the release version.
 ARG OASIS_CORE_SIMPLE_KM_BRANCH=master
-#ARG OASIS_CORE_VERSION=25.6
-ARG OASIS_CORE_BRANCH=master
-#ARG OASIS_CLI_VERSION=0.18.5
-ARG OASIS_CLI_BRANCH=master
-ARG OASIS_WEB3_GATEWAY_BRANCH=v5.3.4
-#ARG OASIS_WEB3_GATEWAY_VERSION=main
+ARG OASIS_CORE_VERSION=26.1
+#ARG OASIS_CORE_BRANCH=master
+ARG OASIS_CLI_VERSION=0.21.0
+#ARG OASIS_CLI_BRANCH=master
+ARG OASIS_WEB3_GATEWAY_VERSION=5.3.4
+#ARG OASIS_WEB3_GATEWAY_BRANCH=main
 #ARG OASIS_SAPPHIRE_PARATIME_BRANCH=main
 ARG OASIS_ROFL_APPD_LOCALNET_VERSION=0.2.0
 #ARG OASIS_ROFL_APPD_LOCALNET_BRANCH=main
 
-ARG NEXUS_VERSION=0.7.17
+ARG NEXUS_VERSION=0.7.24
 # ARG NEXUS_BRANCH=main
 
-ARG EXPLORER_BRANCH=v1.24.2
+ARG EXPLORER_BRANCH=v1.27.0
 
 COPY docker/common /out
 COPY tests/tools/* /out/
@@ -110,7 +110,7 @@ RUN set -e; \
     git clone https://github.com/oasisprotocol/oasis-sdk.git oasis-sdk-git --branch ${OASIS_ROFL_APPD_LOCALNET_BRANCH} --depth 1 \
     && cd /oasis-sdk-git \
     && cd rofl-appd-localnet \
-    && /out/oasis rofl build --offline \
+    && /out/oasis rofl build --offline --no-container \
     && mv /oasis-sdk-git/rofl-appd-localnet/rofl-appd-localnet.localnet.orc /out/rofl-appd-localnet.localnet.orc \
     && rm -rf /oasis-sdk-git; \
     else \

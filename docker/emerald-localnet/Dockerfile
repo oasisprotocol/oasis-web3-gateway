@@ -1,18 +1,18 @@
 # Build oasis-web3-gateway
-FROM golang:1.25.0 AS oasis-web3-gateway
+FROM docker.io/golang:1.27.0 AS oasis-web3-gateway
 
 COPY . /go/oasis-web3-gateway
 RUN cd oasis-web3-gateway && make && strip -S -x oasis-web3-gateway
 
-FROM ghcr.io/oasisprotocol/oasis-core-dev:stable-25.6.x AS oasis-core-dev
+FROM ghcr.io/oasisprotocol/oasis-core-dev:stable-26.2.x AS oasis-core-dev
 
 # Set _BRANCH to build from source; comment it out to use the pre-built release.
-#ARG OASIS_CORE_VERSION=25.9
-ARG OASIS_CORE_BRANCH=master
-#ARG OASIS_CLI_VERSION=0.18.5
-ARG OASIS_CLI_BRANCH=master
+ARG OASIS_CORE_VERSION=26.1
+#ARG OASIS_CORE_BRANCH=master
+ARG OASIS_CLI_VERSION=0.21.0
+#ARG OASIS_CLI_BRANCH=master
 
-ARG NEXUS_VERSION=0.7.17
+ARG NEXUS_VERSION=0.7.24
 RUN wget https://github.com/oasisprotocol/nexus/releases/download/v${NEXUS_VERSION}/oasis_nexus_${NEXUS_VERSION}_linux_amd64.tar.gz \
     && tar -zxvf oasis_nexus_${NEXUS_VERSION}_linux_amd64.tar.gz \
     && strip -S -x /oasis_nexus_${NEXUS_VERSION}_linux_amd64/nexus \
@@ -36,9 +36,9 @@ RUN wget https://github.com/oasisprotocol/nexus/releases/download/v${NEXUS_VERSI
 #     && rm -rf /nexus-git
 
 ARG EXPLORER_REPO=https://github.com/oasisprotocol/explorer.git
-ARG EXPLORER_VERSION=v1.20.0
+ARG EXPLORER_VERSION=v1.27.0
 COPY docker/common/nexus.env.production /nexus.env.production
-RUN git clone ${EXPLORER_REPO} explorer --depth 1 \
+RUN git clone ${EXPLORER_REPO} explorer --recurse-submodules --depth 1 \
     && cd explorer \
     && git fetch origin ${EXPLORER_VERSION} --depth 1 \
     && git checkout FETCH_HEAD \
@@ -108,8 +108,8 @@ RUN apt update && apt install -y bash libseccomp2 unzip jq binutils curl wget ng
     && rm -f /etc/apt/keyrings/envoy-keyring.gpg
 
 # Docker-specific variables
-ENV OASIS_CORE_VERSION=25.6
-ENV OASIS_CLI_VERSION=0.18.5
+ENV OASIS_CORE_VERSION=${OASIS_CORE_VERSION}
+ENV OASIS_CLI_VERSION=${OASIS_CLI_VERSION}
 ENV PARATIME_VERSION=11.0.0-testnet
 ENV PARATIME_NAME=emerald
 ENV GATEWAY__CHAIN_ID=0xa514
