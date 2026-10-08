@@ -90,7 +90,7 @@ RUN set -e; \
 
 
 # Build emerald-localnet
-FROM docker.io/postgres:16-trixie
+FROM docker.io/postgres:18-trixie
 
 RUN apt update && apt install -y bash libseccomp2 unzip jq binutils curl wget nginx && apt clean \
     && su -c "POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres /usr/local/bin/docker-entrypoint.sh postgres &" postgres \

@@ -160,7 +160,7 @@ RUN set -e; \
 
 
 # Build sapphire-localnet
-FROM docker.io/postgres:16-trixie
+FROM docker.io/postgres:18-trixie
 
 # Docker-specific variables.
 ARG PARATIME_VERSION
