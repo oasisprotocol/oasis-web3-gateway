@@ -41,105 +41,105 @@ RUN set -e; \
     \
     && cd / \
     && if [ "x${OASIS_CORE_BRANCH}" != "x" ]; then \
-        git clone https://github.com/oasisprotocol/oasis-core.git --branch ${OASIS_CORE_BRANCH} --depth 1 \
-        && cd /oasis-core \
-        && make -C go oasis-node oasis-net-runner \
-        && strip -s /oasis-core/go/oasis-net-runner/oasis-net-runner /oasis-core/go/oasis-node/oasis-node \
-        && mv /oasis-core/go/oasis-net-runner/oasis-net-runner /oasis-core/go/oasis-node/oasis-node /out \
-        && rm -rf /oasis-core; \
+    git clone https://github.com/oasisprotocol/oasis-core.git --branch ${OASIS_CORE_BRANCH} --depth 1 \
+    && cd /oasis-core \
+    && make -C go oasis-node oasis-net-runner \
+    && strip -s /oasis-core/go/oasis-net-runner/oasis-net-runner /oasis-core/go/oasis-node/oasis-node \
+    && mv /oasis-core/go/oasis-net-runner/oasis-net-runner /oasis-core/go/oasis-node/oasis-node /out \
+    && rm -rf /oasis-core; \
     else \
-        wget https://github.com/oasisprotocol/oasis-core/releases/download/v${OASIS_CORE_VERSION}/oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz \
-        && tar -zxvf oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz \
-        && strip -s oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-node oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-net-runner \
-        && mv oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-node oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-net-runner /out \
-        && rm -rf /oasis_core_${OASIS_CORE_VERSION}_linux_amd64*; \
+    wget https://github.com/oasisprotocol/oasis-core/releases/download/v${OASIS_CORE_VERSION}/oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz \
+    && tar -zxvf oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz \
+    && strip -s oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-node oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-net-runner \
+    && mv oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-node oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-net-runner /out \
+    && rm -rf /oasis_core_${OASIS_CORE_VERSION}_linux_amd64*; \
     fi \
     \
     && cd / \
     && if [ "x${OASIS_CLI_BRANCH}" != "x" ]; then \
-        git clone https://github.com/oasisprotocol/cli.git --branch ${OASIS_CLI_BRANCH} --depth 1 \
-        && cd /cli \
-        && make CGO_ENABLED=0 \
-        && strip -s oasis \
-        && mv oasis /out \
-        && rm -rf /cli; \
+    git clone https://github.com/oasisprotocol/cli.git --branch ${OASIS_CLI_BRANCH} --depth 1 \
+    && cd /cli \
+    && make CGO_ENABLED=0 \
+    && strip -s oasis \
+    && mv oasis /out \
+    && rm -rf /cli; \
     else \
-        wget https://github.com/oasisprotocol/cli/releases/download/v${OASIS_CLI_VERSION}/oasis_cli_${OASIS_CLI_VERSION}_linux_amd64.tar.gz \
-        && tar -zxvf oasis_cli_${OASIS_CLI_VERSION}_linux_amd64.tar.gz \
-        && strip -s /oasis_cli_${OASIS_CLI_VERSION}_linux_amd64/oasis \
-        && mv /oasis_cli_${OASIS_CLI_VERSION}_linux_amd64/oasis /out \
-        && rm -rf /oasis_cli_${OASIS_CLI_VERSION}_linux_amd64*; \
+    wget https://github.com/oasisprotocol/cli/releases/download/v${OASIS_CLI_VERSION}/oasis_cli_${OASIS_CLI_VERSION}_linux_amd64.tar.gz \
+    && tar -zxvf oasis_cli_${OASIS_CLI_VERSION}_linux_amd64.tar.gz \
+    && strip -s /oasis_cli_${OASIS_CLI_VERSION}_linux_amd64/oasis \
+    && mv /oasis_cli_${OASIS_CLI_VERSION}_linux_amd64/oasis /out \
+    && rm -rf /oasis_cli_${OASIS_CLI_VERSION}_linux_amd64*; \
     fi \
     \
     && cd / \
     && if [ "x${OASIS_WEB3_GATEWAY_BRANCH}" != "x" ]; then \
-        git clone https://github.com/oasisprotocol/oasis-web3-gateway.git oasis-web3-gateway-git --branch ${OASIS_WEB3_GATEWAY_BRANCH} --depth 1 \
-        && cd /oasis-web3-gateway-git \
-        && make \
-        && strip -s oasis-web3-gateway \
-        && mv oasis-web3-gateway /out \
-        && rm -rf /oasis-web3-gateway-git; \
+    git clone https://github.com/oasisprotocol/oasis-web3-gateway.git oasis-web3-gateway-git --branch ${OASIS_WEB3_GATEWAY_BRANCH} --depth 1 \
+    && cd /oasis-web3-gateway-git \
+    && make \
+    && strip -s oasis-web3-gateway \
+    && mv oasis-web3-gateway /out \
+    && rm -rf /oasis-web3-gateway-git; \
     else \
-        wget https://github.com/oasisprotocol/oasis-web3-gateway/releases/download/v${OASIS_WEB3_GATEWAY_VERSION}/oasis_web3_gateway_${OASIS_WEB3_GATEWAY_VERSION}_linux_amd64.tar.gz \
-        && tar -zxvf oasis_web3_gateway_${OASIS_WEB3_GATEWAY_VERSION}_linux_amd64.tar.gz \
-        && strip -s /oasis_web3_gateway_${OASIS_WEB3_GATEWAY_VERSION}_linux_amd64/oasis-web3-gateway \
-        && mv /oasis_web3_gateway_${OASIS_WEB3_GATEWAY_VERSION}_linux_amd64/oasis-web3-gateway /out \
-        && rm -rf /oasis_web3_gateway_${OASIS_WEB3_GATEWAY_VERSION}_linux_amd64*; \
+    wget https://github.com/oasisprotocol/oasis-web3-gateway/releases/download/v${OASIS_WEB3_GATEWAY_VERSION}/oasis_web3_gateway_${OASIS_WEB3_GATEWAY_VERSION}_linux_amd64.tar.gz \
+    && tar -zxvf oasis_web3_gateway_${OASIS_WEB3_GATEWAY_VERSION}_linux_amd64.tar.gz \
+    && strip -s /oasis_web3_gateway_${OASIS_WEB3_GATEWAY_VERSION}_linux_amd64/oasis-web3-gateway \
+    && mv /oasis_web3_gateway_${OASIS_WEB3_GATEWAY_VERSION}_linux_amd64/oasis-web3-gateway /out \
+    && rm -rf /oasis_web3_gateway_${OASIS_WEB3_GATEWAY_VERSION}_linux_amd64*; \
     fi \
     \
     && cd / \
     && if [ "x${OASIS_SAPPHIRE_PARATIME_BRANCH}" != "x" ]; then \
-        git clone https://github.com/oasisprotocol/sapphire-paratime.git sapphire-paratime-git --branch ${OASIS_SAPPHIRE_PARATIME_BRANCH} --depth 1 \
-        && cd /sapphire-paratime-git \
-        && cd runtime \
-        && OASIS_UNSAFE_SKIP_AVR_VERIFY=1 OASIS_UNSAFE_ALLOW_DEBUG_ENCLAVES=1 OASIS_UNSAFE_USE_LOCALNET_CHAINID=1 \
-        cargo build --release --locked --features debug-mock-sgx \
-        && strip -s /sapphire-paratime-git/runtime/target/release/sapphire-paratime \
-        && mv /sapphire-paratime-git/runtime/target/release/sapphire-paratime /out/ronl.elf \
-        && rm -rf /sapphire-paratime-git; \
+    git clone https://github.com/oasisprotocol/sapphire-paratime.git sapphire-paratime-git --branch ${OASIS_SAPPHIRE_PARATIME_BRANCH} --depth 1 \
+    && cd /sapphire-paratime-git \
+    && cd runtime \
+    && OASIS_UNSAFE_SKIP_AVR_VERIFY=1 OASIS_UNSAFE_ALLOW_DEBUG_ENCLAVES=1 OASIS_UNSAFE_USE_LOCALNET_CHAINID=1 \
+    cargo build --release --locked --features debug-mock-sgx \
+    && strip -s /sapphire-paratime-git/runtime/target/release/sapphire-paratime \
+    && mv /sapphire-paratime-git/runtime/target/release/sapphire-paratime /out/ronl.elf \
+    && rm -rf /sapphire-paratime-git; \
     else \
-        wget https://github.com/oasisprotocol/${PARATIME_NAME}-paratime/releases/download/v${PARATIME_VERSION}/localnet-${PARATIME_NAME}-paratime.orc \
-        && unzip "localnet-${PARATIME_NAME}-paratime.orc" ronl.elf \
-        && chmod a+x ronl.elf \
-        && strip -s ronl.elf \
-        && mv ronl.elf /out \
-        && rm "localnet-${PARATIME_NAME}-paratime.orc"; \
+    wget https://github.com/oasisprotocol/${PARATIME_NAME}-paratime/releases/download/v${PARATIME_VERSION}/localnet-${PARATIME_NAME}-paratime.orc \
+    && unzip "localnet-${PARATIME_NAME}-paratime.orc" ronl.elf \
+    && chmod a+x ronl.elf \
+    && strip -s ronl.elf \
+    && mv ronl.elf /out \
+    && rm "localnet-${PARATIME_NAME}-paratime.orc"; \
     fi \
     \
     && if [ "x${OASIS_ROFL_APPD_LOCALNET_BRANCH}" != "x" ]; then \
-        git clone https://github.com/oasisprotocol/oasis-sdk.git oasis-sdk-git --branch ${OASIS_ROFL_APPD_LOCALNET_BRANCH} --depth 1 \
-        && cd /oasis-sdk-git \
-        && cd rofl-appd-localnet \
-        && /out/oasis rofl build --offline \
-        && mv /oasis-sdk-git/rofl-appd-localnet/rofl-appd-localnet.localnet.orc /out/rofl-appd-localnet.localnet.orc \
-        && rm -rf /oasis-sdk-git; \
+    git clone https://github.com/oasisprotocol/oasis-sdk.git oasis-sdk-git --branch ${OASIS_ROFL_APPD_LOCALNET_BRANCH} --depth 1 \
+    && cd /oasis-sdk-git \
+    && cd rofl-appd-localnet \
+    && /out/oasis rofl build --offline \
+    && mv /oasis-sdk-git/rofl-appd-localnet/rofl-appd-localnet.localnet.orc /out/rofl-appd-localnet.localnet.orc \
+    && rm -rf /oasis-sdk-git; \
     else \
-        wget -O /out/rofl-appd-localnet.localnet.orc https://github.com/oasisprotocol/oasis-sdk/releases/download/rofl-appd-localnet/v${OASIS_ROFL_APPD_LOCALNET_VERSION}/rofl-appd-localnet.localnet.orc; \
+    wget -O /out/rofl-appd-localnet.localnet.orc https://github.com/oasisprotocol/oasis-sdk/releases/download/rofl-appd-localnet/v${OASIS_ROFL_APPD_LOCALNET_VERSION}/rofl-appd-localnet.localnet.orc; \
     fi \
     \
     && cd / \
     && if [ "x${NEXUS_BRANCH}" != "x" ]; then \
-        git clone https://github.com/oasisprotocol/nexus.git nexus-git --depth 1 \
-        && cd nexus-git \
-        && git fetch origin ${NEXUS_BRANCH} --depth 1 \
-        && git checkout FETCH_HEAD \
-        && go install github.com/deepmap/oapi-codegen/cmd/oapi-codegen@v1.12 \
-        && make codegen-go \
-        && go build \
-        && strip -s /nexus-git/nexus \
-        && mv /nexus-git/nexus /out \
-        && mv /nexus-git/storage/migrations /out/nexus-migrations \
-        && rm -rf /nexus-git; \
+    git clone https://github.com/oasisprotocol/nexus.git nexus-git --depth 1 \
+    && cd nexus-git \
+    && git fetch origin ${NEXUS_BRANCH} --depth 1 \
+    && git checkout FETCH_HEAD \
+    && go install github.com/deepmap/oapi-codegen/cmd/oapi-codegen@v1.12 \
+    && make codegen-go \
+    && go build \
+    && strip -s /nexus-git/nexus \
+    && mv /nexus-git/nexus /out \
+    && mv /nexus-git/storage/migrations /out/nexus-migrations \
+    && rm -rf /nexus-git; \
     else \
-        wget https://github.com/oasisprotocol/nexus/releases/download/v${NEXUS_VERSION}/oasis_nexus_${NEXUS_VERSION}_linux_amd64.tar.gz \
-        && tar -zxvf oasis_nexus_${NEXUS_VERSION}_linux_amd64.tar.gz \
-        && strip -s /oasis_nexus_${NEXUS_VERSION}_linux_amd64/nexus \
-        && mv /oasis_nexus_${NEXUS_VERSION}_linux_amd64/nexus /out \
-        && rm -rf /oasis_nexus_${NEXUS_VERSION}_linux_amd64* && \
-        # We also need to fetch the storage migrations.
-        git clone https://github.com/oasisprotocol/nexus.git nexus-git --branch v${NEXUS_VERSION} --depth 1 \
-        && mv /nexus-git/storage/migrations /out/nexus-migrations \
-        && rm -rf nexus-git; \
+    wget https://github.com/oasisprotocol/nexus/releases/download/v${NEXUS_VERSION}/oasis_nexus_${NEXUS_VERSION}_linux_amd64.tar.gz \
+    && tar -zxvf oasis_nexus_${NEXUS_VERSION}_linux_amd64.tar.gz \
+    && strip -s /oasis_nexus_${NEXUS_VERSION}_linux_amd64/nexus \
+    && mv /oasis_nexus_${NEXUS_VERSION}_linux_amd64/nexus /out \
+    && rm -rf /oasis_nexus_${NEXUS_VERSION}_linux_amd64* && \
+    # We also need to fetch the storage migrations.
+    git clone https://github.com/oasisprotocol/nexus.git nexus-git --branch v${NEXUS_VERSION} --depth 1 \
+    && mv /nexus-git/storage/migrations /out/nexus-migrations \
+    && rm -rf nexus-git; \
     fi \
     \
     && cd / \
@@ -160,7 +160,7 @@ RUN set -e; \
 
 
 # Build sapphire-localnet
-FROM docker.io/postgres:16-bookworm
+FROM docker.io/postgres:18-trixie
 
 # Docker-specific variables.
 ARG PARATIME_VERSION

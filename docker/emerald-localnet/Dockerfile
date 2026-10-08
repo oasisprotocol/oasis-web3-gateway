@@ -54,46 +54,47 @@ RUN git clone ${EXPLORER_REPO} explorer --depth 1 \
 RUN set -e; \
     cd / \
     && if [ "x${OASIS_CORE_BRANCH}" != "x" ]; then \
-        git clone https://github.com/oasisprotocol/oasis-core.git --depth 1 \
-        && cd /oasis-core \
-        && git fetch origin ${OASIS_CORE_BRANCH} --depth 1 \
-        && git checkout FETCH_HEAD \
-        && make -C go oasis-node oasis-net-runner \
-        && strip -s /oasis-core/go/oasis-net-runner/oasis-net-runner /oasis-core/go/oasis-node/oasis-node \
-        && mv /oasis-core/go/oasis-net-runner/oasis-net-runner /oasis-core/go/oasis-node/oasis-node / \
-        && rm -rf /oasis-core; \
+    git clone https://github.com/oasisprotocol/oasis-core.git --depth 1 \
+    && cd /oasis-core \
+    && git fetch origin ${OASIS_CORE_BRANCH} --depth 1 \
+    && git checkout FETCH_HEAD \
+    && make -C go oasis-node oasis-net-runner \
+    && strip -s /oasis-core/go/oasis-net-runner/oasis-net-runner /oasis-core/go/oasis-node/oasis-node \
+    && mv /oasis-core/go/oasis-net-runner/oasis-net-runner /oasis-core/go/oasis-node/oasis-node / \
+    && rm -rf /oasis-core; \
     else \
-        wget https://github.com/oasisprotocol/oasis-core/releases/download/v${OASIS_CORE_VERSION}/oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz \
-        && tar -zxvf oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz \
-        && strip -s oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-node oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-net-runner \
-        && mv oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-node oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-net-runner / \
-        && rm -rf /oasis_core_${OASIS_CORE_VERSION}_linux_amd64*; \
+    wget https://github.com/oasisprotocol/oasis-core/releases/download/v${OASIS_CORE_VERSION}/oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz \
+    && tar -zxvf oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz \
+    && strip -s oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-node oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-net-runner \
+    && mv oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-node oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-net-runner / \
+    && rm -rf /oasis_core_${OASIS_CORE_VERSION}_linux_amd64*; \
     fi \
     \
     && cd / \
     && if [ "x${OASIS_CLI_BRANCH}" != "x" ]; then \
-        git clone https://github.com/oasisprotocol/cli.git --depth 1 \
-        && cd /cli \
-        && git fetch origin ${OASIS_CLI_BRANCH} --depth 1 \
-        && git checkout FETCH_HEAD \
-        && make CGO_ENABLED=0 \
-        && strip -s oasis \
-        && mv oasis / \
-        && rm -rf /cli; \
+    git clone https://github.com/oasisprotocol/cli.git --depth 1 \
+    && cd /cli \
+    && git fetch origin ${OASIS_CLI_BRANCH} --depth 1 \
+    && git checkout FETCH_HEAD \
+    && make CGO_ENABLED=0 \
+    && strip -s oasis \
+    && mv oasis / \
+    && rm -rf /cli; \
     else \
-        wget https://github.com/oasisprotocol/cli/releases/download/v${OASIS_CLI_VERSION}/oasis_cli_${OASIS_CLI_VERSION}_linux_amd64.tar.gz \
-        && tar -zxvf oasis_cli_${OASIS_CLI_VERSION}_linux_amd64.tar.gz \
-        && strip -s /oasis_cli_${OASIS_CLI_VERSION}_linux_amd64/oasis \
-        && mv /oasis_cli_${OASIS_CLI_VERSION}_linux_amd64/oasis / \
-        && rm -rf /oasis_cli_${OASIS_CLI_VERSION}_linux_amd64*; \
+    wget https://github.com/oasisprotocol/cli/releases/download/v${OASIS_CLI_VERSION}/oasis_cli_${OASIS_CLI_VERSION}_linux_amd64.tar.gz \
+    && tar -zxvf oasis_cli_${OASIS_CLI_VERSION}_linux_amd64.tar.gz \
+    && strip -s /oasis_cli_${OASIS_CLI_VERSION}_linux_amd64/oasis \
+    && mv /oasis_cli_${OASIS_CLI_VERSION}_linux_amd64/oasis / \
+    && rm -rf /oasis_cli_${OASIS_CLI_VERSION}_linux_amd64*; \
     fi
 
 
 # Build emerald-localnet
-FROM docker.io/postgres:16-bookworm
+FROM docker.io/postgres:18-trixie
+
 RUN apt update && apt install -y bash libseccomp2 unzip jq binutils curl wget nginx && apt clean \
     && su -c "POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres /usr/local/bin/docker-entrypoint.sh postgres &" postgres \
-	# Explorer frontend deps.
+    # Explorer frontend deps.
     && apt install -y --no-install-recommends nginx \
     # Install Envoy.
     && curl -fsSL https://apt.envoyproxy.io/signing.key | gpg --dearmor -o /etc/apt/keyrings/envoy-keyring.gpg \
@@ -155,11 +156,11 @@ RUN ln -s ${OASIS_NODE_BINARY} ${OASIS_CLI_BINARY} /usr/local/bin
 
 # Configure ParaTime and write VERSION info.
 RUN mkdir -p "$(dirname ${PARATIME_BINARY})" \
-	&& wget --quiet "https://github.com/oasisprotocol/${PARATIME_NAME}-paratime/releases/download/v${PARATIME_VERSION}/localnet-${PARATIME_NAME}-paratime.orc" -O "/paratime.orc" \
-	&& unzip "paratime.orc" \
-	&& chmod a+x "runtime.elf" \
-	&& rm "paratime.orc" \
-	&& echo "${VERSION}" > /VERSION
+    && wget --quiet "https://github.com/oasisprotocol/${PARATIME_NAME}-paratime/releases/download/v${PARATIME_VERSION}/localnet-${PARATIME_NAME}-paratime.orc" -O "/paratime.orc" \
+    && unzip "paratime.orc" \
+    && chmod a+x "runtime.elf" \
+    && rm "paratime.orc" \
+    && echo "${VERSION}" > /VERSION
 
 
 # Envoy proxy port.
