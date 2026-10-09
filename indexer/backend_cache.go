@@ -22,7 +22,11 @@ import (
 	"github.com/oasisprotocol/oasis-web3-gateway/storage"
 )
 
-const periodicMetricsInterval = 60 * time.Second
+const (
+	periodicMetricsInterval = 60 * time.Second
+
+	labelCache = "cache"
+)
 
 var (
 	metricCacheHits = promauto.NewGaugeVec(
@@ -30,21 +34,21 @@ var (
 			Name: "oasis_web3_gateway_cache_hits",
 			Help: "Number of cache hits.",
 		},
-		[]string{"cache"},
+		[]string{labelCache},
 	)
 	metricCacheMisses = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "oasis_web3_gateway_cache_misses",
 			Help: "Number of cache misses.",
 		},
-		[]string{"cache"},
+		[]string{labelCache},
 	)
 	metricCacheHitRatio = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "oasis_web3_gateway_cache_hit_ratio",
 			Help: "Percent of Hits over all accesses (Hits + Misses).",
 		},
-		[]string{"cache"},
+		[]string{labelCache},
 	)
 )
 
