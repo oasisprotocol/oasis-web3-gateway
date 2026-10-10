@@ -1,5 +1,5 @@
 # Build oasis-web3-gateway
-FROM docker.io/golang:1.27.0 AS oasis-web3-gateway
+FROM golang:1.27.2 AS oasis-web3-gateway
 
 COPY . /go/oasis-web3-gateway
 RUN cd oasis-web3-gateway && make && strip -S -x oasis-web3-gateway

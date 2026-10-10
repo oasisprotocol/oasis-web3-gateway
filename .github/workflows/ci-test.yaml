@@ -50,7 +50,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v6
         with:
-          go-version: "1.26.x"
+          go-version: "1.27.x"
 
       - name: Install prerequisites
         run: |
@@ -73,8 +73,7 @@ jobs:
           sleep 60
 
       - name: Unit tests with coverage
-        run:
-          go test -race -coverpkg=./... -coverprofile=coverage.txt
+        run: go test -race -coverpkg=./... -coverprofile=coverage.txt
           -covermode=atomic -v ./...
 
       - name: Shutdown oasis-node
@@ -125,7 +124,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v6
         with:
-          go-version: "1.26.x"
+          go-version: "1.27.x"
 
       - name: Install prerequisites
         run: |
@@ -152,8 +151,7 @@ jobs:
           sleep 60
 
       - name: Unit tests with coverage
-        run:
-          go test -race -coverpkg=./... -coverprofile=coverage.txt
+        run: go test -race -coverpkg=./... -coverprofile=coverage.txt
           -covermode=atomic -v ./...
 
       - name: Shutdown oasis-node
@@ -197,7 +195,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: "1.26.x"
+          go-version: "1.27.x"
 
       - name: Build Go
         run: make oasis-web3-gateway
