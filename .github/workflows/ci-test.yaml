@@ -35,7 +35,7 @@ jobs:
         ports:
           - 5432:5432
     env:
-      OASIS_CORE_VERSION: "26.1"
+      OASIS_CORE_VERSION: "26.3"
       OASIS_NODE_BINARY: ${{ github.workspace }}/oasis_core/oasis-node
       OASIS_NET_RUNNER_BINARY: ${{ github.workspace }}/oasis_core/oasis-net-runner
       EMERALD_PARATIME_VERSION: 11.0.0-testnet
@@ -106,7 +106,7 @@ jobs:
         ports:
           - 5432:5432
     env:
-      OASIS_CORE_VERSION: "26.1"
+      OASIS_CORE_VERSION: "26.3"
       OASIS_NODE_BINARY: ${{ github.workspace }}/oasis_core/oasis-node
       OASIS_NET_RUNNER_BINARY: ${{ github.workspace }}/oasis_core/oasis-net-runner
       SAPPHIRE_PARATIME_VERSION: 1.3.0-testnet
