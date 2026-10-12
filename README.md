@@ -15,7 +15,7 @@ Web3 Gateway for Oasis-SDK Paratime EVM module.
 - [PostgreSQL](https://www.postgresql.org/) (at least version 13.3).
 
 Additionally, for testing:
-- [Oasis Core](https://github.com/oasisprotocol/oasis-core) at least version 24.0.x.
+- [Oasis Core](https://github.com/oasisprotocol/oasis-core) at least version 26.3.x.
 - [Emerald Paratime](https://github.com/oasisprotocol/emerald-paratime) at least version 11.x.x.
 - (or) [Sapphire Paratime](https://github.com/oasisprotocol/sapphire-paratime) at least version 0.7.3.
 
