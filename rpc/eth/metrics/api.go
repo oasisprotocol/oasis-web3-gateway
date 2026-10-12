@@ -156,7 +156,7 @@ func (m *metricsWrapper) Call(ctx context.Context, args utils.TransactionArgs, b
 
 // ChainId implements eth.API.
 //
-//nolint:revive,stylecheck
+//nolint:revive
 func (m *metricsWrapper) ChainId() (res *hexutil.Big, err error) {
 	r, s, f, i, d := metrics.GetAPIMethodMetrics("eth_chainId")
 	defer metrics.InstrumentCaller(r, s, f, i, d, &err)()
@@ -227,7 +227,7 @@ func (m *metricsWrapper) GetBlockByNumber(ctx context.Context, blockNum ethrpc.B
 	res, err = m.api.GetBlockByNumber(ctx, blockNum, fullTx)
 
 	// Measure request height difference from latest height.
-	go m.meassureRequestHeightDiff("eth_getBlockByNumber", blockNum)
+	go m.meassureRequestHeightDiff("eth_getBlockByNumber", blockNum) //nolint:gosec
 
 	return res, err
 }
@@ -240,7 +240,7 @@ func (m *metricsWrapper) GetBlockHash(ctx context.Context, blockNum ethrpc.Block
 	res, err = m.api.GetBlockHash(ctx, blockNum, b)
 
 	// Measure request height difference from latest height.
-	go m.meassureRequestHeightDiff("eth_getBlockHash", blockNum)
+	go m.meassureRequestHeightDiff("eth_getBlockHash", blockNum) //nolint:gosec
 
 	return res, err
 }
@@ -262,7 +262,7 @@ func (m *metricsWrapper) GetBlockTransactionCountByNumber(ctx context.Context, b
 	res, err = m.api.GetBlockTransactionCountByNumber(ctx, blockNum)
 
 	// Measure request height difference from latest height.
-	go m.meassureRequestHeightDiff("eth_getBlockTransationCountByNumber", blockNum)
+	go m.meassureRequestHeightDiff("eth_getBlockTransationCountByNumber", blockNum) //nolint:gosec
 
 	return res, err
 }
@@ -311,7 +311,7 @@ func (m *metricsWrapper) GetTransactionByBlockNumberAndIndex(ctx context.Context
 	res, err = m.api.GetTransactionByBlockNumberAndIndex(ctx, blockNum, index)
 
 	// Measure request height difference from latest height.
-	go m.meassureRequestHeightDiff("eth_getTransactionByBlockNumberAndIndex", blockNum)
+	go m.meassureRequestHeightDiff("eth_getTransactionByBlockNumberAndIndex", blockNum) //nolint:gosec
 
 	return res, err
 }
