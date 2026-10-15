@@ -12,8 +12,8 @@ ARG PARATIME_NAME
 # Note that the simple keymanager is always freshly built because we need to
 # specify different build options from what is in the release version.
 ARG OASIS_CORE_SIMPLE_KM_BRANCH=master
-ARG OASIS_CORE_VERSION=26.3
-#ARG OASIS_CORE_BRANCH=master
+#ARG OASIS_CORE_VERSION=26.3
+ARG OASIS_CORE_BRANCH=master
 ARG OASIS_CLI_VERSION=0.21.0
 #ARG OASIS_CLI_BRANCH=master
 ARG OASIS_WEB3_GATEWAY_VERSION=5.3.4
