@@ -1,7 +1,7 @@
 ARG PARATIME_VERSION=1.3.0-testnet
 ARG PARATIME_NAME=sapphire
 
-FROM ghcr.io/oasisprotocol/oasis-core-dev:stable-26.3.x AS oasis-core-dev
+FROM ghcr.io/oasisprotocol/oasis-core-dev:stable-26.4.x AS oasis-core-dev
 
 ARG PARATIME_VERSION
 ARG PARATIME_NAME
@@ -12,8 +12,8 @@ ARG PARATIME_NAME
 # Note that the simple keymanager is always freshly built because we need to
 # specify different build options from what is in the release version.
 ARG OASIS_CORE_SIMPLE_KM_BRANCH=master
-#ARG OASIS_CORE_VERSION=26.3
-ARG OASIS_CORE_BRANCH=master
+ARG OASIS_CORE_VERSION=26.4
+#ARG OASIS_CORE_BRANCH=master
 ARG OASIS_CLI_VERSION=0.22.1
 #ARG OASIS_CLI_BRANCH=master
 ARG OASIS_WEB3_GATEWAY_VERSION=5.3.4

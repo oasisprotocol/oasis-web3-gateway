@@ -1,14 +1,14 @@
 # Build oasis-web3-gateway
-FROM golang:1.27.2 AS oasis-web3-gateway
+FROM golang:1.27.3 AS oasis-web3-gateway
 
 COPY . /go/oasis-web3-gateway
 RUN cd oasis-web3-gateway && make && strip -S -x oasis-web3-gateway
 
-FROM ghcr.io/oasisprotocol/oasis-core-dev:stable-26.3.x AS oasis-core-dev
+FROM ghcr.io/oasisprotocol/oasis-core-dev:stable-26.4.x AS oasis-core-dev
 
 # Set _BRANCH to build from source; comment it out to use the pre-built release.
-#ARG OASIS_CORE_VERSION=26.3
-ARG OASIS_CORE_BRANCH=master
+ARG OASIS_CORE_VERSION=26.4
+#ARG OASIS_CORE_BRANCH=master
 ARG OASIS_CLI_VERSION=0.22.1
 #ARG OASIS_CLI_BRANCH=master
 

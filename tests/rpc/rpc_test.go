@@ -190,7 +190,8 @@ func TestEth_FeeHistory(t *testing.T) {
 		percentiles []float64
 		expectErr   bool
 	}{
-		{name: "Query with no reward percentiles", blockCount: 5, lastBlock: nil, percentiles: nil, expectErr: false},
+		{name: "Query with nil reward percentiles", blockCount: 5, lastBlock: nil, percentiles: nil, expectErr: true}, // Invalid percentiles = nil
+		{name: "Query with no reward percentiles", blockCount: 5, lastBlock: nil, percentiles: []float64{}, expectErr: false},
 		{name: "Query specific block range", blockCount: 3, lastBlock: big.NewInt(5), percentiles: []float64{50}, expectErr: false},
 		{name: "Query specific block range (large)", blockCount: 3, lastBlock: big.NewInt(100000), percentiles: []float64{50}, expectErr: false},
 		{name: "Query with zero block count (empty response)", blockCount: 0, lastBlock: nil, percentiles: []float64{50}, expectErr: false},
